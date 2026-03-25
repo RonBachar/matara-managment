@@ -50,6 +50,12 @@ export type ProjectBrief = {
   status: ProjectBriefStatus;
   createdAt: string;
   updatedAt: string;
+  /** Website/product framing – GPT-ready inputs */
+  websiteType: string;
+  requiredPages: string;
+  strategicDecisions: string;
+  lockedFixedInput: string;
+  sourceMaterials: string;
   mainService: string;
   projectGoal: string;
   targetAudience: string;

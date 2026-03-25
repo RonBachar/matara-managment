@@ -37,6 +37,11 @@ function normalizeBrief(raw: Record<string, unknown>): ProjectBrief {
     status,
     createdAt: ensureString(raw.createdAt) || nowIso,
     updatedAt: ensureString(raw.updatedAt) || ensureString(raw.createdAt) || nowIso,
+    websiteType: ensureString((raw as any).websiteType),
+    requiredPages: ensureString((raw as any).requiredPages),
+    strategicDecisions: ensureString((raw as any).strategicDecisions),
+    lockedFixedInput: ensureString((raw as any).lockedFixedInput),
+    sourceMaterials: ensureString((raw as any).sourceMaterials),
     mainService: ensureString(raw.mainService),
     projectGoal: ensureString(raw.projectGoal),
     targetAudience: ensureString(raw.targetAudience),
@@ -211,25 +216,27 @@ export function ProjectBriefs() {
         createDisabledMessage={createDisabledMessage}
       />
 
-      {pageMessage && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {pageMessage}
-        </div>
-      )}
+      <div className="mx-auto w-full max-w-4xl space-y-4">
+        {pageMessage && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {pageMessage}
+          </div>
+        )}
 
-      {mode && (
-        <ProjectBriefForm
-          mode={mode}
-          projects={projects}
-          existingBriefs={briefs}
-          initialBrief={mode === "edit" ? activeBrief : undefined}
-          onCancel={() => {
-            setMode(null);
-            setActiveBrief(undefined);
-          }}
-          onSubmit={handleFormSubmit}
-        />
-      )}
+        {mode && (
+          <ProjectBriefForm
+            mode={mode}
+            projects={projects}
+            existingBriefs={briefs}
+            initialBrief={mode === "edit" ? activeBrief : undefined}
+            onCancel={() => {
+              setMode(null);
+              setActiveBrief(undefined);
+            }}
+            onSubmit={handleFormSubmit}
+          />
+        )}
+      </div>
 
       <DeleteProjectBriefDialog
         open={deleteOpen}

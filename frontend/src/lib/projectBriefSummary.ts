@@ -13,8 +13,21 @@ function toSummaryValue(value: string | undefined): string {
 export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] {
   return [
     {
+      title: "מסגרת והחלטות",
+      items: [
+        { label: "סוג האתר", value: toSummaryValue(brief.websiteType) },
+        { label: "שירות מרכזי", value: toSummaryValue(brief.mainService) },
+        { label: "מטרת הפרויקט", value: toSummaryValue(brief.projectGoal) },
+        {
+          label: "החלטות אסטרטגיות",
+          value: toSummaryValue(brief.strategicDecisions),
+        },
+      ],
+    },
+    {
       title: "מבנה UX",
       items: [
+        { label: "עמודים חובה", value: toSummaryValue(brief.requiredPages) },
         { label: "קהל יעד", value: toSummaryValue(brief.targetAudience) },
         {
           label: "כאבים/חסמים של הקהל",
@@ -77,6 +90,21 @@ export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] 
         { label: "צבעים להימנע", value: toSummaryValue(brief.unwantedColors) },
         { label: "סגנון עיצובי", value: toSummaryValue(brief.designStyleNotes) },
         { label: "הערות עיצוב", value: toSummaryValue(brief.designNotes) },
+      ],
+    },
+    {
+      title: "Locked / Fixed Input",
+      items: [
+        {
+          label: "תכנים/אלמנטים נעולים",
+          value: toSummaryValue(brief.lockedFixedInput),
+        },
+      ],
+    },
+    {
+      title: "מקורות וחומרים",
+      items: [
+        { label: "חומרי גלם/קישורים", value: toSummaryValue(brief.sourceMaterials) },
       ],
     },
   ];
