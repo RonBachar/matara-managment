@@ -1,20 +1,34 @@
-import type { Client, ClientType } from '@/types/client'
-import type { Lead } from '@/types/lead'
-import { ClientFormModal } from '@/components/clients/ClientFormModal'
+import type { Client } from "@/types/client";
+import type { Lead } from "@/types/lead";
+import { Button } from "@/components/ui/button";
 
 type ConvertLeadDialogProps = {
-  open: boolean
-  lead?: Lead
-  onClose: () => void
-  onConvert: (client: Client) => void
-}
+  open: boolean;
+  lead?: Lead;
+  onClose: () => void;
+  onConvert: (client: Client) => void;
+};
 
-function buildNotesFromLead(lead: Lead): string {
-  const parts: string[] = []
-  if (lead.requestedService) parts.push(`שירות מבוקש: ${lead.requestedService}`)
-  if (lead.leadSource) parts.push(`מקור ליד: ${lead.leadSource}`)
-  if (lead.notes) parts.push(lead.notes)
-  return parts.join('\n')
+function buildClientFromLead(lead: Lead): Client {
+  const notesParts: string[] = [];
+  if (lead.leadSource) notesParts.push(`מקור ליד: ${lead.leadSource}`);
+  if (lead.notes) notesParts.push(lead.notes);
+  const notes = notesParts.length > 0 ? notesParts.join("\n") : undefined;
+
+  return {
+    id: String(Date.now()),
+    clientType: "Website Client",
+    createdAt: lead.createdAt ?? new Date().toISOString(),
+    businessName: lead.name,
+    contactPerson: lead.name,
+    phone: lead.phone,
+    email: lead.email?.trim() ?? "",
+    website: undefined,
+    notes,
+    packageType: "None",
+    renewalPrice: 0,
+    renewalDate: "",
+  };
 }
 
 export function ConvertLeadDialog({
@@ -23,43 +37,39 @@ export function ConvertLeadDialog({
   onClose,
   onConvert,
 }: ConvertLeadDialogProps) {
-  if (!open || !lead) return null
+  if (!open || !lead) return null;
 
-  const prefClientType: ClientType = 'Website Client'
+  function handleConfirm() {
+    if (!lead) return;
+    onConvert(buildClientFromLead(lead));
+  }
 
   return (
-    <ClientFormModal
-      open={open}
-      mode="create"
-      initialClient={{
-        id: 'prefill',
-        clientType: prefClientType,
-        businessName: lead.contactPerson,
-        contactPerson: lead.contactPerson,
-        phone: lead.phone,
-        email: lead.email,
-        website: '',
-        notes: buildNotesFromLead(lead),
-        packageType: 'None',
-        renewalPrice: 0,
-        renewalDate: '',
-        agreementFileId: lead.agreementFileId,
-        agreementFileName: lead.agreementFileName,
-        agreementFileType: lead.agreementFileType,
-      }}
-      onClose={onClose}
-      onSubmit={(data) => {
-        const newClient: Client = {
-          ...data,
-          id: String(Date.now()),
-          createdAt: lead.createdAt ?? new Date().toISOString(),
-          agreementFileId: lead.agreementFileId,
-          agreementFileName: lead.agreementFileName,
-          agreementFileType: lead.agreementFileType,
-        }
-        onConvert(newClient)
-      }}
-    />
-  )
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      dir="rtl"
+    >
+      <div className="w-full max-w-sm rounded-xl border border-border bg-background shadow-lg">
+        <div className="border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold text-foreground">המרה ללקוח</h2>
+        </div>
+        <div className="space-y-2 px-4 py-4 text-sm">
+          <p>האם אתה בטוח שברצונך להפוך את הליד ללקוח?</p>
+          <p className="font-medium">{lead.name}</p>
+        </div>
+        <div className="flex justify-between gap-3 px-4 pb-4">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ביטול
+          </Button>
+          <Button
+            size="sm"
+            className="bg-[#10B981] px-4 text-white hover:bg-[#059669]"
+            onClick={handleConfirm}
+          >
+            הפוך ללקוח
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
-

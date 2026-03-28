@@ -1,76 +1,53 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import type { Lead, LeadStatus } from '@/types/lead'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { useEffect, useState, type FormEvent } from "react";
+import type { Lead } from "@/types/lead";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { cn } from '@/lib/utils'
-import {
-  deleteAgreementFile,
-  saveAgreementFile,
-} from '@/lib/agreementFiles'
-
-const STATUS_OPTIONS: LeadStatus[] = [
-  'חדש',
-  'במעקב',
-  'הצעת מחיר נשלחה',
-  'נסגר',
-  'לא רלוונטי',
-]
-
-const REQUESTED_SERVICE_OPTIONS = [
-  'דף נחיתה',
-  'אתר תדמית',
-  'אתר קטלוג',
-  'חנות אינטרנט',
-  'אתר קורסים',
-  'אתר מותאם אישית',
-  'מערכת מותאמת אישית',
-  'ניהול ותחזוקת אתרים',
-  'שירותי פרילנסר',
-] as const
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 const LEAD_SOURCE_OPTIONS = [
-  'פנייה מהאתר',
-  'גוגל Ads',
-  'פייסבוק',
-  'אינסטגרם',
-  'וואטסאפ',
-  'הפניה / מפה לאוזן',
-  'אחר',
-] as const
+  "פנייה מהאתר",
+  "גוגל Ads",
+  "פייסבוק",
+  "אינסטגרם",
+  "וואטסאפ",
+  "הפניה / מפה לאוזן",
+  "אחר",
+] as const;
 
-type LeadInput = Omit<Lead, 'id'>
+type LeadInput = Omit<Lead, "id">;
 
 type LeadFormModalProps = {
-  open: boolean
-  mode: 'create' | 'edit'
-  initialLead?: Lead
-  onClose: () => void
-  onSubmit: (lead: LeadInput) => void
-}
+  open: boolean;
+  mode: "create" | "edit";
+  initialLead?: Lead;
+  onClose: () => void;
+  onSubmit: (lead: LeadInput) => void;
+};
 
-type FormState = LeadInput
+type FormState = {
+  name: string;
+  phone: string;
+  email: string;
+  leadSource: string;
+  notes: string;
+};
 
 const emptyForm: FormState = {
-  contactPerson: '',
-  phone: '',
-  email: '',
-  requestedService: '',
-  leadSource: '',
-  notes: '',
-  status: 'חדש',
-  agreementFileId: undefined,
-  agreementFileName: undefined,
-  agreementFileType: undefined,
-}
+  name: "",
+  phone: "",
+  email: "",
+  leadSource: "",
+  notes: "",
+};
 
 export function LeadFormModal({
   open,
@@ -79,85 +56,60 @@ export function LeadFormModal({
   onClose,
   onSubmit,
 }: LeadFormModalProps) {
-  const [form, setForm] = useState<FormState>(emptyForm)
-  const [pendingAgreementFile, setPendingAgreementFile] = useState<File | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const isConverted = Boolean(initialLead?.convertedClientId) || initialLead?.status === 'הפך ללקוח'
-  const agreementLabel = useMemo(() => {
-    if (pendingAgreementFile) return pendingAgreementFile.name
-    return form.agreementFileName ?? ''
-  }, [pendingAgreementFile, form.agreementFileName])
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [isSaving, setIsSaving] = useState(false);
+  const isConverted = Boolean(initialLead?.convertedClientId);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     if (initialLead) {
       setForm({
-        createdAt: initialLead.createdAt,
-        contactPerson: initialLead.contactPerson,
+        name: initialLead.name,
         phone: initialLead.phone,
-        email: initialLead.email,
-        requestedService: initialLead.requestedService ?? '',
+        email: initialLead.email ?? "",
         leadSource: initialLead.leadSource,
-        notes: initialLead.notes ?? '',
-        status: isConverted ? 'הפך ללקוח' : initialLead.status,
-        agreementFileId: initialLead.agreementFileId,
-        agreementFileName: initialLead.agreementFileName,
-        agreementFileType: initialLead.agreementFileType,
-      })
+        notes: initialLead.notes ?? "",
+      });
     } else {
-      setForm({ ...emptyForm, status: 'חדש' })
+      setForm(emptyForm);
     }
-    setPendingAgreementFile(null)
-    setIsSaving(false)
-  }, [open, initialLead, isConverted])
+    setIsSaving(false);
+  }, [open, initialLead]);
 
   function handleChange<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    setIsSaving(true)
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setIsSaving(true);
     try {
-      let agreementRef:
-        | { agreementFileId: string; agreementFileName: string; agreementFileType: string }
-        | null = null
-
-      if (pendingAgreementFile) {
-        agreementRef = await saveAgreementFile(pendingAgreementFile)
-        if (form.agreementFileId && form.agreementFileId !== agreementRef.agreementFileId) {
-          await deleteAgreementFile(form.agreementFileId)
-        }
-      }
-
+      const emailTrim = form.email.trim();
       const next: LeadInput = {
-        createdAt: initialLead?.createdAt,
-        contactPerson: form.contactPerson.trim(),
+        name: form.name.trim(),
         phone: form.phone.trim(),
-        email: form.email.trim(),
-        requestedService: (form.requestedService ?? '').trim() || undefined,
+        email: emailTrim.length > 0 ? emailTrim : undefined,
         leadSource: form.leadSource.trim(),
-        notes: (form.notes ?? '').trim() || undefined,
-        status: isConverted ? 'הפך ללקוח' : form.status,
+        notes: (form.notes ?? "").trim() || undefined,
         convertedClientId: initialLead?.convertedClientId,
-        agreementFileId: agreementRef?.agreementFileId ?? form.agreementFileId,
-        agreementFileName: agreementRef?.agreementFileName ?? form.agreementFileName,
-        agreementFileType: agreementRef?.agreementFileType ?? form.agreementFileType,
-      }
-    onSubmit(next)
+        agreementFileId: initialLead?.agreementFileId,
+        agreementFileName: initialLead?.agreementFileName,
+        agreementFileType: initialLead?.agreementFileType,
+      };
+      onSubmit(next);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="w-full max-w-xl rounded-xl border border-border bg-background shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">
-            {mode === 'create' ? 'ליד חדש' : 'עריכת ליד'}
+            {mode === "create" ? "ליד חדש" : "עריכת ליד"}
           </h2>
           <button
             type="button"
@@ -169,56 +121,44 @@ export function LeadFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
+          {isConverted && (
+            <div
+              className={cn(
+                "rounded-lg border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm text-emerald-800",
+              )}
+            >
+              ליד זה כבר הומר ללקוח. ניתן לעדכן פרטים בסיסיים בלבד; ההמרה נשמרת.
+            </div>
+          )}
+
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="שם מלא" required>
+            <Field label="שם" required>
               <Input
-                value={form.contactPerson}
-                onChange={(e) => handleChange('contactPerson', e.target.value)}
+                value={form.name}
+                onChange={(e) => handleChange("name", e.target.value)}
                 required
               />
             </Field>
             <Field label="טלפון" required>
               <Input
                 value={form.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
+                onChange={(e) => handleChange("phone", e.target.value)}
                 required
               />
             </Field>
-            <Field label="אימייל" required>
+            <Field label="אימייל">
               <Input
                 type="email"
                 value={form.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                required
+                onChange={(e) => handleChange("email", e.target.value)}
+                inputMode="email"
+                autoComplete="email"
               />
-            </Field>
-            <Field label="שירות מבוקש">
-              <Select
-                value={form.requestedService || ''}
-                onValueChange={(value) =>
-                  handleChange(
-                    'requestedService',
-                    value === '__empty__' ? '' : (value ?? ''),
-                  )
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="בחר שירות (אופציונלי)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__empty__">—</SelectItem>
-                  {REQUESTED_SERVICE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </Field>
             <Field label="מקור ליד">
               <Select
                 value={form.leadSource}
-                onValueChange={(value) => handleChange('leadSource', value ?? '')}
+                onValueChange={(value) => handleChange("leadSource", value ?? "")}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="בחר מקור" />
@@ -232,60 +172,14 @@ export function LeadFormModal({
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="סטטוס">
-              {isConverted ? (
-                <div
-                  className={cn(
-                    'inline-flex h-8 w-full items-center rounded-lg border border-emerald-200/70 bg-emerald-50/70 px-2.5 text-sm text-emerald-800',
-                  )}
-                >
-                  הפך ללקוח
-                </div>
-              ) : (
-                <Select
-                  value={form.status}
-                  onValueChange={(value) =>
-                    handleChange('status', value as LeadStatus)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="בחר סטטוס" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </Field>
           </div>
 
           <Field label="הערות">
             <Textarea
               rows={3}
               value={form.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
+              onChange={(e) => handleChange("notes", e.target.value)}
             />
-          </Field>
-
-          <Field label="הסכם חתום (אופציונלי)">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center">
-              <Input
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null
-                  setPendingAgreementFile(file)
-                }}
-                className="cursor-pointer"
-              />
-              <span className="text-xs text-muted-foreground">
-                {agreementLabel ? `קובץ מקושר: ${agreementLabel}` : 'לא נבחר קובץ'}
-              </span>
-            </div>
           </Field>
 
           <div className="flex justify-between gap-3 pt-2">
@@ -305,7 +199,7 @@ export function LeadFormModal({
         </form>
       </div>
     </div>
-  )
+  );
 }
 
 function Field({
@@ -313,9 +207,9 @@ function Field({
   required,
   children,
 }: {
-  label: string
-  required?: boolean
-  children: React.ReactNode
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1">
@@ -325,6 +219,5 @@ function Field({
       </Label>
       {children}
     </div>
-  )
+  );
 }
-

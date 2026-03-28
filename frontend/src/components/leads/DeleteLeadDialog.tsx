@@ -24,7 +24,7 @@ export function DeleteLeadDialog({
         </div>
         <div className="space-y-2 px-4 py-4 text-sm">
           <p>האם למחוק את הליד הבא?</p>
-          <p className="font-medium">{lead.contactPerson}</p>
+          <p className="font-medium">{lead.name}</p>
           <p className="text-xs text-muted-foreground">
             פעולה זו תשפיע רק על הנתונים המקומיים במערכת (ללא שרת).
           </p>

@@ -16,6 +16,7 @@ import {
   getUpcomingRenewals,
   readStoredArray,
 } from "@/lib/dashboard";
+import { readStoredLeads } from "@/lib/leads";
 
 type DashboardData = {
   leads: Lead[];
@@ -26,7 +27,7 @@ type DashboardData = {
 
 function readDashboardData(): DashboardData {
   return {
-    leads: readStoredArray<Lead>(LEADS_STORAGE_KEY),
+    leads: readStoredLeads(),
     clients: readStoredArray<Client>(CLIENTS_STORAGE_KEY),
     projects: readStoredArray<Project>(PROJECTS_STORAGE_KEY),
     tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
@@ -115,12 +116,12 @@ export function Dashboard() {
 
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm font-semibold">לידים חדשים</div>
+          <div className="text-sm font-semibold">לידים פתוחים</div>
           <div className="mt-2 text-2xl font-bold text-foreground">
             {summary.newLeads}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            לידים עם סטטוס חדש שממתינים לטיפול.
+            לידים שטרם הומרו ללקוחות.
           </p>
         </div>
 

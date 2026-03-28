@@ -5,71 +5,9 @@ import { LeadsTable } from "@/components/leads/LeadsTable";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { ConvertLeadDialog } from "@/components/leads/ConvertLeadDialog";
+import { readStoredLeads, writeStoredLeads } from "@/lib/leads";
 
-const LEADS_STORAGE_KEY = "matara_leads";
 const CLIENTS_STORAGE_KEY = "matara_clients";
-
-function migrateLeadStatus(status: unknown): Lead["status"] {
-  switch (status) {
-    case "New":
-    case "חדש":
-      return "חדש";
-    case "Follow Up":
-    case "במעקב":
-      return "במעקב";
-    case "Proposal Sent":
-    case "הצעת מחיר נשלחה":
-      return "הצעת מחיר נשלחה";
-    case "Closed":
-    case "נסגר":
-      return "נסגר";
-    case "Not Relevant":
-    case "לא רלוונטי":
-      return "לא רלוונטי";
-    case "הפך ללקוח":
-      return "הפך ללקוח";
-    default:
-      return "חדש";
-  }
-}
-
-function loadInitialLeads(): Lead[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(LEADS_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return (parsed as any[]).map((l) => ({
-      id: String(l.id ?? Date.now()),
-      convertedClientId:
-        typeof l.convertedClientId === "string"
-          ? l.convertedClientId
-          : undefined,
-      createdAt:
-        typeof l.createdAt === "string" ? l.createdAt : undefined,
-      contactPerson: String(l.contactPerson ?? ""),
-      phone: String(l.phone ?? ""),
-      email: String(l.email ?? ""),
-      requestedService:
-        typeof l.requestedService === "string" ? l.requestedService : undefined,
-      leadSource: String(l.leadSource ?? ""),
-      notes: typeof l.notes === "string" ? l.notes : undefined,
-      agreementFileId:
-        typeof l.agreementFileId === "string" ? l.agreementFileId : undefined,
-      agreementFileName:
-        typeof l.agreementFileName === "string" ? l.agreementFileName : undefined,
-      agreementFileType:
-        typeof l.agreementFileType === "string" ? l.agreementFileType : undefined,
-      status:
-        typeof l.convertedClientId === "string" && l.convertedClientId
-          ? "הפך ללקוח"
-          : migrateLeadStatus(l.status),
-    })) as Lead[];
-  } catch {
-    return [];
-  }
-}
 
 function loadStoredClients(): Client[] {
   if (typeof window === "undefined") return [];
@@ -78,7 +16,6 @@ function loadStoredClients(): Client[] {
   try {
     const parsed = JSON.parse(raw) as Client[];
     if (!Array.isArray(parsed)) return [];
-    // Backward-compatible migration for older stored clients.
     return parsed.map((c) => ({
       ...c,
       clientType: c.clientType ?? "Website Client",
@@ -86,16 +23,19 @@ function loadStoredClients(): Client[] {
       renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
       renewalDate: c.renewalDate ?? "",
       agreementFileId:
-        typeof (c as any).agreementFileId === "string"
-          ? (c as any).agreementFileId
+        typeof (c as { agreementFileId?: string }).agreementFileId ===
+        "string"
+          ? (c as { agreementFileId?: string }).agreementFileId
           : undefined,
       agreementFileName:
-        typeof (c as any).agreementFileName === "string"
-          ? (c as any).agreementFileName
+        typeof (c as { agreementFileName?: string }).agreementFileName ===
+        "string"
+          ? (c as { agreementFileName?: string }).agreementFileName
           : undefined,
       agreementFileType:
-        typeof (c as any).agreementFileType === "string"
-          ? (c as any).agreementFileType
+        typeof (c as { agreementFileType?: string }).agreementFileType ===
+        "string"
+          ? (c as { agreementFileType?: string }).agreementFileType
           : undefined,
     }));
   } catch {
@@ -104,7 +44,7 @@ function loadStoredClients(): Client[] {
 }
 
 export function Leads() {
-  const [leads, setLeads] = useState<Lead[]>(() => loadInitialLeads());
+  const [leads, setLeads] = useState<Lead[]>(() => readStoredLeads());
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeLead, setActiveLead] = useState<Lead | undefined>();
@@ -113,7 +53,7 @@ export function Leads() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(LEADS_STORAGE_KEY, JSON.stringify(leads));
+    writeStoredLeads(leads);
   }, [leads]);
 
   function handleAdd() {
@@ -131,7 +71,7 @@ export function Leads() {
   function handleFormSubmit(data: Omit<Lead, "id">) {
     setLeads((prev) => {
       if (formMode === "edit" && activeLead) {
-        if (activeLead.convertedClientId || activeLead.status === "הפך ללקוח") {
+        if (activeLead.convertedClientId) {
           return prev.map((l) =>
             l.id === activeLead.id
               ? {
@@ -139,7 +79,6 @@ export function Leads() {
                   id: activeLead.id,
                   createdAt: activeLead.createdAt,
                   convertedClientId: activeLead.convertedClientId,
-                  status: "הפך ללקוח",
                 }
               : l,
           );
@@ -156,7 +95,6 @@ export function Leads() {
         {
           ...data,
           id: newId,
-          status: "חדש",
           createdAt: new Date().toISOString(),
         },
       ];
@@ -176,7 +114,7 @@ export function Leads() {
   }
 
   function handleConvertRequest(lead: Lead) {
-    if (lead.status === "הפך ללקוח" || lead.convertedClientId) return;
+    if (lead.convertedClientId) return;
     setActiveLead(lead);
     setConvertOpen(true);
   }
@@ -195,21 +133,13 @@ export function Leads() {
       setLeads((prev) =>
         prev.map((l) =>
           l.id === activeLead.id
-            ? { ...l, status: "הפך ללקוח", convertedClientId: newClient.id }
+            ? { ...l, convertedClientId: newClient.id }
             : l,
         ),
       );
     }
 
     setConvertOpen(false);
-  }
-
-  function handleStatusChange(lead: Lead, status: Lead["status"]) {
-    if (lead.convertedClientId || lead.status === "הפך ללקוח") return;
-    if (status === "הפך ללקוח" && !lead.convertedClientId) return;
-    setLeads((prev) =>
-      prev.map((l) => (l.id === lead.id ? { ...l, status } : l)),
-    );
   }
 
   return (
@@ -220,7 +150,6 @@ export function Leads() {
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onConvert={handleConvertRequest}
-        onStatusChange={handleStatusChange}
       />
 
       <LeadFormModal

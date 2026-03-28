@@ -3,7 +3,7 @@ import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
 
-export const LEADS_STORAGE_KEY = "matara_leads";
+export { LEADS_STORAGE_KEY } from "@/lib/leads";
 export const CLIENTS_STORAGE_KEY = "matara_clients";
 export const PROJECTS_STORAGE_KEY = "matara_projects";
 export const TASKS_STORAGE_KEY = "matara_tasks";
@@ -50,8 +50,9 @@ export function getTotalRemainingAmount(projects: Project[]): number {
   }, 0);
 }
 
+/** Leads not yet converted to a client (no `convertedClientId`). */
 export function getNewLeadsCount(leads: Lead[]): number {
-  return leads.filter((lead) => lead.status === "חדש").length;
+  return leads.filter((lead) => !lead.convertedClientId).length;
 }
 
 export function getTodayTasks(tasks: Task[]): Task[] {
