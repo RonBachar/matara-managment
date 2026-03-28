@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBlocker } from "react-router-dom";
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
 import { ProjectBriefTable } from "@/components/project-briefs/ProjectBriefTable";
 import { ProjectBriefForm } from "@/components/project-briefs/ProjectBriefForm";
 import { DeleteProjectBriefDialog } from "@/components/project-briefs/DeleteProjectBriefDialog";
+import { Button } from "@/components/ui/button";
+import { PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
 
 const BRIEFS_STORAGE_KEY = "matara_project_briefs";
 
@@ -102,11 +105,45 @@ export function ProjectBriefs() {
   const [briefToDelete, setBriefToDelete] = useState<
     ProjectBrief | undefined
   >();
+  const [dirty, setDirty] = useState(false);
+  const [internalLeaveOpen, setInternalLeaveOpen] = useState(false);
+
+  const inForm = mode !== null;
+  const blocker = useBlocker(inForm && dirty);
+
+  useEffect(() => {
+    if (!mode) setDirty(false);
+  }, [mode]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(BRIEFS_STORAGE_KEY, JSON.stringify(briefs));
   }, [briefs]);
+
+  useEffect(() => {
+    if (!inForm || !dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [inForm, dirty]);
+
+  useEffect(() => {
+    const onShowList = () => {
+      if (!mode) return;
+      if (dirty) {
+        setInternalLeaveOpen(true);
+      } else {
+        setMode(null);
+        setActiveBrief(undefined);
+      }
+    };
+    window.addEventListener(PROJECT_BRIEFS_SHOW_LIST_EVENT, onShowList);
+    return () =>
+      window.removeEventListener(PROJECT_BRIEFS_SHOW_LIST_EVENT, onShowList);
+  }, [mode, dirty]);
 
   const briefsSorted = useMemo(
     () =>
@@ -116,6 +153,12 @@ export function ProjectBriefs() {
       ),
     [briefs],
   );
+
+  function clearFormView() {
+    setMode(null);
+    setActiveBrief(undefined);
+    setDirty(false);
+  }
 
   function handleCreate() {
     setMode("create");
@@ -156,8 +199,7 @@ export function ProjectBriefs() {
             : brief,
         ),
       );
-      setMode(null);
-      setActiveBrief(undefined);
+      clearFormView();
       return;
     }
 
@@ -168,32 +210,55 @@ export function ProjectBriefs() {
       ...input,
     };
     setBriefs((prev) => [...prev, newBrief]);
-    setMode(null);
-    setActiveBrief(undefined);
+    clearFormView();
   }
+
+  function requestLeaveForm() {
+    if (dirty) {
+      setInternalLeaveOpen(true);
+    } else {
+      clearFormView();
+    }
+  }
+
+  function confirmLeave() {
+    if (blocker.state === "blocked") {
+      blocker.proceed();
+    } else {
+      clearFormView();
+    }
+    setInternalLeaveOpen(false);
+  }
+
+  function dismissLeave() {
+    if (blocker.state === "blocked") {
+      blocker.reset();
+    }
+    setInternalLeaveOpen(false);
+  }
+
+  const showLeaveModal = blocker.state === "blocked" || internalLeaveOpen;
 
   return (
     <section className="space-y-4">
-      <ProjectBriefTable
-        briefs={briefsSorted}
-        onCreate={handleCreate}
-        onEdit={handleEdit}
-        onDelete={handleDeleteRequest}
-      />
-
-      <div className="mx-auto w-full max-w-4xl space-y-4">
-        {mode && (
+      {!inForm ? (
+        <ProjectBriefTable
+          briefs={briefsSorted}
+          onCreate={handleCreate}
+          onEdit={handleEdit}
+          onDelete={handleDeleteRequest}
+        />
+      ) : (
+        <div className="mx-auto w-full max-w-4xl space-y-4">
           <ProjectBriefForm
             mode={mode}
             initialBrief={mode === "edit" ? activeBrief : undefined}
-            onCancel={() => {
-              setMode(null);
-              setActiveBrief(undefined);
-            }}
+            onCancel={requestLeaveForm}
             onSubmit={handleFormSubmit}
+            onDirtyChange={setDirty}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       <DeleteProjectBriefDialog
         open={deleteOpen}
@@ -201,6 +266,30 @@ export function ProjectBriefs() {
         onCancel={() => setDeleteOpen(false)}
         onConfirm={handleDeleteConfirm}
       />
+
+      {showLeaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-background p-5 shadow-lg">
+            <p className="text-base leading-relaxed text-foreground">
+              יש שינויים שלא נשמרו. האם לצאת בלי לשמור?
+            </p>
+            <div className="mt-5 flex justify-between gap-3">
+              <Button type="button" variant="ghost" size="sm" onClick={dismissLeave}>
+                המשך לערוך
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="px-4"
+                onClick={confirmLeave}
+              >
+                צא בלי לשמור
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

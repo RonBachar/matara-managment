@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -33,6 +34,7 @@ type ProjectBriefFormProps = {
   initialBrief?: ProjectBrief;
   onCancel: () => void;
   onSubmit: (input: ProjectBriefInput) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 function briefToInput(brief: ProjectBrief): ProjectBriefInput {
@@ -83,14 +85,32 @@ export function ProjectBriefForm({
   initialBrief,
   onCancel,
   onSubmit,
+  onDirtyChange,
 }: ProjectBriefFormProps) {
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
   );
 
+  const baselineInput = useMemo(
+    () => (initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT),
+    [initialBrief],
+  );
+
+  const skipNextDirtySync = useRef(false);
+
   useEffect(() => {
     setInput(initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT);
   }, [initialBrief]);
+
+  useEffect(() => {
+    if (!onDirtyChange) return;
+    if (skipNextDirtySync.current) {
+      skipNextDirtySync.current = false;
+      return;
+    }
+    const isDirty = JSON.stringify(input) !== JSON.stringify(baselineInput);
+    onDirtyChange(isDirty);
+  }, [input, baselineInput, onDirtyChange]);
 
   const summaryBrief = useMemo<ProjectBrief>(
     () => ({
@@ -127,6 +147,8 @@ export function ProjectBriefForm({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    skipNextDirtySync.current = true;
+    onDirtyChange?.(false);
     onSubmit(input);
   }
 

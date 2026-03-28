@@ -1,3 +1,6 @@
+/** Fired when the sidebar "אפיון פרויקטים" item is clicked (same route). */
+export const PROJECT_BRIEFS_SHOW_LIST_EVENT = 'matara:project-briefs:show-list'
+
 export type NavItem = {
   path: string
   label: string

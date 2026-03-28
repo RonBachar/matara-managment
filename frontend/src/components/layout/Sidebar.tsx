@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutGrid,
   BriefcaseBusiness,
@@ -7,7 +7,7 @@ import {
   UserPlus,
   ClipboardList,
 } from "lucide-react";
-import { navItems } from "@/lib/nav";
+import { navItems, PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const pathToIcon: Record<
@@ -25,6 +25,8 @@ const pathToIcon: Record<
 const SIDEBAR_WIDTH_CLASS = "w-64";
 
 export function Sidebar() {
+  const location = useLocation();
+
   return (
     <aside
       className={cn(
@@ -49,6 +51,14 @@ export function Sidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onClick={() => {
+                  if (
+                    item.path === "/project-briefs" &&
+                    location.pathname === "/project-briefs"
+                  ) {
+                    window.dispatchEvent(new Event(PROJECT_BRIEFS_SHOW_LIST_EVENT));
+                  }
+                }}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors",
