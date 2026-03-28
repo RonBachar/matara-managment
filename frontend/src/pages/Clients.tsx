@@ -5,8 +5,12 @@ import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
 import { BulkDeleteClientsDialog } from "@/components/clients/BulkDeleteClientsDialog";
+import {
+  CLIENTS_STORAGE_KEY,
+  normalizeClientFromStorage,
+} from "@/lib/clientStorage";
 
-const STORAGE_KEY = "matara_clients";
+const STORAGE_KEY = CLIENTS_STORAGE_KEY;
 const STORAGE_CLEAN_FLAG = "matara_clients_clean_v1";
 const PROJECTS_STORAGE_KEY = "matara_projects";
 
@@ -33,20 +37,11 @@ function loadInitialClients(): Client[] {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
-    const parsed = JSON.parse(raw) as Client[];
+    const parsed = JSON.parse(raw) as unknown[];
     if (!Array.isArray(parsed)) return [];
-    // Backward-compatible migration for older stored clients.
-    return parsed.map((c) => ({
-      ...c,
-      createdAt:
-        typeof (c as any).createdAt === "string"
-          ? (c as any).createdAt
-          : undefined,
-      clientType: c.clientType ?? "Website Client",
-      packageType: c.packageType ?? "Hosting + Elementor Pro",
-      renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
-      renewalDate: c.renewalDate ?? "",
-    }));
+    return parsed
+      .map((c) => normalizeClientFromStorage(c))
+      .filter((x): x is Client => x != null);
   } catch {
     return [];
   }

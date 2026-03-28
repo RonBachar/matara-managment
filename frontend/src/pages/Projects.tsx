@@ -5,21 +5,9 @@ import { ProjectsTable } from '@/components/projects/ProjectsTable'
 import { ProjectFormModal } from '@/components/projects/ProjectFormModal'
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog'
 import { ClientFormModal } from '@/components/clients/ClientFormModal'
+import { CLIENTS_STORAGE_KEY, readStoredClients } from '@/lib/clientStorage'
 
 const PROJECTS_STORAGE_KEY = 'matara_projects'
-const CLIENTS_STORAGE_KEY = 'matara_clients'
-
-function loadStoredClients(): Client[] {
-  if (typeof window === 'undefined') return []
-  const raw = window.localStorage.getItem(CLIENTS_STORAGE_KEY)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw) as Client[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
 
 function loadInitialProjects(): Project[] {
   if (typeof window === 'undefined') return []
@@ -78,8 +66,8 @@ export function Projects() {
   const [addClientModalOpen, setAddClientModalOpen] = useState(false)
 
   useEffect(() => {
-    setClients(loadStoredClients())
-    const onStorage = () => setClients(loadStoredClients())
+    setClients(readStoredClients())
+    const onStorage = () => setClients(readStoredClients())
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])

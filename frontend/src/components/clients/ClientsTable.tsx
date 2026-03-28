@@ -5,6 +5,7 @@ import type { Client } from "@/types/client";
 import { getPackageTypeLabel } from "@/types/client";
 import { Button } from "@/components/ui/button";
 import { getClientTypeLabel } from "@/lib/client-type";
+import { formatClientDisplayLabel } from "@/lib/clientStorage";
 
 type ClientsTableProps = {
   clients: Client[];
@@ -111,7 +112,7 @@ export function ClientsTable({
               </th>
               <th className="px-2.5 py-1.5 font-medium">שם העסק</th>
               <th className="px-2.5 py-1.5 font-medium">סוג שירות</th>
-              <th className="px-2.5 py-1.5 font-medium">איש קשר</th>
+              <th className="px-2.5 py-1.5 font-medium">שם הלקוח</th>
               <th className="px-2.5 py-1.5 font-medium">טלפון</th>
               <th className="px-2.5 py-1.5 font-medium">אימייל</th>
               <th className="px-2.5 py-1.5 font-medium">אתר</th>
@@ -132,7 +133,7 @@ export function ClientsTable({
                     type="checkbox"
                     checked={selectedSet.has(client.id)}
                     onChange={() => toggleOne(client.id)}
-                    aria-label={`בחר ${client.businessName}`}
+                    aria-label={`בחר ${formatClientDisplayLabel(client)}`}
                     className="h-4 w-4 accent-slate-900"
                   />
                 </td>
@@ -143,7 +144,7 @@ export function ClientsTable({
                   {getClientTypeLabel(client.clientType)}
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">
-                  {client.contactPerson}
+                  {client.clientName}
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">{client.phone}</td>
                 <td className="px-2.5 py-1.5 align-middle">{client.email}</td>

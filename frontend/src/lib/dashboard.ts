@@ -4,7 +4,7 @@ import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
 
 export { LEADS_STORAGE_KEY } from "@/lib/leads";
-export const CLIENTS_STORAGE_KEY = "matara_clients";
+export { CLIENTS_STORAGE_KEY } from "@/lib/clientStorage";
 export const PROJECTS_STORAGE_KEY = "matara_projects";
 export const TASKS_STORAGE_KEY = "matara_tasks";
 

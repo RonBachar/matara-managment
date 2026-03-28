@@ -57,7 +57,7 @@ export function ClientFormModal({
       : {
           clientType: "",
           businessName: "",
-          contactPerson: "",
+          clientName: "",
           phone: "",
           email: "",
           website: "",
@@ -89,7 +89,7 @@ export function ClientFormModal({
       setForm({
         clientType: "",
         businessName: "",
-        contactPerson: "",
+        clientName: "",
         phone: "",
         email: "",
         website: "",
@@ -165,7 +165,7 @@ export function ClientFormModal({
       const base: ClientInput = {
         clientType: chosenType,
         businessName: form.businessName.trim(),
-        contactPerson: form.contactPerson.trim(),
+        clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         website: form.website?.trim() || undefined,
@@ -255,10 +255,10 @@ export function ClientFormModal({
                 onChange={(e) => handleChange("businessName", e.target.value)}
               />
             </Field>
-            <Field label="איש קשר" required>
+            <Field label="שם הלקוח" required>
               <Input
-                value={form.contactPerson}
-                onChange={(e) => handleChange("contactPerson", e.target.value)}
+                value={form.clientName}
+                onChange={(e) => handleChange("clientName", e.target.value)}
                 required
               />
             </Field>

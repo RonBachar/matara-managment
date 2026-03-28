@@ -1,5 +1,6 @@
 import type { Client } from '@/types/client'
 import { Button } from '@/components/ui/button'
+import { formatClientDisplayLabel } from '@/lib/clientStorage'
 
 type DeleteClientDialogProps = {
   open: boolean
@@ -19,6 +20,7 @@ export function DeleteClientDialog({
   if (!open || !client) return null
 
   const isBlocked = Boolean(blockedMessage)
+  const displayName = formatClientDisplayLabel(client)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -31,13 +33,13 @@ export function DeleteClientDialog({
         <div className="space-y-2 px-4 py-4 text-sm">
           {isBlocked ? (
             <>
-              <p className="font-medium">{client.businessName}</p>
+              <p className="font-medium">{displayName}</p>
               <p className="text-sm text-muted-foreground">{blockedMessage}</p>
             </>
           ) : (
             <>
               <p>האם למחוק את הלקוח הבא?</p>
-              <p className="font-medium">{client.businessName}</p>
+              <p className="font-medium">{displayName}</p>
               <p className="text-xs text-muted-foreground">
                 פעולה זו תשפיע רק על הנתונים המקומיים במערכת (ללא שרת).
               </p>

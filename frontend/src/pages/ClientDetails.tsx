@@ -5,42 +5,17 @@ import { Button } from "@/components/ui/button";
 import { getClientTypeLabel } from "@/lib/client-type";
 import { getPackageTypeLabel } from "@/types/client";
 import { getAgreementFile, getContractFile } from "@/lib/agreementFiles";
-
-const STORAGE_KEY = "matara_clients";
+import { readStoredClients } from "@/lib/clientStorage";
 
 type LocationState = {
   client?: Client;
 };
 
-function getStoredClients(): Client[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as Client[];
-    if (!Array.isArray(parsed)) return [];
-    // Backward-compatible migration for older stored clients.
-    return parsed.map((c) => ({
-      ...c,
-      createdAt:
-        typeof (c as any).createdAt === "string"
-          ? (c as any).createdAt
-          : undefined,
-      clientType: c.clientType ?? "Website Client",
-      packageType: c.packageType ?? "Hosting + Elementor Pro",
-      renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
-      renewalDate: c.renewalDate ?? "",
-    }));
-  } catch {
-    return [];
-  }
-}
-
 export function ClientDetails() {
   const params = useParams<{ id: string }>();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const storedClients = getStoredClients();
+  const storedClients = readStoredClients();
 
   const client =
     state?.client ?? storedClients.find((c) => c.id === params.id) ?? null;
@@ -141,7 +116,9 @@ export function ClientDetails() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">{client.businessName}</h2>
+          <h2 className="text-lg font-semibold">
+            {client.businessName || client.clientName}
+          </h2>
           <p className="text-sm text-muted-foreground">
             פרטי לקוח – צפייה בלבד.
           </p>
@@ -155,10 +132,7 @@ export function ClientDetails() {
 
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
         <DetailsField label="שם העסק" value={client.businessName} />
-        <DetailsField
-          label="שם הלקוח / איש הקשר"
-          value={client.contactPerson}
-        />
+        <DetailsField label="שם הלקוח" value={client.clientName} />
         <DetailsField label="מספר טלפון" value={client.phone} />
         <DetailsField label="אימייל" value={client.email} />
         <DetailsField

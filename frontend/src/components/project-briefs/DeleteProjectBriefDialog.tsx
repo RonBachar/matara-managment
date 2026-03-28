@@ -1,4 +1,5 @@
 import type { ProjectBrief } from "@/types/projectBrief";
+import { getBriefDisplayTitle } from "@/types/projectBrief";
 import { Button } from "@/components/ui/button";
 
 type DeleteProjectBriefDialogProps = {
@@ -20,12 +21,12 @@ export function DeleteProjectBriefDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="w-full max-w-sm rounded-xl border border-border bg-background shadow-lg">
         <div className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">מחיקת בריף</h2>
+          <h2 className="text-base font-semibold text-foreground">מחיקת בריף</h2>
         </div>
-        <div className="space-y-2 px-4 py-4 text-sm">
+        <div className="space-y-2 px-4 py-4 text-base leading-relaxed">
           <p>האם למחוק את הבריף הבא?</p>
-          <p className="font-medium">{brief.projectNameSnapshot}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-medium">{getBriefDisplayTitle(brief)}</p>
+          <p className="text-sm text-muted-foreground">
             הפעולה תמחק את הבריף מהמערכת המקומית בלבד.
           </p>
         </div>

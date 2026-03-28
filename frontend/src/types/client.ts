@@ -30,8 +30,10 @@ export type Client = {
   /** Service type (סוג שירות). "Website Client" = בניית אתרים, "Service Client" = עבודת פרילנסר. */
   clientType: ClientType;
   createdAt?: string;
+  /** שם העסק */
   businessName: string;
-  contactPerson: string;
+  /** שם הלקוח (איש קשר / שם פרטי וכו׳) */
+  clientName: string;
   phone: string;
   email: string;
   website?: string;

@@ -1,5 +1,6 @@
 import { Pencil, Trash2 } from "lucide-react";
 import type { ProjectBrief } from "@/types/projectBrief";
+import { getBriefDisplayTitle } from "@/types/projectBrief";
 import { Button } from "@/components/ui/button";
 
 type ProjectBriefTableProps = {
@@ -7,8 +8,6 @@ type ProjectBriefTableProps = {
   onCreate: () => void;
   onEdit: (brief: ProjectBrief) => void;
   onDelete: (brief: ProjectBrief) => void;
-  canCreate: boolean;
-  createDisabledMessage?: string;
 };
 
 export function ProjectBriefTable({
@@ -16,41 +15,34 @@ export function ProjectBriefTable({
   onCreate,
   onEdit,
   onDelete,
-  canCreate,
-  createDisabledMessage,
 }: ProjectBriefTableProps) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-5 text-base">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">אפיון פרויקטים</h2>
-          <p className="text-sm text-muted-foreground">
-            בריף אחד לכל פרויקט קיים במערכת.
+          <h2 className="text-xl font-semibold tracking-tight">אפיון פרויקטים</h2>
+          <p className="mt-1 text-base leading-relaxed text-muted-foreground">
+            מסמכי אפיון עצמאיים — ניתן לפתוח בריף חדש בכל עת.
           </p>
-          {!canCreate && createDisabledMessage && (
-            <p className="mt-1 text-xs text-muted-foreground">{createDisabledMessage}</p>
-          )}
         </div>
         <Button
-          size="sm"
           onClick={onCreate}
-          disabled={!canCreate}
-          className="bg-[#10B981] text-white hover:bg-[#059669] disabled:opacity-50"
+          className="bg-[#10B981] px-4 text-sm text-white hover:bg-[#059669]"
         >
           בריף חדש
         </Button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-muted/60">
+        <table className="w-full border-collapse text-base">
+          <thead className="bg-muted/60 text-sm font-semibold">
             <tr className="text-right">
-              <th className="px-3 py-2 font-medium">שם הפרויקט</th>
-              <th className="px-3 py-2 font-medium">שם הלקוח</th>
-              <th className="px-3 py-2 font-medium">סטטוס</th>
-              <th className="px-3 py-2 font-medium">תאריך יצירה</th>
-              <th className="px-3 py-2 font-medium">תאריך עדכון</th>
-              <th className="px-3 py-2 text-center font-medium">פעולות</th>
+              <th className="px-3 py-2.5 font-medium">שם האפיון</th>
+              <th className="px-3 py-2.5 font-medium">שם העסק</th>
+              <th className="px-3 py-2.5 font-medium">שם הלקוח</th>
+              <th className="px-3 py-2.5 font-medium">תאריך יצירה</th>
+              <th className="px-3 py-2.5 font-medium">תאריך עדכון</th>
+              <th className="px-3 py-2.5 text-center font-medium">פעולות</th>
             </tr>
           </thead>
           <tbody>
@@ -58,9 +50,9 @@ export function ProjectBriefTable({
               <tr>
                 <td
                   colSpan={6}
-                  className="px-3 py-6 text-center text-muted-foreground"
+                  className="px-3 py-8 text-center text-base text-muted-foreground"
                 >
-                  אין בריפים עדיין. ניתן ליצור בריף חדש מתוך פרויקט קיים.
+                  אין בריפים עדיין. לחץ על &quot;בריף חדש&quot; כדי להתחיל.
                 </td>
               </tr>
             ) : (
@@ -69,20 +61,22 @@ export function ProjectBriefTable({
                   key={brief.id}
                   className="border-t border-border/60 even:bg-muted/30"
                 >
-                  <td className="px-3 py-2 align-middle">{brief.projectNameSnapshot}</td>
-                  <td className="px-3 py-2 align-middle">{brief.clientNameSnapshot}</td>
-                  <td className="px-3 py-2 align-middle">
-                    <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs">
-                      {brief.status}
-                    </span>
+                  <td className="px-3 py-2.5 align-middle leading-snug">
+                    {getBriefDisplayTitle(brief)}
                   </td>
-                  <td className="px-3 py-2 align-middle text-xs text-muted-foreground">
+                  <td className="px-3 py-2.5 align-middle leading-snug">
+                    {brief.businessNameSnapshot?.trim() || "—"}
+                  </td>
+                  <td className="px-3 py-2.5 align-middle leading-snug">
+                    {brief.clientNameSnapshot?.trim() || "—"}
+                  </td>
+                  <td className="px-3 py-2.5 align-middle text-sm text-muted-foreground">
                     {new Date(brief.createdAt).toLocaleDateString("he-IL")}
                   </td>
-                  <td className="px-3 py-2 align-middle text-xs text-muted-foreground">
+                  <td className="px-3 py-2.5 align-middle text-sm text-muted-foreground">
                     {new Date(brief.updatedAt).toLocaleDateString("he-IL")}
                   </td>
-                  <td className="px-3 py-2 align-middle text-center">
+                  <td className="px-3 py-2.5 align-middle text-center">
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <Button
                         type="button"
@@ -113,4 +107,3 @@ export function ProjectBriefTable({
     </section>
   );
 }
-

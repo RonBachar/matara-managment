@@ -5,6 +5,7 @@ import {
   getBillableTotal,
   getRemainingAmount,
 } from "@/lib/project-calculations";
+import { formatClientDisplayLabel } from "@/lib/clientStorage";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +176,7 @@ export function ProjectFormModal({
     event.preventDefault();
     const paid = Number(form.paidAmount) || 0;
     const client = clients.find((c) => c.id === form.clientId);
-    const clientName = client?.businessName ?? "";
+    const clientName = client ? formatClientDisplayLabel(client) : "";
 
     if (form.projectType === "בניית אתר" || form.projectType === "ריטיינר חודשי") {
       const totalAmount = Number(form.totalAmount) || 0;
@@ -226,8 +227,10 @@ export function ProjectFormModal({
     isHourly &&
     (Number(form.hourlyRate) || 0) * (Number(form.workedHours) || 0);
 
-  const selectedClientName =
-    clients.find((c) => c.id === form.clientId)?.businessName ?? "";
+  const selectedClient = clients.find((c) => c.id === form.clientId);
+  const selectedClientName = selectedClient
+    ? formatClientDisplayLabel(selectedClient)
+    : "";
 
   return (
     <>
@@ -285,7 +288,7 @@ export function ProjectFormModal({
                   <SelectContent>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.businessName}
+                        {formatClientDisplayLabel(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>

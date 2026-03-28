@@ -19,8 +19,8 @@ function buildClientFromLead(lead: Lead): Client {
     id: String(Date.now()),
     clientType: "Website Client",
     createdAt: lead.createdAt ?? new Date().toISOString(),
-    businessName: lead.name,
-    contactPerson: lead.name,
+    businessName: "",
+    clientName: lead.clientName,
     phone: lead.phone,
     email: lead.email?.trim() ?? "",
     website: undefined,
@@ -55,7 +55,7 @@ export function ConvertLeadDialog({
         </div>
         <div className="space-y-2 px-4 py-4 text-sm">
           <p>האם אתה בטוח שברצונך להפוך את הליד ללקוח?</p>
-          <p className="font-medium">{lead.name}</p>
+          <p className="font-medium">{lead.clientName}</p>
         </div>
         <div className="flex justify-between gap-3 px-4 pb-4">
           <Button variant="ghost" size="sm" onClick={onClose}>

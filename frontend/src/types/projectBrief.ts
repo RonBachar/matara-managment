@@ -1,7 +1,3 @@
-export type ProjectBriefStatus = "טיוטה" | "הושלם";
-
-export const PROJECT_BRIEF_STATUSES: ProjectBriefStatus[] = ["טיוטה", "הושלם"];
-
 export const TONE_SELECTION_OPTIONS = [
   "מקצועי",
   "חם",
@@ -41,13 +37,23 @@ export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
   "תוצאתית",
 ] as const;
 
+/**
+ * Standalone specification document. Optional `projectId` / `clientId` for legacy or future linking.
+ */
 export type ProjectBrief = {
   id: string;
-  projectId: string;
-  clientId: string;
-  projectNameSnapshot: string;
+  /** Optional — legacy or future link to a project */
+  projectId?: string;
+  /** Optional — legacy or future link to a client */
+  clientId?: string;
+  /** שם האפיון — primary title for the document */
+  briefTitle: string;
+  /** שם העסק */
+  businessNameSnapshot: string;
+  /** שם הלקוח */
   clientNameSnapshot: string;
-  status: ProjectBriefStatus;
+  /** @deprecated Legacy display field; migrated into `briefTitle` when missing */
+  projectNameSnapshot?: string;
   createdAt: string;
   updatedAt: string;
   /** Website/product framing – GPT-ready inputs */
@@ -82,14 +88,13 @@ export type ProjectBrief = {
   designNotes: string;
 };
 
-export type ProjectBriefInput = Omit<
-  ProjectBrief,
-  | "id"
-  | "projectId"
-  | "clientId"
-  | "projectNameSnapshot"
-  | "clientNameSnapshot"
-  | "createdAt"
-  | "updatedAt"
->;
+/** All brief fields except id and timestamps (used for create/edit form state + submit). */
+export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
 
+/** Table / dialogs — prefer `briefTitle`, fall back to legacy `projectNameSnapshot`. */
+export function getBriefDisplayTitle(
+  brief: Pick<ProjectBrief, "briefTitle" | "projectNameSnapshot">,
+): string {
+  const t = brief.briefTitle?.trim() || brief.projectNameSnapshot?.trim();
+  return t || "ללא כותרת";
+}

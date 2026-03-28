@@ -6,42 +6,10 @@ import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { ConvertLeadDialog } from "@/components/leads/ConvertLeadDialog";
 import { readStoredLeads, writeStoredLeads } from "@/lib/leads";
-
-const CLIENTS_STORAGE_KEY = "matara_clients";
-
-function loadStoredClients(): Client[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(CLIENTS_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as Client[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((c) => ({
-      ...c,
-      clientType: c.clientType ?? "Website Client",
-      packageType: c.packageType ?? "Hosting + Elementor Pro",
-      renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
-      renewalDate: c.renewalDate ?? "",
-      agreementFileId:
-        typeof (c as { agreementFileId?: string }).agreementFileId ===
-        "string"
-          ? (c as { agreementFileId?: string }).agreementFileId
-          : undefined,
-      agreementFileName:
-        typeof (c as { agreementFileName?: string }).agreementFileName ===
-        "string"
-          ? (c as { agreementFileName?: string }).agreementFileName
-          : undefined,
-      agreementFileType:
-        typeof (c as { agreementFileType?: string }).agreementFileType ===
-        "string"
-          ? (c as { agreementFileType?: string }).agreementFileType
-          : undefined,
-    }));
-  } catch {
-    return [];
-  }
-}
+import {
+  CLIENTS_STORAGE_KEY,
+  readStoredClients,
+} from "@/lib/clientStorage";
 
 export function Leads() {
   const [leads, setLeads] = useState<Lead[]>(() => readStoredLeads());
@@ -120,7 +88,7 @@ export function Leads() {
   }
 
   function handleConvertToClient(newClient: Client) {
-    const storedClients = loadStoredClients();
+    const storedClients = readStoredClients();
     const nextClients = [...storedClients, newClient];
     if (typeof window !== "undefined") {
       window.localStorage.setItem(

@@ -17,6 +17,7 @@ import {
   readStoredArray,
 } from "@/lib/dashboard";
 import { readStoredLeads } from "@/lib/leads";
+import { readStoredClients } from "@/lib/clientStorage";
 
 type DashboardData = {
   leads: Lead[];
@@ -28,7 +29,7 @@ type DashboardData = {
 function readDashboardData(): DashboardData {
   return {
     leads: readStoredLeads(),
-    clients: readStoredArray<Client>(CLIENTS_STORAGE_KEY),
+    clients: readStoredClients(),
     projects: readStoredArray<Project>(PROJECTS_STORAGE_KEY),
     tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
   };
@@ -162,9 +163,9 @@ export function Dashboard() {
                 className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center md:gap-3"
               >
                 <div className="font-medium text-foreground">
-                  {client.businessName || client.contactPerson}
-                  {client.businessName && client.contactPerson
-                    ? ` / ${client.contactPerson}`
+                  {client.businessName || client.clientName}
+                  {client.businessName && client.clientName
+                    ? ` / ${client.clientName}`
                     : ""}
                 </div>
                 <div className="text-muted-foreground">

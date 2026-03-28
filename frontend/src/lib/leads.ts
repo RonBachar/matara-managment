@@ -13,9 +13,9 @@ export function formatLeadCreatedAt(iso: string | undefined): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-function pickLegacyName(raw: Record<string, unknown>): string {
+function pickLegacyClientName(raw: Record<string, unknown>): string {
   const v =
-    raw.name ?? raw.contactPerson ?? raw.fullName ?? raw.businessName;
+    raw.clientName ?? raw.name ?? raw.contactPerson ?? raw.fullName;
   if (typeof v === "string") return v;
   if (v == null) return "";
   return String(v);
@@ -42,12 +42,12 @@ export function normalizeLead(raw: unknown): Lead | null {
       ? l.convertedClientId.trim()
       : undefined;
 
-  const name = pickLegacyName(l).trim();
+  const clientName = pickLegacyClientName(l).trim();
   const email = normalizeEmail(l.email);
 
   return {
     id,
-    name,
+    clientName,
     phone: String(l.phone ?? ""),
     email,
     leadSource: String(l.leadSource ?? ""),
@@ -67,7 +67,7 @@ export function normalizeLead(raw: unknown): Lead | null {
 export function leadToStorage(lead: Lead): Record<string, unknown> {
   const out: Record<string, unknown> = {
     id: lead.id,
-    name: lead.name,
+    clientName: lead.clientName,
     phone: lead.phone,
     leadSource: lead.leadSource,
   };

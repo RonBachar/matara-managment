@@ -3,7 +3,8 @@
  */
 export type Lead = {
   id: string;
-  name: string;
+  /** שם הלקוח (contact name — may be first name only or full name). */
+  clientName: string;
   phone: string;
   /** Optional — may be empty when unknown. */
   email?: string;

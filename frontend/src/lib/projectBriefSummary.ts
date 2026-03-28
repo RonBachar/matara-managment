@@ -13,6 +13,14 @@ function toSummaryValue(value: string | undefined): string {
 export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] {
   return [
     {
+      title: "פרטי המסמך",
+      items: [
+        { label: "שם האפיון", value: toSummaryValue(brief.briefTitle) },
+        { label: "שם העסק", value: toSummaryValue(brief.businessNameSnapshot) },
+        { label: "שם הלקוח", value: toSummaryValue(brief.clientNameSnapshot) },
+      ],
+    },
+    {
       title: "מסגרת והחלטות",
       items: [
         { label: "סוג האתר", value: toSummaryValue(brief.websiteType) },

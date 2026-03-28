@@ -66,7 +66,7 @@ export function LeadsTable({
                     key={lead.id}
                     className="border-t border-border/60 even:bg-muted/30"
                   >
-                    <td className="px-3 py-2 align-middle">{lead.name}</td>
+                    <td className="px-3 py-2 align-middle">{lead.clientName}</td>
                     <td className="px-3 py-2 align-middle">{lead.phone}</td>
                     <td className="px-3 py-2 align-middle">
                       {lead.email?.trim() ? lead.email : "—"}

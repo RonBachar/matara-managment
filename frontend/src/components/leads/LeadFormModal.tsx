@@ -34,7 +34,7 @@ type LeadFormModalProps = {
 };
 
 type FormState = {
-  name: string;
+  clientName: string;
   phone: string;
   email: string;
   leadSource: string;
@@ -42,7 +42,7 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
-  name: "",
+  clientName: "",
   phone: "",
   email: "",
   leadSource: "",
@@ -64,7 +64,7 @@ export function LeadFormModal({
     if (!open) return;
     if (initialLead) {
       setForm({
-        name: initialLead.name,
+        clientName: initialLead.clientName,
         phone: initialLead.phone,
         email: initialLead.email ?? "",
         leadSource: initialLead.leadSource,
@@ -86,7 +86,7 @@ export function LeadFormModal({
     try {
       const emailTrim = form.email.trim();
       const next: LeadInput = {
-        name: form.name.trim(),
+        clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: emailTrim.length > 0 ? emailTrim : undefined,
         leadSource: form.leadSource.trim(),
@@ -132,10 +132,10 @@ export function LeadFormModal({
           )}
 
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="שם" required>
+            <Field label="שם הלקוח" required>
               <Input
-                value={form.name}
-                onChange={(e) => handleChange("name", e.target.value)}
+                value={form.clientName}
+                onChange={(e) => handleChange("clientName", e.target.value)}
                 required
               />
             </Field>
