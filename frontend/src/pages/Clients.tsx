@@ -4,7 +4,6 @@ import type { Project } from "@/types/project";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
-import { BulkDeleteClientsDialog } from "@/components/clients/BulkDeleteClientsDialog";
 import {
   CLIENTS_STORAGE_KEY,
   normalizeClientFromStorage,
@@ -56,19 +55,12 @@ export function Clients() {
   const [deleteBlockedMessage, setDeleteBlockedMessage] = useState<
     string | undefined
   >();
-  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
   }, [clients]);
 
-  useEffect(() => {
-    setSelectedClientIds((prev) =>
-      prev.filter((id) => clients.some((c) => c.id === id)),
-    );
-  }, [clients]);
   function handleAdd() {
     setFormMode("create");
     setActiveClient(undefined);
@@ -127,43 +119,6 @@ export function Clients() {
     setDeleteOpen(false);
   }
 
-  function handleBulkDeleteRequest() {
-    if (selectedClientIds.length === 0) return;
-    setBulkDeleteOpen(true);
-  }
-
-  const bulkSelectedClients = clients.filter((c) =>
-    selectedClientIds.includes(c.id),
-  );
-  const projects = loadStoredProjects();
-  const blockedClientIdSet = new Set(
-    projects
-      .map((p) => p.clientId)
-      .filter((id) => selectedClientIds.includes(id)),
-  );
-  const bulkBlockedClients = bulkSelectedClients.filter((c) =>
-    blockedClientIdSet.has(c.id),
-  );
-  const bulkDeletableClients = bulkSelectedClients.filter(
-    (c) => !blockedClientIdSet.has(c.id),
-  );
-
-  function handleBulkDeleteConfirm() {
-    if (bulkDeletableClients.length === 0) {
-      setBulkDeleteOpen(false);
-      return;
-    }
-    const deletableIds = new Set(bulkDeletableClients.map((c) => c.id));
-    setClients((prev) => prev.filter((c) => !deletableIds.has(c.id)));
-    setSelectedClientIds((prev) => prev.filter((id) => !deletableIds.has(id)));
-    setBulkDeleteOpen(false);
-  }
-
-  function handleView(client: Client) {
-    // Placeholder for future behavior such as preloading details.
-    void client;
-  }
-
   return (
     <>
       <ClientsTable
@@ -171,10 +126,6 @@ export function Clients() {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
-        onView={handleView}
-        selectedClientIds={selectedClientIds}
-        onSelectedClientIdsChange={setSelectedClientIds}
-        onBulkDelete={handleBulkDeleteRequest}
       />
 
       <ClientFormModal
@@ -194,14 +145,6 @@ export function Clients() {
           setDeleteBlockedMessage(undefined);
         }}
         onConfirm={handleDeleteConfirm}
-      />
-
-      <BulkDeleteClientsDialog
-        open={bulkDeleteOpen}
-        deletableClients={bulkDeletableClients}
-        blockedClients={bulkBlockedClients}
-        onCancel={() => setBulkDeleteOpen(false)}
-        onConfirm={handleBulkDeleteConfirm}
       />
     </>
   );

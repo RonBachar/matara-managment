@@ -329,7 +329,7 @@ export function ProjectBriefForm({
                 rows={3}
                 value={input.requiredPages}
                 onChange={(e) => update("requiredPages", e.target.value)}
-                placeholder="דוגמה:\n- בית\n- שירותים\n- אודות\n- תיק עבודות\n- צור קשר"
+                placeholder="דוגמה: בית · שירותים · אודות · תיק עבודות · צור קשר"
               />
             </Field>
             <Field label="סקשנים שחייבים להופיע (בעמודים השונים)">
@@ -337,7 +337,7 @@ export function ProjectBriefForm({
                 rows={3}
                 value={input.mustHaveSections}
                 onChange={(e) => update("mustHaveSections", e.target.value)}
-                placeholder="דוגמה:\n- הצעת ערך\n- יתרונות\n- תהליך עבודה\n- שאלות נפוצות\n- קריאה לפעולה"
+                placeholder="דוגמה: הצעת ערך · יתרונות · תהליך עבודה · שאלות נפוצות · קריאה לפעולה"
               />
             </Field>
             <Field label="מידע קריטי מעל הקפל (Above the fold)">

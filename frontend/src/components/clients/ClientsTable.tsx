@@ -1,21 +1,15 @@
-import { useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import type { Client } from "@/types/client";
 import { getPackageTypeLabel } from "@/types/client";
 import { Button } from "@/components/ui/button";
 import { getClientTypeLabel } from "@/lib/client-type";
-import { formatClientDisplayLabel } from "@/lib/clientStorage";
 
 type ClientsTableProps = {
   clients: Client[];
   onAdd: () => void;
   onEdit: (client: Client) => void;
   onDelete: (client: Client) => void;
-  onView?: (client: Client) => void;
-  selectedClientIds: string[];
-  onSelectedClientIdsChange: (next: string[]) => void;
-  onBulkDelete: () => void;
 };
 
 export function ClientsTable({
@@ -23,9 +17,6 @@ export function ClientsTable({
   onAdd,
   onEdit,
   onDelete,
-  selectedClientIds,
-  onSelectedClientIdsChange,
-  onBulkDelete,
 }: ClientsTableProps) {
   const sortedByRenewalDate = [...clients].sort((a, b) => {
     const aDate = a.renewalDate ?? "";
@@ -35,36 +26,6 @@ export function ClientsTable({
     if (!bDate) return -1;
     return aDate.localeCompare(bDate);
   });
-
-  const selectedSet = useMemo(
-    () => new Set(selectedClientIds),
-    [selectedClientIds],
-  );
-  const allIds = useMemo(
-    () => sortedByRenewalDate.map((c) => c.id),
-    [sortedByRenewalDate],
-  );
-  const selectedCount = selectedClientIds.length;
-  const allSelected = allIds.length > 0 && selectedCount === allIds.length;
-  const someSelected = selectedCount > 0 && !allSelected;
-
-  const selectAllRef = useRef<HTMLInputElement | null>(null);
-  useEffect(() => {
-    if (!selectAllRef.current) return;
-    selectAllRef.current.indeterminate = someSelected;
-  }, [someSelected]);
-
-  function toggleOne(id: string) {
-    onSelectedClientIdsChange(
-      selectedSet.has(id)
-        ? selectedClientIds.filter((x) => x !== id)
-        : [...selectedClientIds, id],
-    );
-  }
-
-  function toggleAll() {
-    onSelectedClientIdsChange(allSelected ? [] : allIds);
-  }
 
   return (
     <section className="space-y-4">
@@ -76,16 +37,6 @@ export function ClientsTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {selectedCount > 0 && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={onBulkDelete}
-              className="px-3"
-            >
-              מחיקה ({selectedCount})
-            </Button>
-          )}
           <Button
             size="sm"
             onClick={onAdd}
@@ -100,16 +51,6 @@ export function ClientsTable({
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted/60">
             <tr className="text-right">
-              <th className="px-2.5 py-1.5 text-center">
-                <input
-                  ref={selectAllRef}
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  aria-label="בחר הכל"
-                  className="h-4 w-4 accent-slate-900"
-                />
-              </th>
               <th className="px-2.5 py-1.5 font-medium">שם העסק</th>
               <th className="px-2.5 py-1.5 font-medium">סוג שירות</th>
               <th className="px-2.5 py-1.5 font-medium">שם הלקוח</th>
@@ -128,15 +69,6 @@ export function ClientsTable({
                 key={client.id}
                 className="border-t border-border/60 even:bg-muted/30"
               >
-                <td className="px-2.5 py-1.5 align-middle text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedSet.has(client.id)}
-                    onChange={() => toggleOne(client.id)}
-                    aria-label={`בחר ${formatClientDisplayLabel(client)}`}
-                    className="h-4 w-4 accent-slate-900"
-                  />
-                </td>
                 <td className="px-2.5 py-1.5 align-middle">
                   {client.businessName}
                 </td>
