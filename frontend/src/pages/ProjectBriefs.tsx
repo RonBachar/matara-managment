@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
+import { WEBSITE_GOAL_OPTIONS } from "@/types/projectBrief";
 import { ProjectBriefTable } from "@/components/project-briefs/ProjectBriefTable";
 import { ProjectBriefForm } from "@/components/project-briefs/ProjectBriefForm";
 import { DeleteProjectBriefDialog } from "@/components/project-briefs/DeleteProjectBriefDialog";
@@ -20,6 +21,16 @@ function normalizeBrief(raw: Record<string, unknown>): ProjectBrief {
 
   const legacyProjectName = ensureString(raw.projectNameSnapshot);
   const briefTitle = ensureString(raw.briefTitle) || legacyProjectName || "";
+  const legacyProjectGoal = ensureString(
+    (raw as Record<string, unknown>).projectGoal,
+  );
+  let websiteGoal = ensureString((raw as Record<string, unknown>).websiteGoal);
+  if (
+    !websiteGoal &&
+    (WEBSITE_GOAL_OPTIONS as readonly string[]).includes(legacyProjectGoal)
+  ) {
+    websiteGoal = legacyProjectGoal;
+  }
 
   return {
     id: ensureString(raw.id) || String(Date.now()),
@@ -43,6 +54,12 @@ function normalizeBrief(raw: Record<string, unknown>): ProjectBrief {
     updatedAt:
       ensureString(raw.updatedAt) || ensureString(raw.createdAt) || nowIso,
     websiteType: ensureString((raw as Record<string, unknown>).websiteType),
+    websiteGoal,
+    pageCount: ensureString((raw as Record<string, unknown>).pageCount),
+    pageListAiSuggested: (() => {
+      const v = (raw as Record<string, unknown>).pageListAiSuggested;
+      return typeof v === "boolean" ? v : false;
+    })(),
     requiredPages: ensureString((raw as Record<string, unknown>).requiredPages),
     strategicDecisions: ensureString(
       (raw as Record<string, unknown>).strategicDecisions,
@@ -77,6 +94,18 @@ function normalizeBrief(raw: Record<string, unknown>): ProjectBrief {
     unwantedColors: ensureString(raw.unwantedColors),
     designStyleNotes: ensureString(raw.designStyleNotes),
     designNotes: ensureString(raw.designNotes),
+    gpt1Output:
+      typeof (raw as Record<string, unknown>).gpt1Output === "string"
+        ? String((raw as Record<string, unknown>).gpt1Output)
+        : undefined,
+    gpt2Output:
+      typeof (raw as Record<string, unknown>).gpt2Output === "string"
+        ? String((raw as Record<string, unknown>).gpt2Output)
+        : undefined,
+    gpt3Output:
+      typeof (raw as Record<string, unknown>).gpt3Output === "string"
+        ? String((raw as Record<string, unknown>).gpt3Output)
+        : undefined,
   };
 }
 

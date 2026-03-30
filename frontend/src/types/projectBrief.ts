@@ -1,40 +1,38 @@
+/** מטרת האתר — ברירות מחדל לבריף הממוקד */
+export const WEBSITE_GOAL_OPTIONS = [
+  "לידים",
+  "מכירות",
+  "חשיפה",
+  "הרשמה",
+] as const;
+
+/** סוג אתר — ברירות מחדל */
+export const WEBSITE_TYPE_OPTIONS = [
+  "אתר תדמית",
+  "דף נחיתה",
+  "חנות",
+  "מערכת",
+] as const;
+
+export const MAIN_ACTION_SUGGESTIONS = [
+  "השארת פרטים",
+  "רכישה",
+  "שיחה",
+] as const;
+
 export const TONE_SELECTION_OPTIONS = [
   "מקצועי",
-  "חם",
+  "ישיר",
   "נגיש",
   "יוקרתי",
-  "ישיר",
+  "חם",
   "סמכותי",
-  "אנושי",
-  "צעיר",
-  "נקי",
-  "אלגנטי",
-  "בטוח בעצמו",
-  "מרגיע",
-  "אנרגטי",
-  "מדויק",
-  "ענייני",
-  "ידידותי",
-  "יוניסקסי",
-  "יצירתי",
 ] as const;
 
 export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
-  "פשוטה וברורה",
-  "שיווקית",
-  "עניינית",
-  "קצרה ותכליתית",
-  "מפורטת ומסבירה",
+  "קצר ותכליתי",
+  "שיווקי",
   "בגובה העיניים",
-  "רשמית",
-  "קלילה",
-  "אלגנטית",
-  "חכמה",
-  "ממוקדת המרה",
-  "מבוססת אמון",
-  "מבוססת מומחיות",
-  "רגשית",
-  "תוצאתית",
 ] as const;
 
 /**
@@ -58,11 +56,18 @@ export type ProjectBrief = {
   updatedAt: string;
   /** Website/product framing – GPT-ready inputs */
   websiteType: string;
+  /** מטרת האתר (לידים / מכירות / …) — שדה מרכזי בבריף הממוקד */
+  websiteGoal: string;
+  /** מספר עמודים מתוכנן — שדה מובנה */
+  pageCount: string;
+  /** כשמסומן: רשימת עמודים מדויקת לא חובה; ניתן להציע ב-AI */
+  pageListAiSuggested: boolean;
   requiredPages: string;
   strategicDecisions: string;
   lockedFixedInput: string;
   sourceMaterials: string;
   mainService: string;
+  /** טקסט חופשי ישן (מטרת פרויקט מילולית); אופציונלי — תאימות לבריפים קודמים */
   projectGoal: string;
   targetAudience: string;
   audiencePainPoints: string;
@@ -86,6 +91,12 @@ export type ProjectBrief = {
   unwantedColors: string;
   designStyleNotes: string;
   designNotes: string;
+  /** שמור לעתיד: פלט GPT 1 (למשל Sitemap) לאחר שזרימת השמירה תתווסף */
+  gpt1Output?: string;
+  /** שמור לעתיד: פלט GPT 2 */
+  gpt2Output?: string;
+  /** שמור לעתיד: פלט GPT 3 */
+  gpt3Output?: string;
 };
 
 /** All brief fields except id and timestamps (used for create/edit form state + submit). */

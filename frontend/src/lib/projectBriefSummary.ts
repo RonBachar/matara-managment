@@ -10,111 +10,170 @@ function toSummaryValue(value: string | undefined): string {
   return trimmed && trimmed.length > 0 ? trimmed : "—";
 }
 
+function listOrDash(arr: string[] | undefined): string {
+  if (!arr?.length) return "—";
+  return arr.join(" | ");
+}
+
 export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] {
-  return [
+  const sections: SummarySection[] = [
     {
-      title: "פרטי המסמך",
+      title: "פרטי מסמך ופרויקט",
       items: [
-        { label: "שם האפיון", value: toSummaryValue(brief.briefTitle) },
+        { label: "כותרת הבריף", value: toSummaryValue(brief.briefTitle) },
         { label: "שם העסק", value: toSummaryValue(brief.businessNameSnapshot) },
-        { label: "שם הלקוח", value: toSummaryValue(brief.clientNameSnapshot) },
+        { label: "סוג אתר", value: toSummaryValue(brief.websiteType) },
+        { label: "מטרת האתר", value: toSummaryValue(brief.websiteGoal) },
+        { label: "פעולה מרכזית", value: toSummaryValue(brief.mainUserAction) },
       ],
     },
     {
-      title: "מסגרת והחלטות",
+      title: "קהל יעד",
       items: [
-        { label: "סוג האתר", value: toSummaryValue(brief.websiteType) },
+        { label: "מי קהל היעד", value: toSummaryValue(brief.targetAudience) },
+        {
+          label: "כאב מרכזי",
+          value: toSummaryValue(brief.audiencePainPoints),
+        },
+        {
+          label: "למה יבחרו בלקוח",
+          value: toSummaryValue(brief.differentiators),
+        },
+      ],
+    },
+    {
+      title: "שירותים והצעה",
+      items: [
+        {
+          label: "מה העסק מציע",
+          value: toSummaryValue(brief.businessDescription),
+        },
         { label: "שירות מרכזי", value: toSummaryValue(brief.mainService) },
-        { label: "מטרת הפרויקט", value: toSummaryValue(brief.projectGoal) },
+      ],
+    },
+    {
+      title: "מבנה אתר",
+      items: [
+        {
+          label: "מספר עמודים",
+          value: brief.pageListAiSuggested
+            ? "— (תן ל-AI להציע)"
+            : toSummaryValue(brief.pageCount),
+        },
+        {
+          label: "רשימת עמודים",
+          value: brief.pageListAiSuggested
+            ? "תן ל-AI להציע"
+            : toSummaryValue(brief.requiredPages),
+        },
+      ],
+    },
+    {
+      title: "טון וסגנון",
+      items: [
+        { label: "טון", value: listOrDash(brief.toneSelections) },
+        {
+          label: "סגנון שפה",
+          value: listOrDash(brief.languageStyleSelections),
+        },
+      ],
+    },
+    {
+      title: "הערות חשובות",
+      items: [
+        {
+          label: "משהו חשוב לדעת",
+          value: toSummaryValue(brief.contentNotes),
+        },
+      ],
+    },
+  ];
+
+  const hasLegacy =
+    brief.clientNameSnapshot?.trim() ||
+    brief.projectGoal?.trim() ||
+    brief.strategicDecisions?.trim() ||
+    brief.mustHaveSections?.trim() ||
+    brief.keyInfoAboveTheFold?.trim() ||
+    brief.repeatedCustomerQuestions?.trim() ||
+    brief.uxNotes?.trim() ||
+    brief.keyMessages?.trim() ||
+    brief.forbiddenPhrases?.trim() ||
+    brief.existingContentNotes?.trim() ||
+    brief.visualFeeling?.trim() ||
+    brief.likedReferences?.trim() ||
+    brief.dislikedReferences?.trim() ||
+    brief.preferredColors?.trim() ||
+    brief.unwantedColors?.trim() ||
+    brief.designStyleNotes?.trim() ||
+    brief.designNotes?.trim() ||
+    brief.lockedFixedInput?.trim() ||
+    brief.sourceMaterials?.trim();
+
+  if (hasLegacy) {
+    sections.push({
+      title: "הרחבות (אופציונלי)",
+      items: [
+        {
+          label: "שם לקוח",
+          value: toSummaryValue(brief.clientNameSnapshot),
+        },
+        {
+          label: "מטרת פרויקט (טקסט חופשי, ישן)",
+          value: toSummaryValue(brief.projectGoal),
+        },
         {
           label: "החלטות אסטרטגיות",
           value: toSummaryValue(brief.strategicDecisions),
         },
-      ],
-    },
-    {
-      title: "מבנה UX",
-      items: [
-        { label: "עמודים חובה", value: toSummaryValue(brief.requiredPages) },
-        { label: "קהל יעד", value: toSummaryValue(brief.targetAudience) },
         {
-          label: "כאבים/חסמים של הקהל",
-          value: toSummaryValue(brief.audiencePainPoints),
-        },
-        { label: "פעולה מרכזית", value: toSummaryValue(brief.mainUserAction) },
-        { label: "סקשנים חובה", value: toSummaryValue(brief.mustHaveSections) },
-        {
-          label: "מה חובה מעל הקפל",
-          value: toSummaryValue(brief.keyInfoAboveTheFold),
+          label: "סקשנים חובה / מעל הקפל / FAQ / UX",
+          value: [
+            brief.mustHaveSections,
+            brief.keyInfoAboveTheFold,
+            brief.repeatedCustomerQuestions,
+            brief.uxNotes,
+          ]
+            .map((s) => s?.trim())
+            .filter(Boolean)
+            .join(" · ") || "—",
         },
         {
-          label: "שאלות לקוחות שחוזרות",
-          value: toSummaryValue(brief.repeatedCustomerQuestions),
-        },
-        { label: "הערות UX", value: toSummaryValue(brief.uxNotes) },
-      ],
-    },
-    {
-      title: "כיוון תוכן",
-      items: [
-        { label: "תיאור העסק", value: toSummaryValue(brief.businessDescription) },
-        { label: "בידול", value: toSummaryValue(brief.differentiators) },
-        { label: "מסרים מרכזיים", value: toSummaryValue(brief.keyMessages) },
-        { label: "ביטויים להימנע", value: toSummaryValue(brief.forbiddenPhrases) },
-        {
-          label: "הערות תוכן קיים",
-          value: toSummaryValue(brief.existingContentNotes),
+          label: "מסרים / ניסוחים / תוכן קיים",
+          value: [
+            brief.keyMessages,
+            brief.forbiddenPhrases,
+            brief.existingContentNotes,
+          ]
+            .map((s) => s?.trim())
+            .filter(Boolean)
+            .join(" · ") || "—",
         },
         {
-          label: "טון",
-          value:
-            brief.toneSelections.length > 0
-              ? brief.toneSelections.join(" | ")
-              : "—",
+          label: "כיוון עיצוב",
+          value: [
+            brief.visualFeeling,
+            brief.preferredColors,
+            brief.unwantedColors,
+            brief.likedReferences,
+            brief.dislikedReferences,
+            brief.designStyleNotes,
+            brief.designNotes,
+          ]
+            .map((s) => s?.trim())
+            .filter(Boolean)
+            .join(" · ") || "—",
         },
         {
-          label: "סגנון שפה",
-          value:
-            brief.languageStyleSelections.length > 0
-              ? brief.languageStyleSelections.join(" | ")
-              : "—",
-        },
-        { label: "הערות תוכן", value: toSummaryValue(brief.contentNotes) },
-      ],
-    },
-    {
-      title: "כיוון עיצוב",
-      items: [
-        { label: "תחושה חזותית", value: toSummaryValue(brief.visualFeeling) },
-        { label: "רפרנסים אהובים", value: toSummaryValue(brief.likedReferences) },
-        {
-          label: "רפרנסים לא רצויים",
-          value: toSummaryValue(brief.dislikedReferences),
-        },
-        {
-          label: "צבעים מועדפים",
-          value: toSummaryValue(brief.preferredColors),
-        },
-        { label: "צבעים להימנע", value: toSummaryValue(brief.unwantedColors) },
-        { label: "סגנון עיצובי", value: toSummaryValue(brief.designStyleNotes) },
-        { label: "הערות עיצוב", value: toSummaryValue(brief.designNotes) },
-      ],
-    },
-    {
-      title: "Locked / Fixed Input",
-      items: [
-        {
-          label: "תכנים/אלמנטים נעולים",
-          value: toSummaryValue(brief.lockedFixedInput),
+          label: "תוכן נעול / חומרי מקור",
+          value: [brief.lockedFixedInput, brief.sourceMaterials]
+            .map((s) => s?.trim())
+            .filter(Boolean)
+            .join(" · ") || "—",
         },
       ],
-    },
-    {
-      title: "מקורות וחומרים",
-      items: [
-        { label: "חומרי גלם/קישורים", value: toSummaryValue(brief.sourceMaterials) },
-      ],
-    },
-  ];
-}
+    });
+  }
 
+  return sections;
+}
