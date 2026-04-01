@@ -107,10 +107,13 @@ function getStatusOptionsForProject(project: Project): ProjectStatus[] {
 
 type ProjectsTableProps = {
   projects: Project[]
+  /** Project IDs that have a saved specification brief */
+  projectIdsWithBrief: Set<string>
   onAdd: () => void
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
   onStatusChange: (project: Project, status: ProjectStatus) => void
+  onOpenProjectBrief: (project: Project) => void
   canAdd: boolean
   noClientsMessage?: string
   onAddClient?: () => void
@@ -118,10 +121,12 @@ type ProjectsTableProps = {
 
 export function ProjectsTable({
   projects,
+  projectIdsWithBrief,
   onAdd,
   onEdit,
   onDelete,
   onStatusChange,
+  onOpenProjectBrief,
   canAdd,
   noClientsMessage,
   onAddClient,
@@ -174,6 +179,7 @@ export function ProjectsTable({
               <th className="px-3 py-2 font-medium">סה״כ</th>
               <th className="px-3 py-2 font-medium">שולם</th>
               <th className="px-3 py-2 font-medium">נותר</th>
+              <th className="px-3 py-2 font-medium">אפיון</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
           </thead>
@@ -181,7 +187,7 @@ export function ProjectsTable({
             {projects.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
                   {canAdd ? 'אין פרויקטים. הוסף פרויקט חדש.' : 'הוסף קודם לקוח כדי ליצור פרויקט.'}
@@ -248,6 +254,19 @@ export function ProjectsTable({
                     </td>
                     <td className="px-3 py-2 align-middle">
                       ₪{project.remainingAmount.toLocaleString('he-IL')}
+                    </td>
+                    <td className="px-3 py-2 align-middle">
+                      {projectIdsWithBrief.has(project.id) ? (
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-[#10B981] underline-offset-2 hover:underline"
+                          onClick={() => onOpenProjectBrief(project)}
+                        >
+                          פתח אפיון
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 align-middle text-center">
                       <div className="flex flex-wrap items-center justify-center gap-2">

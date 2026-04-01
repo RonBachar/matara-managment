@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import type { Project } from "@/types/project";
 import {
   LANGUAGE_STYLE_SELECTION_OPTIONS,
   MAIN_ACTION_SUGGESTIONS,
@@ -31,9 +32,11 @@ import { ChevronDown, FileText } from "lucide-react";
 type ProjectBriefFormProps = {
   mode: "create" | "edit";
   initialBrief?: ProjectBrief;
+  linkedProject: Project;
   onCancel: () => void;
   onSubmit: (input: ProjectBriefInput) => void;
   onDirtyChange?: (dirty: boolean) => void;
+  onRequestDelete?: () => void;
 };
 
 function briefToInput(brief: ProjectBrief): ProjectBriefInput {
@@ -41,9 +44,26 @@ function briefToInput(brief: ProjectBrief): ProjectBriefInput {
   return rest;
 }
 
+function projectLinkFields(project: Project): Pick<
+  ProjectBriefInput,
+  | "projectId"
+  | "clientId"
+  | "briefTitle"
+  | "projectNameSnapshot"
+  | "clientNameSnapshot"
+> {
+  return {
+    projectId: project.id,
+    clientId: project.clientId,
+    briefTitle: project.projectName,
+    projectNameSnapshot: project.projectName,
+    clientNameSnapshot: project.clientName,
+  };
+}
+
 const EMPTY_INPUT: ProjectBriefInput = {
-  projectId: undefined,
-  clientId: undefined,
+  projectId: "",
+  clientId: "",
   briefTitle: "",
   businessNameSnapshot: "",
   clientNameSnapshot: "",
@@ -87,26 +107,37 @@ const CUSTOM = "__custom__";
 export function ProjectBriefForm({
   mode,
   initialBrief,
+  linkedProject,
   onCancel,
   onSubmit,
   onDirtyChange,
+  onRequestDelete,
 }: ProjectBriefFormProps) {
   const [sitemapHandoffOpen, setSitemapHandoffOpen] = useState(false);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
-    initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
+    initialBrief
+      ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
+      : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
   );
 
   const baselineInput = useMemo(
-    () => (initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT),
-    [initialBrief],
+    () =>
+      initialBrief
+        ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
+        : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
+    [initialBrief, linkedProject],
   );
 
   const skipNextDirtySync = useRef(false);
 
   useEffect(() => {
-    setInput(initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT);
-  }, [initialBrief]);
+    setInput(
+      initialBrief
+        ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
+        : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
+    );
+  }, [initialBrief, linkedProject]);
 
   useEffect(() => {
     if (!onDirtyChange) return;
@@ -179,26 +210,34 @@ export function ProjectBriefForm({
   return (
     <section className="rounded-xl border border-border bg-card p-5 text-base [&_input]:min-h-9 [&_input]:py-2 [&_input]:text-base md:[&_input]:!text-base [&_textarea]:text-base md:[&_textarea]:!text-base">
       <div className="mx-auto w-full max-w-4xl space-y-5">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">
-            {mode === "create" ? "בריף חדש" : "עריכת בריף"}
-          </h3>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            בריף ממוקד: מבנה אתר, כיוון תוכן ו-wireframe — בלי רעש מיותר.
+        <div className="rounded-lg border border-[#312E81]/40 bg-[#111827]/40 px-4 py-3 text-start">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                שם פרויקט
+              </p>
+              <p className="text-base font-semibold text-foreground">
+                {linkedProject.projectName}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">
+                שם לקוח
+              </p>
+              <p className="text-base font-semibold text-foreground">
+                {linkedProject.clientName}
+              </p>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            {mode === "create" ? "אפיון חדש" : "עריכת אפיון"} — מבנה אתר, כיוון
+            תוכן ו-wireframe.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <SectionCard title="פרטי פרויקט">
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="כותרת הבריף (לרשימה)" required>
-                <Input
-                  required
-                  value={input.briefTitle}
-                  onChange={(e) => update("briefTitle", e.target.value)}
-                  placeholder="למשל: אתר תדמית — שם העסק"
-                />
-              </Field>
+            <div className="max-w-xl space-y-3">
               <Field label="שם העסק" required>
                 <Input
                   required
@@ -620,10 +659,22 @@ export function ProjectBriefForm({
             </Button>
           </div>
 
-          <div className="flex justify-between gap-3 pt-1">
-            <Button type="button" variant="ghost" onClick={onCancel}>
-              ביטול
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {mode === "edit" && onRequestDelete && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={onRequestDelete}
+                >
+                  מחק אפיון
+                </Button>
+              )}
+              <Button type="button" variant="ghost" onClick={onCancel}>
+                ביטול
+              </Button>
+            </div>
             <Button type="submit" className="px-5 text-sm">
               שמירה
             </Button>

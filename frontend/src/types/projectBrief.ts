@@ -62,15 +62,15 @@ export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
 ] as const;
 
 /**
- * Standalone specification document. Optional `projectId` / `clientId` for legacy or future linking.
+ * Specification document for exactly one project (one brief per project).
  */
 export type ProjectBrief = {
   id: string;
-  /** Optional — legacy or future link to a project */
-  projectId?: string;
-  /** Optional — legacy or future link to a client */
-  clientId?: string;
-  /** שם האפיון — primary title for the document */
+  /** Required — owning project */
+  projectId: string;
+  /** Required — client that owns the project */
+  clientId: string;
+  /** Internal title; kept in sync with project name for exports */
   briefTitle: string;
   /** שם העסק */
   businessNameSnapshot: string;
@@ -128,10 +128,10 @@ export type ProjectBrief = {
 /** All brief fields except id and timestamps (used for create/edit form state + submit). */
 export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
 
-/** Table / dialogs — prefer `briefTitle`, fall back to legacy `projectNameSnapshot`. */
+/** List / dialogs — prefer project snapshot, then brief title. */
 export function getBriefDisplayTitle(
   brief: Pick<ProjectBrief, "briefTitle" | "projectNameSnapshot">,
 ): string {
-  const t = brief.briefTitle?.trim() || brief.projectNameSnapshot?.trim();
-  return t || "ללא כותרת";
+  const t = brief.projectNameSnapshot?.trim() || brief.briefTitle?.trim();
+  return t || "ללא שם פרויקט";
 }

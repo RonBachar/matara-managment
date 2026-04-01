@@ -1,63 +1,29 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Client } from '@/types/client'
-import type { Project, ProjectStatus, ProjectType } from '@/types/project'
+import type { Project, ProjectStatus } from '@/types/project'
 import { ProjectsTable } from '@/components/projects/ProjectsTable'
 import { ProjectFormModal } from '@/components/projects/ProjectFormModal'
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog'
 import { ClientFormModal } from '@/components/clients/ClientFormModal'
 import { CLIENTS_STORAGE_KEY, readStoredClients } from '@/lib/clientStorage'
-
-const PROJECTS_STORAGE_KEY = 'matara_projects'
-
-function loadInitialProjects(): Project[] {
-  if (typeof window === 'undefined') return []
-  const raw = window.localStorage.getItem(PROJECTS_STORAGE_KEY)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw) as any[]
-    if (!Array.isArray(parsed)) return []
-
-    // Normalize legacy stored values to current work types (סוג עבודה) for compatibility.
-    const mapType = (t: any): ProjectType => {
-      switch (t) {
-        case 'Full Project':
-        case 'בניית אתרים':
-          return 'בניית אתר'
-        case 'Hourly Project':
-        case 'עבודת פרילנסר לפי שעה':
-          return 'פרילנסר שעתי'
-        case 'ריטיינר חודשי':
-          return 'ריטיינר חודשי'
-        case 'בניית אתר':
-        case 'פרילנסר שעתי':
-          return t
-        default:
-          return 'בניית אתר'
-      }
-    }
-
-    return parsed.map((p) => ({
-      id: String(p.id ?? Date.now()),
-      projectName: String(p.projectName ?? ''),
-      clientId: String(p.clientId ?? ''),
-      clientName: String(p.clientName ?? ''),
-      projectType: mapType(p.projectType),
-      status: (p.status as ProjectStatus) ?? 'New',
-      totalAmount: Number(p.totalAmount ?? 0),
-      paidAmount: Number(p.paidAmount ?? 0),
-      remainingAmount: Number(p.remainingAmount ?? 0),
-      hourlyRate: Number(p.hourlyRate ?? 0),
-      workedHours: Number(p.workedHours ?? 0),
-      billableTotal: Number(p.billableTotal ?? 0),
-      notes: typeof p.notes === 'string' ? p.notes : undefined,
-    }))
-  } catch {
-    return []
-  }
-}
+import {
+  BRIEFS_CHANGED_EVENT,
+  getProjectIdsWithBriefs,
+} from '@/lib/projectBriefStorage'
+import {
+  PROJECTS_STORAGE_KEY,
+  loadProjectsFromStorage,
+} from '@/lib/projectsStorage'
 
 export function Projects() {
-  const [projects, setProjects] = useState<Project[]>(() => loadInitialProjects())
+  const navigate = useNavigate()
+  const [projects, setProjects] = useState<Project[]>(() =>
+    loadProjectsFromStorage(),
+  )
+  const [projectIdsWithBrief, setProjectIdsWithBrief] = useState<Set<string>>(
+    () => getProjectIdsWithBriefs(),
+  )
   const [clients, setClients] = useState<Client[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
@@ -70,6 +36,12 @@ export function Projects() {
     const onStorage = () => setClients(readStoredClients())
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => setProjectIdsWithBrief(getProjectIdsWithBriefs())
+    window.addEventListener(BRIEFS_CHANGED_EVENT, refresh)
+    return () => window.removeEventListener(BRIEFS_CHANGED_EVENT, refresh)
   }, [])
 
   useEffect(() => {
@@ -141,10 +113,14 @@ export function Projects() {
     <>
       <ProjectsTable
         projects={projects}
+        projectIdsWithBrief={projectIdsWithBrief}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onStatusChange={handleStatusChange}
+        onOpenProjectBrief={(project) =>
+          navigate(`/project-briefs?project=${encodeURIComponent(project.id)}`)
+        }
         canAdd={canAdd}
         noClientsMessage={noClientsMessage}
         onAddClient={canAdd ? undefined : () => setAddClientModalOpen(true)}

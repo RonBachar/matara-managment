@@ -20,7 +20,13 @@ export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] 
     {
       title: "פרטי מסמך ופרויקט",
       items: [
-        { label: "כותרת הבריף", value: toSummaryValue(brief.briefTitle) },
+        {
+          label: "שם פרויקט",
+          value: toSummaryValue(
+            brief.projectNameSnapshot || brief.briefTitle,
+          ),
+        },
+        { label: "שם לקוח", value: toSummaryValue(brief.clientNameSnapshot) },
         { label: "שם העסק", value: toSummaryValue(brief.businessNameSnapshot) },
         { label: "סוג אתר", value: toSummaryValue(brief.websiteType) },
         { label: "מטרת האתר", value: toSummaryValue(brief.websiteGoal) },
@@ -90,7 +96,6 @@ export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] 
   ];
 
   const hasLegacy =
-    brief.clientNameSnapshot?.trim() ||
     brief.projectGoal?.trim() ||
     brief.strategicDecisions?.trim() ||
     brief.mustHaveSections?.trim() ||
@@ -114,10 +119,6 @@ export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] 
     sections.push({
       title: "הרחבות (אופציונלי)",
       items: [
-        {
-          label: "שם לקוח",
-          value: toSummaryValue(brief.clientNameSnapshot),
-        },
         {
           label: "מטרת פרויקט (טקסט חופשי, ישן)",
           value: toSummaryValue(brief.projectGoal),
