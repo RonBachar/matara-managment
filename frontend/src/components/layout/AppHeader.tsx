@@ -1,14 +1,21 @@
-type AppHeaderProps = {
-  title: string
-}
+import { useLocation } from "react-router-dom";
+import { getRoutePageTitle } from "@/lib/nav";
+import { cn } from "@/lib/utils";
 
-export function AppHeader({ title }: AppHeaderProps) {
+export function AppHeader() {
+  const { pathname } = useLocation();
+  const title = getRoutePageTitle(pathname);
+
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-      <div className="flex h-14 items-center px-6">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-      </div>
+    <header
+      className={cn(
+        "-mx-6 mb-4 border-b border-[#312E81] bg-[#111827] px-6 py-2.5",
+        "text-start",
+      )}
+    >
+      <h1 className="text-sm font-semibold tracking-tight text-slate-50">
+        {title}
+      </h1>
     </header>
-  )
+  );
 }
-

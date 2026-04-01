@@ -1,7 +1,10 @@
 import type { Lead } from "@/types/lead";
+import type { LeadEditableStatus } from "@/types/lead";
+import { LEAD_EDITABLE_STATUS_OPTIONS } from "@/types/lead";
 import { Pencil, Trash2, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatLeadCreatedAt } from "@/lib/leads";
+import { formatLeadCreatedAt, leadStatusPillClass } from "@/lib/leads";
+import { cn } from "@/lib/utils";
 
 type LeadsTableProps = {
   leads: Lead[];
@@ -9,6 +12,7 @@ type LeadsTableProps = {
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
   onConvert: (lead: Lead) => void;
+  onStatusChange: (leadId: string, status: LeadEditableStatus) => void;
 };
 
 export function LeadsTable({
@@ -17,6 +21,7 @@ export function LeadsTable({
   onEdit,
   onDelete,
   onConvert,
+  onStatusChange,
 }: LeadsTableProps) {
   return (
     <section className="space-y-4">
@@ -44,6 +49,7 @@ export function LeadsTable({
               <th className="px-3 py-2 font-medium">טלפון</th>
               <th className="px-3 py-2 font-medium">אימייל</th>
               <th className="px-3 py-2 font-medium">מקור ליד</th>
+              <th className="px-3 py-2 font-medium">סטטוס</th>
               <th className="px-3 py-2 font-medium">תאריך יצירה</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
@@ -52,7 +58,7 @@ export function LeadsTable({
             {leads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
                   אין לידים. הוסף ליד חדש.
@@ -75,6 +81,39 @@ export function LeadsTable({
                       <span className="text-xs text-muted-foreground">
                         {lead.leadSource || "—"}
                       </span>
+                    </td>
+                    <td className="min-w-[9.5rem] px-2 py-1.5 align-middle">
+                      {isConverted ? (
+                        <span
+                          className={cn(
+                            "inline-flex rounded-md px-2 py-1 text-xs font-medium",
+                            leadStatusPillClass(lead.status),
+                          )}
+                        >
+                          {lead.status}
+                        </span>
+                      ) : (
+                        <select
+                          value={lead.status}
+                          onChange={(e) =>
+                            onStatusChange(
+                              lead.id,
+                              e.target.value as LeadEditableStatus,
+                            )
+                          }
+                          className={cn(
+                            "w-full min-w-[8.5rem] cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring",
+                            leadStatusPillClass(lead.status),
+                          )}
+                          aria-label="סטטוס ליד"
+                        >
+                          {LEAD_EDITABLE_STATUS_OPTIONS.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td className="px-3 py-2 align-middle">
                       <span className="text-xs text-muted-foreground">

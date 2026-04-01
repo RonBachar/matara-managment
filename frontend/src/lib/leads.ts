@@ -1,6 +1,38 @@
-import type { Lead } from "@/types/lead";
+import type { Lead, LeadStatus } from "@/types/lead";
+import { LEAD_STATUS_OPTIONS } from "@/types/lead";
+
+/** Soft pill styles for status chips / inline selects. */
+export function leadStatusPillClass(status: LeadStatus): string {
+  switch (status) {
+    case "חדש":
+      return "border border-sky-200/90 bg-sky-50 text-sky-900";
+    case "במעקב":
+      return "border border-amber-200/90 bg-amber-50 text-amber-900";
+    case "לא מעוניין":
+      return "border border-slate-200 bg-slate-100 text-slate-800";
+    case "הפך ללקוח":
+      return "border border-emerald-200/90 bg-emerald-50 text-emerald-900";
+    default:
+      return "border border-border bg-muted text-foreground";
+  }
+}
 
 export const LEADS_STORAGE_KEY = "matara_leads";
+
+const STATUS_SET = new Set<string>(LEAD_STATUS_OPTIONS);
+
+function normalizeLeadStatus(
+  raw: unknown,
+  convertedClientId: string | undefined,
+): LeadStatus {
+  if (convertedClientId) return "הפך ללקוח";
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (s && STATUS_SET.has(s)) {
+    if (s === "הפך ללקוח") return "חדש";
+    return s as LeadStatus;
+  }
+  return "חדש";
+}
 
 /** Display createdAt as DD/MM/YYYY (local calendar). */
 export function formatLeadCreatedAt(iso: string | undefined): string {
@@ -29,7 +61,7 @@ function normalizeEmail(raw: unknown): string | undefined {
 
 /**
  * Maps arbitrary stored / legacy shapes into the current `Lead` model.
- * Ignores removed pipeline fields (status, requestedService, etc.).
+ * Missing `status` defaults to `חדש`; converted leads always get `הפך ללקוח`.
  */
 export function normalizeLead(raw: unknown): Lead | null {
   if (!raw || typeof raw !== "object") return null;
@@ -45,12 +77,15 @@ export function normalizeLead(raw: unknown): Lead | null {
   const clientName = pickLegacyClientName(l).trim();
   const email = normalizeEmail(l.email);
 
+  const status = normalizeLeadStatus(l.status, convertedClientId);
+
   return {
     id,
     clientName,
     phone: String(l.phone ?? ""),
     email,
     leadSource: String(l.leadSource ?? ""),
+    status,
     notes: typeof l.notes === "string" ? l.notes : undefined,
     createdAt: typeof l.createdAt === "string" ? l.createdAt : undefined,
     convertedClientId,
@@ -70,6 +105,7 @@ export function leadToStorage(lead: Lead): Record<string, unknown> {
     clientName: lead.clientName,
     phone: lead.phone,
     leadSource: lead.leadSource,
+    status: lead.status,
   };
   if (lead.email) out.email = lead.email;
   if (lead.notes) out.notes = lead.notes;

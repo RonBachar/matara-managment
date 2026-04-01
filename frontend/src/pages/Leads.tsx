@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Lead } from "@/types/lead";
+import type { Lead, LeadEditableStatus } from "@/types/lead";
 import type { Client } from "@/types/client";
 import { LeadsTable } from "@/components/leads/LeadsTable";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
@@ -47,6 +47,7 @@ export function Leads() {
                   id: activeLead.id,
                   createdAt: activeLead.createdAt,
                   convertedClientId: activeLead.convertedClientId,
+                  status: "הפך ללקוח",
                 }
               : l,
           );
@@ -87,6 +88,15 @@ export function Leads() {
     setConvertOpen(true);
   }
 
+  function handleStatusChange(leadId: string, status: LeadEditableStatus) {
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id !== leadId || l.convertedClientId) return l;
+        return { ...l, status };
+      }),
+    );
+  }
+
   function handleConvertToClient(newClient: Client) {
     const storedClients = readStoredClients();
     const nextClients = [...storedClients, newClient];
@@ -101,7 +111,11 @@ export function Leads() {
       setLeads((prev) =>
         prev.map((l) =>
           l.id === activeLead.id
-            ? { ...l, convertedClientId: newClient.id }
+            ? {
+                ...l,
+                convertedClientId: newClient.id,
+                status: "הפך ללקוח",
+              }
             : l,
         ),
       );
@@ -118,6 +132,7 @@ export function Leads() {
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onConvert={handleConvertRequest}
+        onStatusChange={handleStatusChange}
       />
 
       <LeadFormModal

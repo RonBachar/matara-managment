@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Lead } from "@/types/lead";
+import type { Lead, LeadEditableStatus } from "@/types/lead";
+import { LEAD_EDITABLE_STATUS_OPTIONS } from "@/types/lead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ type FormState = {
   phone: string;
   email: string;
   leadSource: string;
+  status: string;
   notes: string;
 };
 
@@ -46,6 +48,7 @@ const emptyForm: FormState = {
   phone: "",
   email: "",
   leadSource: "",
+  status: "חדש",
   notes: "",
 };
 
@@ -68,6 +71,7 @@ export function LeadFormModal({
         phone: initialLead.phone,
         email: initialLead.email ?? "",
         leadSource: initialLead.leadSource,
+        status: initialLead.status,
         notes: initialLead.notes ?? "",
       });
     } else {
@@ -85,11 +89,16 @@ export function LeadFormModal({
     setIsSaving(true);
     try {
       const emailTrim = form.email.trim();
+      const statusValue: Lead["status"] = isConverted
+        ? "הפך ללקוח"
+        : (form.status as LeadEditableStatus);
+
       const next: LeadInput = {
         clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: emailTrim.length > 0 ? emailTrim : undefined,
         leadSource: form.leadSource.trim(),
+        status: statusValue,
         notes: (form.notes ?? "").trim() || undefined,
         convertedClientId: initialLead?.convertedClientId,
         agreementFileId: initialLead?.agreementFileId,
@@ -171,6 +180,31 @@ export function LeadFormModal({
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+            <Field label="סטטוס">
+              {isConverted ? (
+                <Input
+                  readOnly
+                  value="הפך ללקוח"
+                  className="bg-muted/50"
+                />
+              ) : (
+                <Select
+                  value={form.status}
+                  onValueChange={(value) => handleChange("status", value ?? "חדש")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="סטטוס" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_EDITABLE_STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </Field>
           </div>
 
