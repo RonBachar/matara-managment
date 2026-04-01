@@ -22,19 +22,81 @@ function ensureStringArray(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
-/** Raw localStorage row → typed brief (ids may be empty until migration). */
+function migrateSitePrimaryBusinessGoal(raw: Record<string, unknown>): string {
+  const direct = ensureString(raw.sitePrimaryBusinessGoal);
+  if (direct) return direct;
+  const wg = ensureString(raw.websiteGoal);
+  const pg = ensureString(raw.projectGoal);
+  if (wg) return wg;
+  if (pg && (WEBSITE_GOAL_OPTIONS as readonly string[]).includes(pg)) return pg;
+  return pg;
+}
+
+function combineLegacySiteStructure(raw: Record<string, unknown>): string {
+  const direct = ensureString(raw.sitePagesAndStructure);
+  if (direct) return direct;
+  const pageListAiSuggested = raw.pageListAiSuggested === true;
+  const pageCount = ensureString(raw.pageCount);
+  const requiredPages = ensureString(raw.requiredPages);
+  if (pageListAiSuggested) {
+    const parts: string[] = [];
+    if (pageCount) parts.push(`מספר עמודים (הערכה): ${pageCount}`);
+    parts.push("תן ל-AI להציע רשימת עמודים");
+    return parts.join("\n");
+  }
+  const parts: string[] = [];
+  if (pageCount) parts.push(`מספר עמודים: ${pageCount}`);
+  if (requiredPages) parts.push(`רשימת עמודים:\n${requiredPages}`);
+  return parts.join("\n\n");
+}
+
+function mergeLegacyAdditionalNotes(raw: Record<string, unknown>): string {
+  const direct = ensureString(raw.additionalNotes);
+  if (direct) return direct;
+  const chunks = [
+    ensureString(raw.contentNotes),
+    ensureString(raw.existingContentNotes),
+    ensureString(raw.visualFeeling),
+    ensureString(raw.likedReferences),
+    ensureString(raw.dislikedReferences),
+    ensureString(raw.designStyleNotes),
+    ensureString(raw.designNotes),
+    ensureString(raw.strategicDecisions),
+    ensureString(raw.uxNotes),
+    ensureString(raw.repeatedCustomerQuestions),
+    ensureString(raw.keyMessages),
+    ensureString(raw.mustHaveSections),
+    ensureString(raw.keyInfoAboveTheFold),
+    ensureString(raw.lockedFixedInput),
+    ensureString(raw.sourceMaterials),
+    ensureString(raw.preferredColors),
+    ensureString(raw.unwantedColors),
+  ].filter((s) => s.trim().length > 0);
+  return chunks.join("\n\n---\n\n");
+}
+
+/** Raw localStorage row → typed brief (migrates legacy field names). */
 export function normalizeBriefRow(raw: Record<string, unknown>): ProjectBrief {
   const nowIso = new Date().toISOString();
   const legacyProjectName = ensureString(raw.projectNameSnapshot);
   const briefTitle = ensureString(raw.briefTitle) || legacyProjectName || "";
-  const legacyProjectGoal = ensureString(raw.projectGoal);
-  let websiteGoal = ensureString(raw.websiteGoal);
-  if (
-    !websiteGoal &&
-    (WEBSITE_GOAL_OPTIONS as readonly string[]).includes(legacyProjectGoal)
-  ) {
-    websiteGoal = legacyProjectGoal;
-  }
+
+  const businessWhatTheyDo =
+    ensureString(raw.businessWhatTheyDo) ||
+    ensureString(raw.businessDescription);
+  const servicesProductsOnSite =
+    ensureString(raw.servicesProductsOnSite) || ensureString(raw.mainService);
+
+  const idealClient =
+    ensureString(raw.idealClient) || ensureString(raw.keyMessages);
+
+  const siteEmphasis =
+    ensureString(raw.siteEmphasis) ||
+    ensureString(raw.keyInfoAboveTheFold) ||
+    ensureString(raw.mustHaveSections);
+
+  const contentAvoid =
+    ensureString(raw.contentAvoid) || ensureString(raw.forbiddenPhrases);
 
   return {
     id: ensureString(raw.id) || String(Date.now()),
@@ -51,41 +113,28 @@ export function normalizeBriefRow(raw: Record<string, unknown>): ProjectBrief {
     createdAt: ensureString(raw.createdAt) || nowIso,
     updatedAt:
       ensureString(raw.updatedAt) || ensureString(raw.createdAt) || nowIso,
-    websiteType: ensureString(raw.websiteType),
-    websiteGoal,
-    pageCount: ensureString(raw.pageCount),
-    pageListAiSuggested: (() => {
-      const v = raw.pageListAiSuggested;
-      return typeof v === "boolean" ? v : false;
-    })(),
-    requiredPages: ensureString(raw.requiredPages),
-    strategicDecisions: ensureString(raw.strategicDecisions),
-    lockedFixedInput: ensureString(raw.lockedFixedInput),
-    sourceMaterials: ensureString(raw.sourceMaterials),
-    mainService: ensureString(raw.mainService),
-    projectGoal: ensureString(raw.projectGoal),
-    targetAudience: ensureString(raw.targetAudience),
-    audiencePainPoints: ensureString(raw.audiencePainPoints),
-    mainUserAction: ensureString(raw.mainUserAction),
-    mustHaveSections: ensureString(raw.mustHaveSections),
-    keyInfoAboveTheFold: ensureString(raw.keyInfoAboveTheFold),
-    repeatedCustomerQuestions: ensureString(raw.repeatedCustomerQuestions),
-    uxNotes: ensureString(raw.uxNotes),
-    businessDescription: ensureString(raw.businessDescription),
+
+    businessWhatTheyDo,
+    servicesProductsOnSite,
     differentiators: ensureString(raw.differentiators),
-    keyMessages: ensureString(raw.keyMessages),
-    forbiddenPhrases: ensureString(raw.forbiddenPhrases),
-    existingContentNotes: ensureString(raw.existingContentNotes),
+
+    targetAudience: ensureString(raw.targetAudience),
+    idealClient,
+    audiencePainPoints: ensureString(raw.audiencePainPoints),
+    sitePrimaryBusinessGoal: migrateSitePrimaryBusinessGoal(raw),
+    mainUserAction: ensureString(raw.mainUserAction),
+
+    websiteType: ensureString(raw.websiteType),
+    sitePagesAndStructure: combineLegacySiteStructure(raw),
+    siteEmphasis,
+
     toneSelections: ensureStringArray(raw.toneSelections),
     languageStyleSelections: ensureStringArray(raw.languageStyleSelections),
-    contentNotes: ensureString(raw.contentNotes),
-    visualFeeling: ensureString(raw.visualFeeling),
-    likedReferences: ensureString(raw.likedReferences),
-    dislikedReferences: ensureString(raw.dislikedReferences),
-    preferredColors: ensureString(raw.preferredColors),
-    unwantedColors: ensureString(raw.unwantedColors),
-    designStyleNotes: ensureString(raw.designStyleNotes),
-    designNotes: ensureString(raw.designNotes),
+    linguisticAddressing: ensureString(raw.linguisticAddressing),
+
+    contentAvoid,
+    additionalNotes: mergeLegacyAdditionalNotes(raw),
+
     gpt1Output:
       typeof raw.gpt1Output === "string" ? String(raw.gpt1Output) : undefined,
     gpt2Output:

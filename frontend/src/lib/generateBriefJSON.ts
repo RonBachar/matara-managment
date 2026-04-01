@@ -8,6 +8,7 @@ export type BriefFormExportInput = {
   mainAction: string;
 
   audienceType: string;
+  audienceIdeal: string;
   audiencePain: string;
   differentiation: string;
 
@@ -16,9 +17,11 @@ export type BriefFormExportInput = {
 
   pagesCount: string;
   pageList: string;
+  siteEmphasis: string;
 
   tone: string[];
   languageStyle: string[];
+  linguisticAddressing: string;
 };
 
 export type NormalizedBriefJSON = {
@@ -30,6 +33,7 @@ export type NormalizedBriefJSON = {
   };
   audience: {
     type: string;
+    idealClient: string;
     pain: string;
     differentiation: string;
   };
@@ -41,10 +45,15 @@ export type NormalizedBriefJSON = {
     pagesCount: number | null;
     pages: string[];
     allowAI: boolean;
+    emphasis: string;
   };
   toneAndLanguage: {
     tone: string[];
     languageStyle: string[];
+    addressing: string;
+  };
+  guidelines: {
+    avoid: string;
   };
   notes: string;
 };
@@ -79,7 +88,19 @@ export function parsePagesCount(raw: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Page names for comparison (strips leading "- " from each segment). */
+/** First line that looks like a standalone page count (legacy + combined field). */
+function parsePagesCountFromStructure(raw: string | undefined): number | null {
+  const t = trimStr(raw);
+  if (!t) return null;
+  const firstLine = t.split(/\r?\n/).find((l) => l.trim()) ?? "";
+  const line = firstLine.trim();
+  const onlyNum = Number(line);
+  if (Number.isFinite(onlyNum)) return onlyNum;
+  const m = line.match(/^(\d{1,3})\s*[-–]?\s*(?:עמודים|דפים|עמ׳)?/i);
+  if (m) return Number(m[1]);
+  return null;
+}
+
 function pageSegmentsForDedup(raw: string | undefined): string[] {
   return parsePageListString(raw).map((s) =>
     s.replace(/^\s*-\s*/, "").trim(),
@@ -87,18 +108,17 @@ function pageSegmentsForDedup(raw: string | undefined): string[] {
 }
 
 /**
- * Free notes for normalized JSON: only `contentNotes` (הערות חשובות).
- * If that field duplicates the page list (same text or same pages as `requiredPages`), return "" so `notes` is never a second copy of `structure.pages`.
+ * Root `notes` ← `additionalNotes`, unless it duplicates the page list text.
  */
 function normalizedFreeNotes(input: ProjectBriefInput): string {
-  const pagesText = trimStr(input.requiredPages);
-  const freeText = trimStr(input.contentNotes);
+  const pagesText = trimStr(input.sitePagesAndStructure);
+  const freeText = trimStr(input.additionalNotes);
   if (freeText.length === 0) return "";
 
   if (freeText === pagesText) return "";
 
-  const fromPages = pageSegmentsForDedup(input.requiredPages);
-  const fromNotes = pageSegmentsForDedup(input.contentNotes);
+  const fromPages = pageSegmentsForDedup(input.sitePagesAndStructure);
+  const fromNotes = pageSegmentsForDedup(input.additionalNotes);
   if (
     fromPages.length > 0 &&
     fromNotes.length > 0 &&
@@ -111,42 +131,35 @@ function normalizedFreeNotes(input: ProjectBriefInput): string {
   return freeText;
 }
 
-/**
- * Maps persisted `ProjectBriefInput` to the flat export shape (without normalization).
- */
 export function projectBriefInputToBriefFormExport(
   input: ProjectBriefInput,
 ): BriefFormExportInput {
-  const pageListRaw = input.requiredPages;
-  const servicesOfferDescription = input.businessDescription;
-
   return {
     projectType: input.websiteType,
     businessName: input.businessNameSnapshot,
-    goal: input.websiteGoal,
+    goal: input.sitePrimaryBusinessGoal,
     mainAction: input.mainUserAction,
 
     audienceType: input.targetAudience,
+    audienceIdeal: input.idealClient,
     audiencePain: input.audiencePainPoints,
     differentiation: input.differentiators,
 
-    servicesDescription: servicesOfferDescription,
-    mainService: input.mainService,
+    servicesDescription: input.businessWhatTheyDo,
+    mainService: input.servicesProductsOnSite,
 
-    pagesCount: input.pageCount,
-    pageList: pageListRaw,
+    pagesCount: String(parsePagesCountFromStructure(input.sitePagesAndStructure) ?? ""),
+    pageList: input.sitePagesAndStructure,
+    siteEmphasis: input.siteEmphasis,
 
     tone: input.toneSelections,
     languageStyle: input.languageStyleSelections,
+    linguisticAddressing: input.linguisticAddressing,
   };
 }
 
-/**
- * Normalizes brief form data into a stable GPT-ready JSON structure.
- * `structure.pages` ← `requiredPages` only. Root `notes` ← `contentNotes` only, unless that field duplicates the page list (then "").
- */
 export function generateBriefJSON(input: ProjectBriefInput): NormalizedBriefJSON {
-  const pages = parsePageListString(input.requiredPages);
+  const pages = parsePageListString(input.sitePagesAndStructure);
   const allowAI = pages.length === 0;
   const notes = normalizedFreeNotes(input);
 
@@ -154,26 +167,32 @@ export function generateBriefJSON(input: ProjectBriefInput): NormalizedBriefJSON
     project: {
       type: trimStr(input.websiteType),
       businessName: trimStr(input.businessNameSnapshot),
-      goal: trimStr(input.websiteGoal),
+      goal: trimStr(input.sitePrimaryBusinessGoal),
       mainAction: trimStr(input.mainUserAction),
     },
     audience: {
       type: trimStr(input.targetAudience),
+      idealClient: trimStr(input.idealClient),
       pain: trimStr(input.audiencePainPoints),
       differentiation: trimStr(input.differentiators),
     },
     services: {
-      offerDescription: trimStr(input.businessDescription),
-      main: trimStr(input.mainService),
+      offerDescription: trimStr(input.businessWhatTheyDo),
+      main: trimStr(input.servicesProductsOnSite),
     },
     structure: {
-      pagesCount: parsePagesCount(input.pageCount),
+      pagesCount: parsePagesCountFromStructure(input.sitePagesAndStructure),
       pages,
       allowAI,
+      emphasis: trimStr(input.siteEmphasis),
     },
     toneAndLanguage: {
       tone: cleanStringArray(input.toneSelections),
       languageStyle: cleanStringArray(input.languageStyleSelections),
+      addressing: trimStr(input.linguisticAddressing),
+    },
+    guidelines: {
+      avoid: trimStr(input.contentAvoid),
     },
     notes,
   };

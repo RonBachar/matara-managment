@@ -11,7 +11,6 @@ import {
   LANGUAGE_STYLE_SELECTION_OPTIONS,
   MAIN_ACTION_SUGGESTIONS,
   TONE_SELECTION_OPTIONS,
-  WEBSITE_GOAL_OPTIONS,
   WEBSITE_TYPE_OPTIONS,
   type ProjectBrief,
   type ProjectBriefInput,
@@ -68,38 +67,22 @@ const EMPTY_INPUT: ProjectBriefInput = {
   businessNameSnapshot: "",
   clientNameSnapshot: "",
   projectNameSnapshot: undefined,
-  websiteType: "",
-  websiteGoal: "",
-  pageCount: "",
-  pageListAiSuggested: false,
-  requiredPages: "",
-  strategicDecisions: "",
-  lockedFixedInput: "",
-  sourceMaterials: "",
-  mainService: "",
-  projectGoal: "",
-  targetAudience: "",
-  audiencePainPoints: "",
-  mainUserAction: "",
-  mustHaveSections: "",
-  keyInfoAboveTheFold: "",
-  repeatedCustomerQuestions: "",
-  uxNotes: "",
-  businessDescription: "",
+  businessWhatTheyDo: "",
+  servicesProductsOnSite: "",
   differentiators: "",
-  keyMessages: "",
-  forbiddenPhrases: "",
-  existingContentNotes: "",
+  targetAudience: "",
+  idealClient: "",
+  audiencePainPoints: "",
+  sitePrimaryBusinessGoal: "",
+  mainUserAction: "",
+  websiteType: "",
+  sitePagesAndStructure: "",
+  siteEmphasis: "",
   toneSelections: [],
   languageStyleSelections: [],
-  contentNotes: "",
-  visualFeeling: "",
-  likedReferences: "",
-  dislikedReferences: "",
-  preferredColors: "",
-  unwantedColors: "",
-  designStyleNotes: "",
-  designNotes: "",
+  linguisticAddressing: "",
+  contentAvoid: "",
+  additionalNotes: "",
 };
 
 const CUSTOM = "__custom__";
@@ -230,45 +213,137 @@ export function ProjectBriefForm({
             </div>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            {mode === "create" ? "אפיון חדש" : "עריכת אפיון"} — מבנה אתר, כיוון
-            תוכן ו-wireframe.
+            שאלון אפיון — חמישה פרקים, מותאם לשיחה חיה עם לקוח.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <SectionCard title="פרטי פרויקט">
-            <div className="max-w-xl space-y-3">
-              <Field label="שם העסק" required>
-                <Input
-                  required
-                  value={input.businessNameSnapshot}
-                  onChange={(e) =>
-                    update("businessNameSnapshot", e.target.value)
-                  }
-                  placeholder="שם העסק או המותג"
-                />
-              </Field>
-            </div>
+          <SectionCard title="1 — פרטי העסק">
+            <Field label="שם העסק" required>
+              <Input
+                required
+                value={input.businessNameSnapshot}
+                onChange={(e) =>
+                  update("businessNameSnapshot", e.target.value)
+                }
+                placeholder="שם העסק או המותג"
+              />
+            </Field>
 
-            <PresetOrCustomSelect
-              label="סוג אתר"
+            <FieldWithHint
+              label="מה העסק עושה בפועל?"
               required
-              options={WEBSITE_TYPE_OPTIONS}
-              value={input.websiteType}
-              onChange={(v) => update("websiteType", v)}
-              placeholderCustom="פרטו סוג אתר"
-            />
+              hint="מה העסק מציע בפועל ביום־יום, בצורה פשוטה וברורה"
+              examples="משרד עורכי דין לדיני משפחה / רואה חשבון לעסקים קטנים / מורה פרטי למתמטיקה / חברה לייצור מוצרי פלסטיק"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.businessWhatTheyDo}
+                onChange={(e) =>
+                  update("businessWhatTheyDo", e.target.value)
+                }
+              />
+            </FieldWithHint>
 
-            <PresetOrCustomSelect
-              label="מטרת האתר"
+            <FieldWithHint
+              label="מה השירותים / המוצרים שצריך להציג באתר?"
               required
-              options={WEBSITE_GOAL_OPTIONS}
-              value={input.websiteGoal}
-              onChange={(v) => update("websiteGoal", v)}
-              placeholderCustom="פרטו מטרה"
-            />
+              hint="רשום את השירותים או המוצרים העיקריים שצריכים להופיע באתר"
+              examples="הנהלת חשבונות, דוחות שנתיים, החזרי מס / עיצוב מטבחים, ליווי שיפוץ, הדמיות / קורס דיגיטלי, פגישות ייעוץ, סדנאות"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.servicesProductsOnSite}
+                onChange={(e) =>
+                  update("servicesProductsOnSite", e.target.value)
+                }
+              />
+            </FieldWithHint>
 
-            <Field label="פעולה מרכזית" required>
+            <FieldWithHint
+              label="מה מבדל אותך ממתחרים?"
+              required
+              hint="למה שלקוח יבחר דווקא בך ולא באחרים"
+              examples="ניסיון של 15 שנה / שירות אישי / זמינות גבוהה / התמחות בתחום מאוד ספציפי / תהליך עבודה מסודר / מחיר נגיש"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.differentiators}
+                onChange={(e) => update("differentiators", e.target.value)}
+              />
+            </FieldWithHint>
+          </SectionCard>
+
+          <SectionCard title="2 — קהל ומטרה">
+            <FieldWithHint
+              label="מי קהל היעד של האתר?"
+              required
+              hint="למי האתר צריך לדבר ולמי הוא מיועד בפועל"
+              examples="בעלי עסקים קטנים / זוגות לפני גירושין / הורים לתלמידי תיכון / חברות תעשייה / לקוחות פרטיים"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.targetAudience}
+                onChange={(e) => update("targetAudience", e.target.value)}
+              />
+            </FieldWithHint>
+
+            <FieldWithHint
+              label="מי הלקוח האידיאלי שאתה רוצה למשוך?"
+              required
+              hint="איזה סוג לקוחות הכי נכון לך למשוך דרך האתר"
+              examples="לקוחות רציניים שמבינים ערך / עסקים שצריכים ליווי קבוע / אנשים שמחפשים פתרון מקצועי ולא זול בלבד"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.idealClient}
+                onChange={(e) => update("idealClient", e.target.value)}
+              />
+            </FieldWithHint>
+
+            <FieldWithHint
+              label="מה הבעיה / הצורך המרכזי של הלקוח?"
+              required
+              hint="מה הכאב, הבעיה או הצורך שהלקוח מגיע איתו"
+              examples="צריך סדר מול הרשויות / מחפש יותר לידים / לא מבין מה השירות כולל / רוצה אתר שייראה מקצועי / צריך פתרון מהיר ואמין"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.audiencePainPoints}
+                onChange={(e) =>
+                  update("audiencePainPoints", e.target.value)
+                }
+              />
+            </FieldWithHint>
+
+            <FieldWithHint
+              label="מה המטרה המרכזית של האתר?"
+              required
+              hint="מה האתר צריך להשיג ברמה העסקית"
+              examples="לייצר פניות / לקבוע שיחות / למכור מוצר / לחזק אמון / להציג שירותים בצורה ברורה"
+            >
+              <Textarea
+                required
+                rows={3}
+                value={input.sitePrimaryBusinessGoal}
+                onChange={(e) =>
+                  update("sitePrimaryBusinessGoal", e.target.value)
+                }
+              />
+            </FieldWithHint>
+
+            <FieldWithHint
+              label="מה הפעולה המרכזית שאתה רוצה שהגולש יבצע?"
+              required
+              hint="מה ה-CTA המרכזי שצריך להוביל את האתר"
+              examples="להשאיר פרטים / לשלוח וואטסאפ / לקבוע פגישה / להתקשר / לבצע רכישה"
+            >
               <div className="flex flex-wrap gap-2">
                 {MAIN_ACTION_SUGGESTIONS.map((s) => (
                   <Button
@@ -288,123 +363,73 @@ export function ProjectBriefForm({
                 className="mt-2"
                 value={input.mainUserAction}
                 onChange={(e) => update("mainUserAction", e.target.value)}
-                placeholder="למשל: השארת פרטים / רכישה / שיחה"
               />
-            </Field>
+            </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="קהל יעד">
-            <Field label="מי קהל היעד" required>
-              <Textarea
-                required
-                rows={2}
-                value={input.targetAudience}
-                onChange={(e) => update("targetAudience", e.target.value)}
-                placeholder="בקצרה — מי הלקוחות?"
-              />
-            </Field>
-            <Field label="כאב מרכזי אחד" required>
-              <Textarea
-                required
-                rows={2}
-                value={input.audiencePainPoints}
-                onChange={(e) => update("audiencePainPoints", e.target.value)}
-                placeholder="הבעיה העיקרית שהאתר צריך לגעת בה"
-              />
-            </Field>
-            <Field label="למה שיבחרו דווקא בלקוח" required>
-              <Textarea
-                required
-                rows={2}
-                value={input.differentiators}
-                onChange={(e) => update("differentiators", e.target.value)}
-                placeholder="יתרון מרכזי אחד שמניע בחירה"
-              />
-            </Field>
-          </SectionCard>
+          <SectionCard title="3 — מבנה האתר">
+            <PresetOrCustomSelect
+              label="איזה סוג אתר צריך לבנות?"
+              required
+              options={WEBSITE_TYPE_OPTIONS}
+              value={input.websiteType}
+              onChange={(v) => update("websiteType", v)}
+              placeholderCustom="פרטו סוג אתר"
+              help="איזה סוג אתר הכי מתאים למטרה העסקית"
+              examples="דף נחיתה / אתר תדמית / אתר שירותים / אתר קטלוג / חנות אינטרנט / אתר אישי / אתר טכני"
+            />
 
-          <SectionCard title="שירותים / הצעה">
-            <Field label="מה העסק מוכר / מציע" required>
-              <Textarea
-                required
-                rows={2}
-                value={input.businessDescription}
-                onChange={(e) => update("businessDescription", e.target.value)}
-                placeholder="בשורה או שתיים"
-              />
-            </Field>
-            <Field label="שירות מרכזי אחד" required>
-              <Input
-                required
-                value={input.mainService}
-                onChange={(e) => update("mainService", e.target.value)}
-                placeholder="השירות או המוצר המרכזי"
-              />
-            </Field>
-          </SectionCard>
-
-          <SectionCard title="מבנה אתר">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={input.pageListAiSuggested}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  update("pageListAiSuggested", on);
-                  if (on) {
-                    update("pageCount", "");
-                    update("requiredPages", "");
-                  }
-                }}
-                className="h-4 w-4 shrink-0"
-              />
-              <span>תן ל-AI להציע רשימת עמודים</span>
-            </label>
-
-            <Field
-              label="מספר עמודים"
-              required={!input.pageListAiSuggested}
-            >
-              <Input
-                type="text"
-                inputMode="numeric"
-                disabled={input.pageListAiSuggested}
-                required={!input.pageListAiSuggested}
-                value={input.pageCount}
-                onChange={(e) => update("pageCount", e.target.value)}
-                placeholder="למשל: 5"
-              />
-            </Field>
-
-            <Field
-              label="רשימת עמודים מדויקת"
-              required={!input.pageListAiSuggested}
+            <FieldWithHint
+              label="כמה עמודים האתר צריך לכלול? האם יש עמודים שחייבים להופיע?"
+              required
+              hint="אם יש מספר עמודים ידוע או עמודים שחייבים להיכלל, רשום אותם כאן"
+              examples="דף בית, אודות, שירותים, המלצות, שאלות נפוצות, יצירת קשר / או רק דף נחיתה אחד ממוקד"
             >
               <Textarea
-                required={!input.pageListAiSuggested}
-                disabled={input.pageListAiSuggested}
+                required
+                rows={4}
+                value={input.sitePagesAndStructure}
+                onChange={(e) =>
+                  update("sitePagesAndStructure", e.target.value)
+                }
+                placeholder="מספר עמודים, שמות עמודים, או תיאור קצר של המבנה"
+              />
+            </FieldWithHint>
+
+            <FieldWithHint
+              label="מה חשוב במיוחד להבליט באתר?"
+              required
+              hint="מה הדבר שהכי חשוב לך שהגולש ירגיש או יבין"
+              examples="מקצועיות / אמינות / תוצאות / שירות אישי / מהירות / ניסיון / פתרון מותאם / מחירים נגישים"
+            >
+              <Textarea
+                required
                 rows={3}
-                value={input.requiredPages}
-                onChange={(e) => update("requiredPages", e.target.value)}
-                placeholder="דוגמה: בית · אודות · שירותים · צור קשר"
+                value={input.siteEmphasis}
+                onChange={(e) => update("siteEmphasis", e.target.value)}
               />
-            </Field>
+            </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="טון וסגנון">
+          <SectionCard title="4 — שפה וניסוח">
             <MultiCheckGroup
-              title="טון"
+              title="איזה טון דיבור אתה רוצה?"
+              hint="איך האתר צריך להישמע מבחינת אופי הדיבור"
+              examples="מקצועי / אישי / אנושי / סמכותי / יוקרתי / פשוט ונגיש / ישיר ושיווקי"
               options={TONE_SELECTION_OPTIONS as unknown as string[]}
               selected={input.toneSelections}
               onToggle={(value) => toggleMulti("toneSelections", value)}
             />
             {legacyTones.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                ערכי טון מהדגם הקודם (נשמרו): {legacyTones.join(" · ")}
+                ערכי טון נוספים (מהדגם הקודם): {legacyTones.join(" · ")}
               </p>
             )}
+
             <MultiCheckGroup
-              title="סגנון שפה"
+              title="איזה סגנון כתיבה אתה רוצה?"
+              hint="איך התוכן צריך להיות כתוב בפועל"
+              examples="קצר ותכליתי / מפורט / מכירתי / ענייני / טכני / נעים וזורם / פשוט מאוד"
               options={LANGUAGE_STYLE_SELECTION_OPTIONS as unknown as string[]}
               selected={input.languageStyleSelections}
               onToggle={(value) =>
@@ -413,193 +438,51 @@ export function ProjectBriefForm({
             />
             {legacyLang.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                ערכי שפה מהדגם הקודם (נשמרו): {legacyLang.join(" · ")}
+                ערכי שפה נוספים (מהדגם הקודם): {legacyLang.join(" · ")}
               </p>
             )}
-          </SectionCard>
 
-          <SectionCard title="הערות חשובות">
-            <Field label="משהו חשוב שצריך לדעת">
+            <FieldWithHint
+              label="איך תרצה שהאתר יפנה לגולשים?"
+              hint="בחר את צורת הפנייה הלשונית הרצויה לתוכן באתר"
+              examples="יוניסקסי / פנייה לנשים / פנייה לגברים / לשון רבים / לפי קהל היעד"
+            >
               <Textarea
                 rows={3}
-                value={input.contentNotes}
-                onChange={(e) => update("contentNotes", e.target.value)}
-                placeholder="מגבלות, הקשר, או כל דבר קריטי שלא נכנס למעלה"
+                value={input.linguisticAddressing}
+                onChange={(e) =>
+                  update("linguisticAddressing", e.target.value)
+                }
+                placeholder="למשל: פנייה בלשון רבים, טון נייטרלי…"
               />
-            </Field>
+            </FieldWithHint>
           </SectionCard>
 
-          <details className="group rounded-xl border border-border bg-muted/15 p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-foreground">
-              <span>הרחבות ושדות מהדגם הקודם (אופציונלי)</span>
-              <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
-            </summary>
-            <div className="mt-4 space-y-5 border-t border-border/60 pt-4">
-              <p className="text-xs text-muted-foreground">
-                שדות אלה לא נדרשים למבנה הבריף החדש; נשמרים לתאימות ולמקרה
-                שצריך פירוט נוסף.
-              </p>
+          <SectionCard title="5 — הנחיות נוספות">
+            <FieldWithHint
+              label="האם יש משהו שלא תרצה שיופיע באתר?"
+              hint="דברים שחשוב להימנע מהם בתוכן, במסרים או במבנה"
+              examples="לא להישמע אגרסיבי / לא לדבר על מחירים / לא להבטיח תוצאות / לא להשתמש בשפה משפטית כבדה / לא להציג שירות מסוים"
+            >
+              <Textarea
+                rows={4}
+                value={input.contentAvoid}
+                onChange={(e) => update("contentAvoid", e.target.value)}
+              />
+            </FieldWithHint>
 
-              <Field label="שם הלקוח">
-                <Input
-                  value={input.clientNameSnapshot}
-                  onChange={(e) =>
-                    update("clientNameSnapshot", e.target.value)
-                  }
-                  placeholder="איש קשר"
-                />
-              </Field>
-
-              <Field label="מטרת פרויקט (טקסט חופשי, מהדגם הקודם)">
-                <Textarea
-                  rows={2}
-                  value={input.projectGoal}
-                  onChange={(e) => update("projectGoal", e.target.value)}
-                  placeholder="אם יש ניסוח מלא מהבריף הישן"
-                />
-              </Field>
-
-              <Field label="החלטות אסטרטגיות / קווים אדומים">
-                <Textarea
-                  rows={2}
-                  value={input.strategicDecisions}
-                  onChange={(e) =>
-                    update("strategicDecisions", e.target.value)
-                  }
-                />
-              </Field>
-
-              <div className="text-sm font-medium">מבנה ו-UX (מפורט)</div>
-              <Field label="סקשנים שחייבים להופיע">
-                <Textarea
-                  rows={2}
-                  value={input.mustHaveSections}
-                  onChange={(e) => update("mustHaveSections", e.target.value)}
-                />
-              </Field>
-              <Field label="מידע מעל הקפל">
-                <Textarea
-                  rows={2}
-                  value={input.keyInfoAboveTheFold}
-                  onChange={(e) =>
-                    update("keyInfoAboveTheFold", e.target.value)
-                  }
-                />
-              </Field>
-              <Field label="שאלות לקוח שחוזרות">
-                <Textarea
-                  rows={2}
-                  value={input.repeatedCustomerQuestions}
-                  onChange={(e) =>
-                    update("repeatedCustomerQuestions", e.target.value)
-                  }
-                />
-              </Field>
-              <Field label="הערות UX">
-                <Textarea
-                  rows={2}
-                  value={input.uxNotes}
-                  onChange={(e) => update("uxNotes", e.target.value)}
-                />
-              </Field>
-
-              <div className="text-sm font-medium">תוכן נוסף</div>
-              <Field label="מסרים מרכזיים">
-                <Textarea
-                  rows={2}
-                  value={input.keyMessages}
-                  onChange={(e) => update("keyMessages", e.target.value)}
-                />
-              </Field>
-              <Field label="ביטויים להימנע">
-                <Textarea
-                  rows={2}
-                  value={input.forbiddenPhrases}
-                  onChange={(e) => update("forbiddenPhrases", e.target.value)}
-                />
-              </Field>
-              <Field label="הערות על תוכן קיים">
-                <Textarea
-                  rows={2}
-                  value={input.existingContentNotes}
-                  onChange={(e) =>
-                    update("existingContentNotes", e.target.value)
-                  }
-                />
-              </Field>
-
-              <div className="text-sm font-medium">כיוון עיצוב (משני)</div>
-              <Field label="תחושה חזותית">
-                <Textarea
-                  rows={2}
-                  value={input.visualFeeling}
-                  onChange={(e) => update("visualFeeling", e.target.value)}
-                />
-              </Field>
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="צבעים מועדפים">
-                  <Textarea
-                    rows={2}
-                    value={input.preferredColors}
-                    onChange={(e) => update("preferredColors", e.target.value)}
-                  />
-                </Field>
-                <Field label="צבעים להימנע">
-                  <Textarea
-                    rows={2}
-                    value={input.unwantedColors}
-                    onChange={(e) => update("unwantedColors", e.target.value)}
-                  />
-                </Field>
-              </div>
-              <Field label="רפרנסים אהובים">
-                <Textarea
-                  rows={2}
-                  value={input.likedReferences}
-                  onChange={(e) => update("likedReferences", e.target.value)}
-                />
-              </Field>
-              <Field label="רפרנסים לא רצויים">
-                <Textarea
-                  rows={2}
-                  value={input.dislikedReferences}
-                  onChange={(e) =>
-                    update("dislikedReferences", e.target.value)
-                  }
-                />
-              </Field>
-              <Field label="הערות סגנון עיצובי">
-                <Textarea
-                  rows={2}
-                  value={input.designStyleNotes}
-                  onChange={(e) => update("designStyleNotes", e.target.value)}
-                />
-              </Field>
-              <Field label="הערות עיצוב נוספות">
-                <Textarea
-                  rows={2}
-                  value={input.designNotes}
-                  onChange={(e) => update("designNotes", e.target.value)}
-                />
-              </Field>
-
-              <div className="text-sm font-medium">נעילות ומקורות</div>
-              <Field label="תכנים/אלמנטים נעולים">
-                <Textarea
-                  rows={2}
-                  value={input.lockedFixedInput}
-                  onChange={(e) => update("lockedFixedInput", e.target.value)}
-                />
-              </Field>
-              <Field label="חומרי גלם / קישורים">
-                <Textarea
-                  rows={2}
-                  value={input.sourceMaterials}
-                  onChange={(e) => update("sourceMaterials", e.target.value)}
-                />
-              </Field>
-            </div>
-          </details>
+            <FieldWithHint
+              label="האם יש הערות חשובות / דוגמאות / השראות?"
+              hint="כל דבר נוסף שיכול לעזור לכוון נכון את המבנה, התוכן והסגנון"
+              examples="אהבתי את המבנה של האתר הזה / חשוב לי מראה נקי / לא אוהב אתרים עמוסים / חובה שתהיה תחושת יוקרה / חייב להיות ברור גם במובייל"
+            >
+              <Textarea
+                rows={5}
+                value={input.additionalNotes}
+                onChange={(e) => update("additionalNotes", e.target.value)}
+              />
+            </FieldWithHint>
+          </SectionCard>
 
           <details className="group rounded-xl border border-dashed border-border bg-muted/10 p-4">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
@@ -695,16 +578,10 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
   return (
     <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm shadow-black/[0.02]">
       <div className="text-base font-semibold text-foreground">{title}</div>
-      <div className="space-y-3">{children}</div>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
-
-type FieldProps = {
-  label: string;
-  required?: boolean;
-  children: ReactNode;
-};
 
 function Field({ label, required, children }: FieldProps) {
   return (
@@ -718,6 +595,44 @@ function Field({ label, required, children }: FieldProps) {
   );
 }
 
+type FieldProps = {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+};
+
+function FieldWithHint({
+  label,
+  required,
+  hint,
+  examples,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  examples?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-medium leading-snug">
+        {label}
+        {required && <span className="text-destructive">*</span>}
+      </Label>
+      {hint ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
+      ) : null}
+      {examples ? (
+        <p className="text-xs italic leading-relaxed text-muted-foreground/90">
+          דוגמאות: {examples}
+        </p>
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
 function PresetOrCustomSelect({
   label,
   required,
@@ -725,6 +640,8 @@ function PresetOrCustomSelect({
   value,
   onChange,
   placeholderCustom,
+  help,
+  examples,
 }: {
   label: string;
   required?: boolean;
@@ -732,6 +649,8 @@ function PresetOrCustomSelect({
   value: string;
   onChange: (v: string) => void;
   placeholderCustom: string;
+  help?: string;
+  examples?: string;
 }) {
   const trimmed = value.trim();
   const presetMatch = options.find((o) => o === trimmed);
@@ -743,6 +662,14 @@ function PresetOrCustomSelect({
         {label}
         {required && <span className="text-destructive">*</span>}
       </Label>
+      {help ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{help}</p>
+      ) : null}
+      {examples ? (
+        <p className="text-xs italic leading-relaxed text-muted-foreground/90">
+          דוגמאות: {examples}
+        </p>
+      ) : null}
       <select
         required={required && selectValue === ""}
         value={selectValue}
@@ -779,11 +706,15 @@ function PresetOrCustomSelect({
 
 function MultiCheckGroup({
   title,
+  hint,
+  examples,
   options,
   selected,
   onToggle,
 }: {
   title: string;
+  hint?: string;
+  examples?: string;
   options: string[];
   selected: string[];
   onToggle: (value: string) => void;
@@ -791,6 +722,14 @@ function MultiCheckGroup({
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium">{title}</div>
+      {hint ? (
+        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
+      ) : null}
+      {examples ? (
+        <p className="text-xs italic leading-relaxed text-muted-foreground/90">
+          דוגמאות: {examples}
+        </p>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {options.map((option) => (
           <label

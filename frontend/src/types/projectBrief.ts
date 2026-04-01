@@ -1,4 +1,4 @@
-/** מטרת האתר — ברירות מחדל לבריף הממוקד */
+/** @deprecated Legacy preset — migration only; new questionnaire uses free-text מטרה */
 export const WEBSITE_GOAL_OPTIONS = [
   "לידים",
   "מכירות",
@@ -6,12 +6,17 @@ export const WEBSITE_GOAL_OPTIONS = [
   "הרשמה",
 ] as const;
 
-/** סוג אתר — ברירות מחדל */
+/** סוג אתר — ברירות מחדל + ערכים נפוצים (ניתן גם "אחר") */
 export const WEBSITE_TYPE_OPTIONS = [
-  "אתר תדמית",
   "דף נחיתה",
+  "אתר תדמית",
+  "אתר שירותים",
+  "אתר קטלוג",
+  "חנות אינטרנט",
   "חנות",
   "מערכת",
+  "אתר אישי",
+  "אתר טכני",
 ] as const;
 
 export const MAIN_ACTION_SUGGESTIONS = [
@@ -62,73 +67,53 @@ export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
 ] as const;
 
 /**
- * Specification document for exactly one project (one brief per project).
+ * Project specification — one document per project, aligned with the discovery questionnaire.
  */
 export type ProjectBrief = {
   id: string;
-  /** Required — owning project */
   projectId: string;
-  /** Required — client that owns the project */
   clientId: string;
-  /** Internal title; kept in sync with project name for exports */
   briefTitle: string;
-  /** שם העסק */
+  /** שם העסק (למסמך / ייצוא) */
   businessNameSnapshot: string;
-  /** שם הלקוח */
   clientNameSnapshot: string;
-  /** @deprecated Legacy display field; migrated into `briefTitle` when missing */
   projectNameSnapshot?: string;
   createdAt: string;
   updatedAt: string;
-  /** Website/product framing – GPT-ready inputs */
-  websiteType: string;
-  /** מטרת האתר (לידים / מכירות / …) — שדה מרכזי בבריף הממוקד */
-  websiteGoal: string;
-  /** מספר עמודים מתוכנן — שדה מובנה */
-  pageCount: string;
-  /** כשמסומן: רשימת עמודים מדויקת לא חובה; ניתן להציע ב-AI */
-  pageListAiSuggested: boolean;
-  requiredPages: string;
-  strategicDecisions: string;
-  lockedFixedInput: string;
-  sourceMaterials: string;
-  mainService: string;
-  /** טקסט חופשי ישן (מטרת פרויקט מילולית); אופציונלי — תאימות לבריפים קודמים */
-  projectGoal: string;
-  targetAudience: string;
-  audiencePainPoints: string;
-  mainUserAction: string;
-  mustHaveSections: string;
-  keyInfoAboveTheFold: string;
-  repeatedCustomerQuestions: string;
-  uxNotes: string;
-  businessDescription: string;
+
+  /** 1 — פרטי העסק */
+  businessWhatTheyDo: string;
+  servicesProductsOnSite: string;
   differentiators: string;
-  keyMessages: string;
-  forbiddenPhrases: string;
-  existingContentNotes: string;
+
+  /** 2 — קהל ומטרה */
+  targetAudience: string;
+  idealClient: string;
+  audiencePainPoints: string;
+  sitePrimaryBusinessGoal: string;
+  mainUserAction: string;
+
+  /** 3 — מבנה האתר */
+  websiteType: string;
+  sitePagesAndStructure: string;
+  siteEmphasis: string;
+
+  /** 4 — שפה וניסוח */
   toneSelections: string[];
   languageStyleSelections: string[];
-  contentNotes: string;
-  visualFeeling: string;
-  likedReferences: string;
-  dislikedReferences: string;
-  preferredColors: string;
-  unwantedColors: string;
-  designStyleNotes: string;
-  designNotes: string;
-  /** שמור לעתיד: פלט GPT 1 (למשל Sitemap) לאחר שזרימת השמירה תתווסף */
+  linguisticAddressing: string;
+
+  /** 5 — הנחיות נוספות */
+  contentAvoid: string;
+  additionalNotes: string;
+
   gpt1Output?: string;
-  /** שמור לעתיד: פלט GPT 2 */
   gpt2Output?: string;
-  /** שמור לעתיד: פלט GPT 3 */
   gpt3Output?: string;
 };
 
-/** All brief fields except id and timestamps (used for create/edit form state + submit). */
 export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
 
-/** List / dialogs — prefer project snapshot, then brief title. */
 export function getBriefDisplayTitle(
   brief: Pick<ProjectBrief, "briefTitle" | "projectNameSnapshot">,
 ): string {
