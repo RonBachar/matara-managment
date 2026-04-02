@@ -2,6 +2,20 @@ import type { ProjectBrief } from "@/types/projectBrief";
 import { getBriefDisplayTitle } from "@/types/projectBrief";
 import { Button } from "@/components/ui/button";
 
+function displayClientName(raw: string | undefined): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "—";
+  // In some places we store "Business · ClientName". For this table we want just the client name.
+  if (s.includes("·")) {
+    const parts = s
+      .split("·")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return parts[parts.length - 1] || "—";
+  }
+  return s;
+}
+
 type ProjectBriefTableProps = {
   briefs: ProjectBrief[];
   onCreate: () => void;
@@ -59,7 +73,7 @@ export function ProjectBriefTable({
                     {getBriefDisplayTitle(brief)}
                   </td>
                   <td className="px-3 py-2.5 align-middle leading-snug">
-                    {brief.clientNameSnapshot?.trim() || "—"}
+                    {displayClientName(brief.clientNameSnapshot)}
                   </td>
                 </tr>
               ))

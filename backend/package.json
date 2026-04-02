@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:import-projects": "tsx src/scripts/importProjectsFromBackup.ts",
-    "db:import-clients": "tsx src/scripts/importClientsFromBackup.ts"
+    "db:import-clients": "tsx src/scripts/importClientsFromBackup.ts",
+    "db:import-briefs": "tsx src/scripts/importProjectBriefsFromBackup.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

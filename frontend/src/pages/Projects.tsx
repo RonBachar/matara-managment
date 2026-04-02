@@ -13,16 +13,14 @@ import {
   apiGetProjects,
   apiUpdateProject,
 } from '@/lib/projectsApi'
-import {
-  BRIEFS_CHANGED_EVENT,
-  getProjectIdsWithBriefs,
-} from '@/lib/projectBriefStorage'
+import { BRIEFS_CHANGED_EVENT } from '@/lib/projectBriefStorage'
+import { apiListBriefs } from '@/lib/projectBriefsApi'
 
 export function Projects() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
   const [projectIdsWithBrief, setProjectIdsWithBrief] = useState<Set<string>>(
-    () => getProjectIdsWithBriefs(),
+    () => new Set(),
   )
   const [clients, setClients] = useState<ClientRecord[]>([])
   const [formOpen, setFormOpen] = useState(false)
@@ -64,10 +62,33 @@ export function Projects() {
     }
   }, [])
 
+  async function fetchProjectIdsWithBriefs(): Promise<Set<string>> {
+    const briefs = await apiListBriefs()
+    return new Set(briefs.map((b) => b.projectId))
+  }
+
   useEffect(() => {
-    const refresh = () => setProjectIdsWithBrief(getProjectIdsWithBriefs())
-    window.addEventListener(BRIEFS_CHANGED_EVENT, refresh)
-    return () => window.removeEventListener(BRIEFS_CHANGED_EVENT, refresh)
+    let cancelled = false
+
+    const load = () => {
+      fetchProjectIdsWithBriefs()
+        .then((set) => {
+          if (cancelled) return
+          setProjectIdsWithBrief(set)
+        })
+        .catch(() => {
+          if (cancelled) return
+          setProjectIdsWithBrief(new Set())
+        })
+    }
+
+    load()
+    window.addEventListener(BRIEFS_CHANGED_EVENT, load)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener(BRIEFS_CHANGED_EVENT, load)
+    }
   }, [])
 
   function handleAdd() {

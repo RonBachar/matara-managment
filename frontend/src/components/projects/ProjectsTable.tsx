@@ -81,6 +81,14 @@ function getStatusDotClass(status: ProjectStatus): string {
   return STATUS_DOT_CLASSES[status] ?? 'bg-muted-foreground/50'
 }
 
+function displayClientName(value: string): string {
+  const s = (value ?? '').trim()
+  if (!s) return '—'
+  // Backward compatibility: some older rows stored "business · client".
+  const parts = s.split(' · ').map((p) => p.trim()).filter(Boolean)
+  return parts.length > 0 ? parts[parts.length - 1] : s
+}
+
 const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ['ללא סטטוס']
 
 function getStatusOptionsForProject(project: Project): ProjectStatus[] {
@@ -201,7 +209,7 @@ export function ProjectsTable({
                       {project.projectName}
                     </td>
                     <td className="px-3 py-2 align-middle">
-                      {project.clientName}
+                      {displayClientName(project.clientName)}
                     </td>
                     <td className="px-3 py-2 align-middle text-xs">
                       {project.projectType}

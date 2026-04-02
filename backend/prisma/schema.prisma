@@ -31,7 +31,8 @@ model Project {
 
   notes String?
 
-  briefs ProjectBrief[]
+  /// One brief per project (optional until created).
+  brief ProjectBrief?
 }
 
 /// A client/customer record (service/work type belongs to Project, not Client).
@@ -66,7 +67,8 @@ model ProjectBrief {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projectId String
+  /// Enforces "one brief per project" at the DB level.
+  projectId String  @unique
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   /// Full brief payload (questionnaire answers, etc.).

@@ -8,20 +8,21 @@ import { DeleteProjectBriefDialog } from "@/components/project-briefs/DeleteProj
 import { ProjectBriefProjectPicker } from "@/components/project-briefs/ProjectBriefProjectPicker";
 import { Button } from "@/components/ui/button";
 import { PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
+import { notifyBriefsChanged } from "@/lib/projectBriefStorage";
+import { apiGetProjects } from "@/lib/projectsApi";
 import {
-  BRIEFS_STORAGE_KEY,
-  loadProjectBriefs,
-  notifyBriefsChanged,
-  projectForBriefEditor,
-} from "@/lib/projectBriefStorage";
-import { loadProjectsFromStorage } from "@/lib/projectsStorage";
+  apiCreateBrief,
+  apiDeleteBrief,
+  apiGetBriefByProjectId,
+  apiListBriefs,
+  apiUpdateBrief,
+} from "@/lib/projectBriefsApi";
 
 export function ProjectBriefs() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [briefs, setBriefs] = useState<ProjectBrief[]>(() =>
-    loadProjectBriefs(),
-  );
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [briefs, setBriefs] = useState<ProjectBrief[]>([]);
   const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [activeBrief, setActiveBrief] = useState<ProjectBrief | undefined>();
   const [formProject, setFormProject] = useState<Project | undefined>();
@@ -42,10 +43,36 @@ export function ProjectBriefs() {
   }, [mode]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(BRIEFS_STORAGE_KEY, JSON.stringify(briefs));
-    notifyBriefsChanged();
-  }, [briefs]);
+    let cancelled = false;
+    apiGetProjects()
+      .then((rows) => {
+        if (cancelled) return;
+        setProjects(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiListBriefs()
+      .then((rows) => {
+        if (cancelled) return;
+        setBriefs(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setBriefs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!inForm || !dirty) return;
@@ -76,23 +103,35 @@ export function ProjectBriefs() {
     const pid = searchParams.get("project");
     if (!pid) return;
 
-    setSearchParams({}, { replace: true });
-
-    const projects = loadProjectsFromStorage();
     const project = projects.find((p) => p.id === pid);
     if (!project) return;
 
-    const brief = loadProjectBriefs().find((b) => b.projectId === pid);
-    if (brief) {
-      setMode("edit");
-      setActiveBrief(brief);
-      setFormProject(project);
-    } else {
-      setMode("create");
-      setActiveBrief(undefined);
-      setFormProject(project);
-    }
-  }, [searchParams, setSearchParams]);
+    setSearchParams({}, { replace: true });
+
+    let cancelled = false;
+    apiGetBriefByProjectId(pid)
+      .then((brief) => {
+        if (cancelled) return;
+        setMode("edit");
+        setActiveBrief(brief);
+        setFormProject(project);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("HTTP 404")) {
+          setMode("create");
+          setActiveBrief(undefined);
+          setFormProject(project);
+          return;
+        }
+        // On other errors, stay in list mode (beginner-friendly).
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams, projects]);
 
   const briefsSorted = useMemo(
     () =>
@@ -106,7 +145,7 @@ export function ProjectBriefs() {
   );
 
   const projectsForPicker = useMemo(
-    () => loadProjectsFromStorage(),
+    () => projects,
     [pickerOpen],
   );
 
@@ -140,8 +179,22 @@ export function ProjectBriefs() {
   }
 
   function handleOpenBrief(brief: ProjectBrief) {
-    const projectsList = loadProjectsFromStorage();
-    const project = projectForBriefEditor(brief, projectsList);
+    const project =
+      projects.find((p) => p.id === brief.projectId) ??
+      ({
+        id: brief.projectId,
+        projectName: brief.projectNameSnapshot || brief.briefTitle || "פרויקט",
+        clientId: brief.clientId,
+        clientName: brief.clientNameSnapshot,
+        projectType: "בניית אתר",
+        status: "New",
+        totalAmount: 0,
+        paidAmount: 0,
+        remainingAmount: 0,
+        hourlyRate: 0,
+        workedHours: 0,
+        billableTotal: 0,
+      } satisfies Project);
     setMode("edit");
     setActiveBrief(brief);
     setFormProject(project);
@@ -153,60 +206,54 @@ export function ProjectBriefs() {
     setDeleteOpen(true);
   }
 
-  function handleDeleteConfirm() {
+  function displayClientNameSnapshot(raw: string): string {
+    const s = raw.trim();
+    if (!s) return s;
+    if (s.includes("·")) {
+      const parts = s
+        .split("·")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      return parts[parts.length - 1] || s;
+    }
+    return s;
+  }
+
+  async function handleDeleteConfirm() {
     if (!briefToDelete) return;
+    await apiDeleteBrief(briefToDelete.id);
     setBriefs((prev) => prev.filter((brief) => brief.id !== briefToDelete.id));
     if (activeBrief?.id === briefToDelete.id) {
       clearFormView();
     }
     setDeleteOpen(false);
     setBriefToDelete(undefined);
+    notifyBriefsChanged();
   }
 
-  function handleFormSubmit(input: ProjectBriefInput) {
+  async function handleFormSubmit(input: ProjectBriefInput) {
     if (!formProject) return;
-    const now = new Date().toISOString();
     const merged: ProjectBriefInput = {
       ...input,
       projectId: formProject.id,
       clientId: formProject.clientId,
       briefTitle: formProject.projectName,
       projectNameSnapshot: formProject.projectName,
-      clientNameSnapshot: formProject.clientName,
+      clientNameSnapshot: displayClientNameSnapshot(formProject.clientName),
     };
 
     if (mode === "edit" && activeBrief) {
-      setBriefs((prev) =>
-        prev.map((brief) =>
-          brief.id === activeBrief.id
-            ? {
-                ...brief,
-                ...merged,
-                updatedAt: now,
-              }
-            : brief,
-        ),
-      );
+      const updated = await apiUpdateBrief(activeBrief.id, merged);
+      setBriefs((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
       clearFormView();
+      notifyBriefsChanged();
       return;
     }
 
-    const duplicate = briefs.some((b) => b.projectId === formProject.id);
-    if (duplicate) {
-      const existing = briefs.find((b) => b.projectId === formProject.id)!;
-      setMode("edit");
-      setActiveBrief(existing);
-      return;
-    }
-
-    const newBrief: ProjectBrief = {
-      id: String(Date.now()),
-      createdAt: now,
-      updatedAt: now,
-      ...merged,
-    };
-    setBriefs((prev) => [...prev, newBrief]);
+    const created = await apiCreateBrief(formProject.id, merged);
+    setBriefs((prev) => [created, ...prev.filter((b) => b.id !== created.id)]);
     clearFormView();
+    notifyBriefsChanged();
   }
 
   function requestLeaveForm() {
@@ -238,8 +285,25 @@ export function ProjectBriefs() {
   const editorProject = useMemo(() => {
     if (formProject) return formProject;
     if (!activeBrief) return undefined;
-    return projectForBriefEditor(activeBrief, loadProjectsFromStorage());
-  }, [formProject, activeBrief]);
+    return (
+      projects.find((p) => p.id === activeBrief.projectId) ??
+      ({
+        id: activeBrief.projectId,
+        projectName:
+          activeBrief.projectNameSnapshot || activeBrief.briefTitle || "פרויקט",
+        clientId: activeBrief.clientId,
+        clientName: activeBrief.clientNameSnapshot,
+        projectType: "בניית אתר",
+        status: "New",
+        totalAmount: 0,
+        paidAmount: 0,
+        remainingAmount: 0,
+        hourlyRate: 0,
+        workedHours: 0,
+        billableTotal: 0,
+      } satisfies Project)
+    );
+  }, [formProject, activeBrief, projects]);
 
   return (
     <section className="space-y-4">
