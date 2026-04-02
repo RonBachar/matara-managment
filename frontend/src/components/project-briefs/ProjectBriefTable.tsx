@@ -33,7 +33,7 @@ export function ProjectBriefTable({
         <div>
           <h2 className="text-xl font-semibold tracking-tight">אפיון פרויקטים</h2>
           <p className="mt-1 text-base leading-relaxed text-muted-foreground">
-            אפיון אחד לכל פרויקט — נשמר מקומית בדפדפן.
+            אפיון אחד לכל פרויקט — נשמר בבסיס הנתונים.
           </p>
         </div>
         <Button
