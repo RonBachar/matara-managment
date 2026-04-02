@@ -1,0 +1,20 @@
+# Local PostgreSQL for Matara (development).
+# Start: docker compose up -d
+# Stop:  docker compose down
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: matara-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: matara
+      POSTGRES_USER: matara
+      POSTGRES_PASSWORD: matara
+    volumes:
+      - matara_pgdata:/var/lib/postgresql/data
+
+volumes:
+  matara_pgdata:
