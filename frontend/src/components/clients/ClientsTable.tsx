@@ -1,15 +1,14 @@
 import { Link } from "react-router-dom";
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import type { Client } from "@/types/client";
+import type { ClientRecord } from "@/types/clientRecord";
 import { getPackageTypeLabel } from "@/types/client";
 import { Button } from "@/components/ui/button";
-import { getClientTypeLabel } from "@/lib/client-type";
 
 type ClientsTableProps = {
-  clients: Client[];
+  clients: ClientRecord[];
   onAdd: () => void;
-  onEdit: (client: Client) => void;
-  onDelete: (client: Client) => void;
+  onEdit: (client: ClientRecord) => void;
+  onDelete: (client: ClientRecord) => void;
 };
 
 export function ClientsTable({
@@ -52,7 +51,6 @@ export function ClientsTable({
           <thead className="bg-muted/60">
             <tr className="text-right">
               <th className="px-2.5 py-1.5 font-medium">שם העסק</th>
-              <th className="px-2.5 py-1.5 font-medium">סוג שירות</th>
               <th className="px-2.5 py-1.5 font-medium">שם הלקוח</th>
               <th className="px-2.5 py-1.5 font-medium">טלפון</th>
               <th className="px-2.5 py-1.5 font-medium">אימייל</th>
@@ -71,9 +69,6 @@ export function ClientsTable({
               >
                 <td className="px-2.5 py-1.5 align-middle">
                   {client.businessName}
-                </td>
-                <td className="px-2.5 py-1.5 align-middle">
-                  {getClientTypeLabel(client.clientType)}
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">
                   {client.clientName}
@@ -96,14 +91,11 @@ export function ClientsTable({
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">
                   <span className="text-xs text-muted-foreground">
-                    {client.clientType === "Website Client"
-                      ? getPackageTypeLabel(client.packageType)
-                      : "—"}
+                    {getPackageTypeLabel(client.packageType as any)}
                   </span>
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">
-                  {client.clientType === "Website Client" &&
-                  client.packageType !== "None" ? (
+                  {client.packageType && client.packageType !== "None" ? (
                     <>
                       ₪
                       {Number(client.renewalPrice ?? 0).toLocaleString("he-IL")}
@@ -113,9 +105,7 @@ export function ClientsTable({
                   )}
                 </td>
                 <td className="px-2.5 py-1.5 align-middle">
-                  {client.clientType === "Website Client" &&
-                  client.packageType !== "None" &&
-                  client.renewalDate ? (
+                  {client.packageType && client.packageType !== "None" && client.renewalDate ? (
                     new Date(client.renewalDate).toLocaleDateString("he-IL")
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>

@@ -1,11 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Client } from "@/types/client";
+import type { ClientRecord } from "@/types/clientRecord";
 import type { Project, ProjectType, ProjectStatus } from "@/types/project";
 import {
   getBillableTotal,
   getRemainingAmount,
 } from "@/lib/project-calculations";
-import { formatClientDisplayLabel } from "@/lib/clientStorage";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,11 +88,11 @@ function normalizeStatusForType(
 type ProjectFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
-  clients: Client[];
+  clients: ClientRecord[];
   initialProject?: Project;
   onClose: () => void;
   onSubmit: (project: Project) => void;
-  onClientAdded?: (client: Client) => void;
+  onClientAdded?: (client: ClientRecord) => void;
 };
 
 type FormState = {
@@ -175,7 +174,7 @@ export function ProjectFormModal({
     event.preventDefault();
     const paid = Number(form.paidAmount) || 0;
     const client = clients.find((c) => c.id === form.clientId);
-    const clientName = client ? formatClientDisplayLabel(client) : "";
+    const clientName = client ? client.clientName : "";
 
     if (form.projectType === "בניית אתר" || form.projectType === "ריטיינר חודשי") {
       const totalAmount = Number(form.totalAmount) || 0;
@@ -227,9 +226,7 @@ export function ProjectFormModal({
     (Number(form.hourlyRate) || 0) * (Number(form.workedHours) || 0);
 
   const selectedClient = clients.find((c) => c.id === form.clientId);
-  const selectedClientName = selectedClient
-    ? formatClientDisplayLabel(selectedClient)
-    : "";
+  const selectedClientName = selectedClient ? selectedClient.clientName : "";
 
   return (
     <>
@@ -287,7 +284,7 @@ export function ProjectFormModal({
                   <SelectContent>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {formatClientDisplayLabel(c)}
+                        {c.clientName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -444,7 +441,7 @@ export function ProjectFormModal({
           mode="create"
           onClose={() => setAddClientOpen(false)}
           onSubmit={(data) => {
-            const newClient: Client = {
+            const newClient: ClientRecord = {
               ...data,
               id: String(Date.now()),
               createdAt: new Date().toISOString(),

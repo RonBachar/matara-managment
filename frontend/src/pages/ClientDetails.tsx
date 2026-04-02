@@ -1,41 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
-import type { Client } from "@/types/client";
+import type { ClientRecord } from "@/types/clientRecord";
 import { Button } from "@/components/ui/button";
-import { getClientTypeLabel } from "@/lib/client-type";
 import { getPackageTypeLabel } from "@/types/client";
-import { getAgreementFile, getContractFile } from "@/lib/agreementFiles";
-import { readStoredClients } from "@/lib/clientStorage";
+import { getAgreementFile } from "@/lib/agreementFiles";
+import { apiGetClients } from "@/lib/clientsApi";
 
 type LocationState = {
-  client?: Client;
+  client?: ClientRecord;
 };
 
 export function ClientDetails() {
   const params = useParams<{ id: string }>();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const storedClients = readStoredClients();
+  const [client, setClient] = useState<ClientRecord | null>(state?.client ?? null);
 
-  const client =
-    state?.client ?? storedClients.find((c) => c.id === params.id) ?? null;
+  useEffect(() => {
+    if (client) return;
+    let cancelled = false;
+    apiGetClients()
+      .then((rows) => {
+        if (cancelled) return;
+        setClient(rows.find((c) => c.id === params.id) ?? null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setClient(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, params.id]);
 
   const [agreementBlobUrl, setAgreementBlobUrl] = useState<string | null>(null);
   const [agreementLoading, setAgreementLoading] = useState(false);
   const [agreementMissing, setAgreementMissing] = useState(false);
 
-  const [contractBlobUrl, setContractBlobUrl] = useState<string | null>(null);
-  const [contractLoading, setContractLoading] = useState(false);
-  const [contractMissing, setContractMissing] = useState(false);
-
   const hasAgreementRef = useMemo(
     () => Boolean(client?.agreementFileId && client?.agreementFileName),
     [client?.agreementFileId, client?.agreementFileName],
-  );
-
-  const hasContractRef = useMemo(
-    () => Boolean(client?.contractFileId && client?.contractFileName),
-    [client?.contractFileId, client?.contractFileName],
   );
 
   useEffect(() => {
@@ -66,35 +70,6 @@ export function ClientDetails() {
       if (revokedUrl) URL.revokeObjectURL(revokedUrl);
     };
   }, [client?.agreementFileId]);
-
-  useEffect(() => {
-    let revokedUrl: string | null = null;
-    async function run() {
-      if (!client?.contractFileId) return;
-      setContractLoading(true);
-      setContractMissing(false);
-      try {
-        const record = await getContractFile(client.contractFileId);
-        if (!record) {
-          setContractMissing(true);
-          setContractBlobUrl(null);
-          return;
-        }
-        const url = URL.createObjectURL(record.blob);
-        revokedUrl = url;
-        setContractBlobUrl(url);
-      } catch {
-        setContractMissing(true);
-        setContractBlobUrl(null);
-      } finally {
-        setContractLoading(false);
-      }
-    }
-    void run();
-    return () => {
-      if (revokedUrl) URL.revokeObjectURL(revokedUrl);
-    };
-  }, [client?.contractFileId]);
 
   if (!client) {
     return (
@@ -136,10 +111,6 @@ export function ClientDetails() {
         <DetailsField label="מספר טלפון" value={client.phone} />
         <DetailsField label="אימייל" value={client.email} />
         <DetailsField
-          label="סוג שירות"
-          value={getClientTypeLabel(client.clientType)}
-        />
-        <DetailsField
           label="כתובת אתר"
           value={
             client.website ? (
@@ -158,17 +129,12 @@ export function ClientDetails() {
         />
         <DetailsField
           label="סוג חבילה"
-          value={
-            client.clientType === "Website Client"
-              ? getPackageTypeLabel(client.packageType)
-              : "—"
-          }
+          value={getPackageTypeLabel(client.packageType as any)}
         />
         <DetailsField
           label="מחיר חידוש"
           value={
-            client.clientType === "Website Client" &&
-            client.packageType !== "None"
+            client.packageType && client.packageType !== "None"
               ? `₪${Number(client.renewalPrice ?? 0).toLocaleString("he-IL")}`
               : "—"
           }
@@ -176,22 +142,13 @@ export function ClientDetails() {
         <DetailsField
           label="תאריך חידוש"
           value={
-            client.clientType === "Website Client" &&
+            client.packageType &&
             client.packageType !== "None" &&
             client.renewalDate
               ? new Date(client.renewalDate).toLocaleDateString("he-IL")
               : "—"
           }
         />
-        {!hasContractRef && client.workContractFileName && (
-          <DetailsField
-            label="חוזה עבודה (שם בלבד, לפני שמירת קובץ)"
-            value={client.workContractFileName}
-          />
-        )}
-        {!hasContractRef && !client.workContractFileName && (
-          <DetailsField label="חוזה עבודה" value="—" />
-        )}
         <DetailsField label="הערות" value={client.notes || "—"} />
         <DetailsField
           label="תאריך תחילת התקשרות"
@@ -202,53 +159,6 @@ export function ClientDetails() {
           }
         />
       </div>
-
-      {hasContractRef && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm font-semibold">חוזה עבודה</div>
-          <div className="mt-1 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-muted-foreground">
-              {client.contractFileName}
-              {contractMissing && (
-                <span className="ms-2 text-xs text-destructive">
-                  (הקובץ לא נמצא בדפדפן)
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!contractBlobUrl || contractLoading}
-                onClick={() => {
-                  if (!contractBlobUrl) return;
-                  window.open(contractBlobUrl, "_blank", "noreferrer");
-                }}
-              >
-                פתיחה
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={!contractBlobUrl || contractLoading}
-                onClick={() => {
-                  if (!contractBlobUrl) return;
-                  const a = document.createElement("a");
-                  a.href = contractBlobUrl;
-                  a.download = client.contractFileName ?? "contract";
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                }}
-              >
-                הורדה
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {hasAgreementRef && (
         <div className="rounded-xl border border-border bg-card p-4">

@@ -1,10 +1,9 @@
-import type { Client } from '@/types/client'
+import type { ClientRecord } from '@/types/clientRecord'
 import { Button } from '@/components/ui/button'
-import { formatClientDisplayLabel } from '@/lib/clientStorage'
 
 type DeleteClientDialogProps = {
   open: boolean
-  client?: Client
+  client?: ClientRecord
   onCancel: () => void
   onConfirm: () => void
   blockedMessage?: string
@@ -20,7 +19,7 @@ export function DeleteClientDialog({
   if (!open || !client) return null
 
   const isBlocked = Boolean(blockedMessage)
-  const displayName = formatClientDisplayLabel(client)
+  const displayName = client.clientName || client.businessName || '—'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -41,7 +40,7 @@ export function DeleteClientDialog({
               <p>האם למחוק את הלקוח הבא?</p>
               <p className="font-medium">{displayName}</p>
               <p className="text-xs text-muted-foreground">
-                פעולה זו תשפיע רק על הנתונים המקומיים במערכת (ללא שרת).
+                פעולה זו תמחק את הלקוח מהשרת/מסד הנתונים (פעולה בלתי הפיכה).
               </p>
             </>
           )}

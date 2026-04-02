@@ -34,6 +34,32 @@ model Project {
   briefs ProjectBrief[]
 }
 
+/// A client/customer record (service/work type belongs to Project, not Client).
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientName   String
+  businessName String @default("")
+  phone        String @default("")
+  email        String @default("")
+  website      String?
+
+  packageType  String?
+  renewalPrice Decimal? @db.Decimal(14, 2)
+  renewalDate  String?
+
+  notes String? @db.Text
+
+  // Signed agreement metadata (file blob remains in browser IndexedDB for now)
+  agreementFileId   String?
+  agreementFileName String?
+  agreementFileType String?
+
+  @@index([clientName])
+}
+
 /// Questionnaire / brief content for a project; flexible JSON until fields are normalized.
 model ProjectBrief {
   id        String   @id @default(cuid())

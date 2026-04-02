@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Client } from '@/types/client'
+import type { ClientRecord } from '@/types/clientRecord'
 import type { Project, ProjectStatus } from '@/types/project'
 import { ProjectsTable } from '@/components/projects/ProjectsTable'
 import { ProjectFormModal } from '@/components/projects/ProjectFormModal'
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog'
 import { ClientFormModal } from '@/components/clients/ClientFormModal'
-import { CLIENTS_STORAGE_KEY, readStoredClients } from '@/lib/clientStorage'
+import { apiCreateClient, apiGetClients } from '@/lib/clientsApi'
 import {
   apiCreateProject,
   apiDeleteProject,
@@ -24,7 +24,7 @@ export function Projects() {
   const [projectIdsWithBrief, setProjectIdsWithBrief] = useState<Set<string>>(
     () => getProjectIdsWithBriefs(),
   )
-  const [clients, setClients] = useState<Client[]>([])
+  const [clients, setClients] = useState<ClientRecord[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [activeProject, setActiveProject] = useState<Project | undefined>()
@@ -49,10 +49,19 @@ export function Projects() {
   }, [])
 
   useEffect(() => {
-    setClients(readStoredClients())
-    const onStorage = () => setClients(readStoredClients())
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    let cancelled = false
+    apiGetClients()
+      .then((rows) => {
+        if (cancelled) return
+        setClients(rows)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setClients([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -136,14 +145,8 @@ export function Projects() {
     setDeleteOpen(false)
   }
 
-  function handleClientAdded(newClient: Client) {
-    setClients((prev) => {
-      const next = [...prev, newClient]
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(next))
-      }
-      return next
-    })
+  function handleClientAdded(newClient: ClientRecord) {
+    setClients((prev) => [newClient, ...prev])
   }
 
   const canAdd = clients.length > 0
@@ -184,13 +187,9 @@ export function Projects() {
           open={addClientModalOpen}
           mode="create"
           onClose={() => setAddClientModalOpen(false)}
-          onSubmit={(data) => {
-            const newClient: Client = {
-              ...data,
-              id: String(Date.now()),
-              createdAt: new Date().toISOString(),
-            }
-            handleClientAdded(newClient)
+          onSubmit={async (data) => {
+            const created = await apiCreateClient(data)
+            handleClientAdded(created)
             setAddClientModalOpen(false)
           }}
         />

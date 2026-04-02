@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Client, ClientType, PackageType } from "@/types/client";
+import type { PackageType } from "@/types/client";
 import { getPackageTypeLabel } from "@/types/client";
 import { PACKAGE_OPTIONS } from "@/data/mockClients";
 import { Button } from "@/components/ui/button";
@@ -13,33 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { getClientTypeLabel } from "@/lib/client-type";
 import {
-  deleteContractFile,
-  saveContractFile,
+  deleteAgreementFile,
+  saveAgreementFile,
 } from "@/lib/agreementFiles";
+import type { ClientRecord } from "@/types/clientRecord";
 
-const CONTRACT_ACCEPT =
+const AGREEMENT_ACCEPT =
   ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-type ClientInput = Omit<Client, "id">;
+type ClientInput = Omit<ClientRecord, "id" | "createdAt" | "updatedAt">;
 
 type ClientFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
-  initialClient?: Client;
+  initialClient?: ClientRecord;
   onClose: () => void;
   onSubmit: (client: ClientInput) => void;
 };
 
-type ClientFormState = Omit<
-  Client,
-  "id" | "renewalPrice" | "clientType" | "workContractFileName"
-> & {
-  clientType: ClientType | "";
-  renewalPrice: string;
-};
+type ClientFormState = Omit<ClientInput, "renewalPrice"> & { renewalPrice: string };
 
 export function ClientFormModal({
   open,
@@ -55,7 +48,6 @@ export function ClientFormModal({
           renewalPrice: String(initialClient.renewalPrice ?? ""),
         }
       : {
-          clientType: "",
           businessName: "",
           clientName: "",
           phone: "",
@@ -65,9 +57,11 @@ export function ClientFormModal({
           packageType: "Hosting + Elementor Pro",
           renewalPrice: "",
           renewalDate: "",
+          agreementFileId: null,
+          agreementFileName: null,
+          agreementFileType: null,
         },
   );
-  const [serviceTypeError, setServiceTypeError] = useState(false);
   const [pendingContractFile, setPendingContractFile] = useState<File | null>(
     null,
   );
@@ -76,7 +70,6 @@ export function ClientFormModal({
 
   useEffect(() => {
     if (!open) return;
-    setServiceTypeError(false);
     setPendingContractFile(null);
     setContractClearRequested(false);
     setIsSaving(false);
@@ -87,7 +80,6 @@ export function ClientFormModal({
       });
     } else {
       setForm({
-        clientType: "",
         businessName: "",
         clientName: "",
         phone: "",
@@ -97,25 +89,12 @@ export function ClientFormModal({
         packageType: "Hosting + Elementor Pro",
         renewalPrice: "",
         renewalDate: "",
+        agreementFileId: null,
+        agreementFileName: null,
+        agreementFileType: null,
       });
     }
   }, [open, initialClient]);
-
-  useEffect(() => {
-    if (form.clientType === "Service Client") {
-      setForm((prev) => ({
-        ...prev,
-        packageType: "None",
-        renewalPrice: "",
-        renewalDate: "",
-      }));
-    }
-  }, [form.clientType]);
-
-  function handleClientTypeChange(value: string | null) {
-    setServiceTypeError(false);
-    handleChange("clientType", (value ?? "") as ClientType | "");
-  }
 
   function handleChange<K extends keyof ClientFormState>(
     key: K,
@@ -133,62 +112,48 @@ export function ClientFormModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const chosenType: ClientType | "" = form.clientType;
-    if (chosenType !== "Website Client" && chosenType !== "Service Client") {
-      setServiceTypeError(true);
-      return;
-    }
     const priceNumber = Number(form.renewalPrice || 0);
     setIsSaving(true);
     try {
-      let contractFileId = form.contractFileId;
-      let contractFileName = form.contractFileName;
-      let contractFileType = form.contractFileType;
+      let agreementFileId = form.agreementFileId ?? undefined;
+      let agreementFileName = form.agreementFileName ?? undefined;
+      let agreementFileType = form.agreementFileType ?? undefined;
 
       if (contractClearRequested) {
-        if (initialClient?.contractFileId) {
-          await deleteContractFile(initialClient.contractFileId);
+        if (initialClient?.agreementFileId) {
+          await deleteAgreementFile(initialClient.agreementFileId);
         }
-        contractFileId = undefined;
-        contractFileName = undefined;
-        contractFileType = undefined;
+        agreementFileId = undefined;
+        agreementFileName = undefined;
+        agreementFileType = undefined;
       } else if (pendingContractFile) {
-        if (initialClient?.contractFileId) {
-          await deleteContractFile(initialClient.contractFileId);
+        if (initialClient?.agreementFileId) {
+          await deleteAgreementFile(initialClient.agreementFileId);
         }
-        const ref = await saveContractFile(pendingContractFile);
-        contractFileId = ref.contractFileId;
-        contractFileName = ref.contractFileName;
-        contractFileType = ref.contractFileType;
+        const ref = await saveAgreementFile(pendingContractFile);
+        agreementFileId = ref.agreementFileId;
+        agreementFileName = ref.agreementFileName;
+        agreementFileType = ref.agreementFileType;
       }
 
       const base: ClientInput = {
-        clientType: chosenType,
         businessName: form.businessName.trim(),
         clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
-        website: form.website?.trim() || undefined,
-        notes: form.notes?.trim() || undefined,
-        packageType:
-          form.clientType === "Website Client" ? form.packageType : undefined,
+        website: form.website?.trim() || null,
+        notes: form.notes?.trim() || null,
+        packageType: form.packageType ?? null,
         renewalPrice:
-          form.clientType === "Website Client" && form.packageType !== "None"
+          form.packageType !== "None"
             ? Number.isNaN(priceNumber)
               ? 0
               : priceNumber
-            : undefined,
-        renewalDate:
-          form.clientType === "Website Client" && form.packageType !== "None"
-            ? form.renewalDate
-            : undefined,
-        workContractFileName: undefined,
-        contractFileId,
-        contractFileName,
-        contractFileType,
-        agreementFileId: form.agreementFileId || undefined,
-        agreementFileName: form.agreementFileName || undefined,
-        agreementFileType: form.agreementFileType || undefined,
+            : null,
+        renewalDate: form.packageType !== "None" ? (form.renewalDate || null) : null,
+        agreementFileId: agreementFileId ?? null,
+        agreementFileName: agreementFileName ?? null,
+        agreementFileType: agreementFileType ?? null,
       };
 
       onSubmit(base);
@@ -200,9 +165,9 @@ export function ClientFormModal({
   if (!open) return null;
 
   const title = mode === "create" ? "לקוח חדש" : "עריכת לקוח";
-  const contractDisplayName =
+  const agreementDisplayName =
     pendingContractFile?.name ??
-    (!contractClearRequested ? form.contractFileName : undefined);
+    (!contractClearRequested ? form.agreementFileName : undefined);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -220,35 +185,6 @@ export function ClientFormModal({
 
         <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="סוג שירות" required>
-              <Select
-                value={form.clientType || undefined}
-                onValueChange={handleClientTypeChange}
-              >
-                <SelectTrigger
-                  className={cn(serviceTypeError && "border-destructive")}
-                >
-                  <SelectValue placeholder="בחר סוג שירות">
-                    {form.clientType
-                      ? getClientTypeLabel(form.clientType as ClientType)
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Website Client">
-                    {getClientTypeLabel("Website Client")}
-                  </SelectItem>
-                  <SelectItem value="Service Client">
-                    {getClientTypeLabel("Service Client")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              {serviceTypeError && (
-                <p className="mt-1 text-xs text-destructive">
-                  נא לבחור סוג שירות
-                </p>
-              )}
-            </Field>
             <Field label="שם העסק">
               <Input
                 value={form.businessName}
@@ -279,63 +215,57 @@ export function ClientFormModal({
             </Field>
             <Field label="אתר">
               <Input
-                value={form.website}
+                value={form.website ?? ""}
                 onChange={(e) => handleChange("website", e.target.value)}
                 placeholder="https://"
               />
             </Field>
-            {form.clientType === "Website Client" && (
+            <Field label="סוג חבילה">
+              <Select
+                value={form.packageType ?? "None"}
+                onValueChange={(value) =>
+                  handleChange(
+                    "packageType",
+                    value as ClientFormState["packageType"],
+                  )
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="בחר סוג חבילה">
+                    {getPackageTypeLabel((form.packageType ?? "None") as PackageType)}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {PACKAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {getPackageTypeLabel(option as PackageType)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            {form.packageType !== "None" && (
               <>
-                <Field label="סוג חבילה">
-                  <Select
-                    value={form.packageType ?? "None"}
-                    onValueChange={(value) =>
-                      handleChange(
-                        "packageType",
-                        value as ClientFormState["packageType"],
-                      )
+                <Field label="מחיר חידוש (ש״ח)">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={form.renewalPrice}
+                    onChange={(e) =>
+                      handleChange("renewalPrice", e.target.value)
                     }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="בחר סוג חבילה">
-                        {getPackageTypeLabel(
-                          (form.packageType ?? "None") as PackageType,
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PACKAGE_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {getPackageTypeLabel(option as PackageType)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    min={0}
+                  />
                 </Field>
-                {form.packageType !== "None" && (
-                  <>
-                    <Field label="מחיר חידוש (ש״ח)">
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={form.renewalPrice}
-                        onChange={(e) =>
-                          handleChange("renewalPrice", e.target.value)
-                        }
-                        min={0}
-                      />
-                    </Field>
-                    <Field label="תאריך חידוש">
-                      <Input
-                        type="date"
-                        value={form.renewalDate ?? ""}
-                        onChange={(e) =>
-                          handleChange("renewalDate", e.target.value)
-                        }
-                      />
-                    </Field>
-                  </>
-                )}
+                <Field label="תאריך חידוש">
+                  <Input
+                    type="date"
+                    value={form.renewalDate ?? ""}
+                    onChange={(e) =>
+                      handleChange("renewalDate", e.target.value)
+                    }
+                  />
+                </Field>
               </>
             )}
           </div>
@@ -343,16 +273,16 @@ export function ClientFormModal({
           <Field label="הערות">
             <Textarea
               rows={3}
-              value={form.notes}
+              value={form.notes ?? ""}
               onChange={(e) => handleChange("notes", e.target.value)}
             />
           </Field>
 
-          <Field label="חוזה עבודה (אופציונלי)">
+          <Field label="הסכם חתום (אופציונלי)">
             <div className="flex flex-col gap-2">
               <Input
                 type="file"
-                accept={CONTRACT_ACCEPT}
+                accept={AGREEMENT_ACCEPT}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -363,12 +293,12 @@ export function ClientFormModal({
                 }}
                 className="cursor-pointer"
               />
-              {contractDisplayName ? (
+              {agreementDisplayName ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-muted-foreground">
                     {pendingContractFile
-                      ? `קובץ חדש: ${contractDisplayName}`
-                      : `קובץ שמור: ${contractDisplayName}`}
+                      ? `קובץ חדש: ${agreementDisplayName}`
+                      : `קובץ שמור: ${agreementDisplayName}`}
                   </span>
                   <Button
                     type="button"
@@ -380,9 +310,9 @@ export function ClientFormModal({
                       setContractClearRequested(true);
                       setForm((prev) => ({
                         ...prev,
-                        contractFileId: undefined,
-                        contractFileName: undefined,
-                        contractFileType: undefined,
+                        agreementFileId: null,
+                        agreementFileName: null,
+                        agreementFileType: null,
                       }));
                     }}
                   >
@@ -427,7 +357,7 @@ type FieldProps = {
 function Field({ label, required, children }: FieldProps) {
   return (
     <div className="space-y-1">
-      <Label className={cn("text-xs")}>
+      <Label className="text-xs">
         {label}
         {required && <span className="text-destructive">*</span>}
       </Label>
