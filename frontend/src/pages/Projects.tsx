@@ -8,19 +8,19 @@ import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog'
 import { ClientFormModal } from '@/components/clients/ClientFormModal'
 import { CLIENTS_STORAGE_KEY, readStoredClients } from '@/lib/clientStorage'
 import {
+  apiCreateProject,
+  apiDeleteProject,
+  apiGetProjects,
+  apiUpdateProject,
+} from '@/lib/projectsApi'
+import {
   BRIEFS_CHANGED_EVENT,
   getProjectIdsWithBriefs,
 } from '@/lib/projectBriefStorage'
-import {
-  PROJECTS_STORAGE_KEY,
-  loadProjectsFromStorage,
-} from '@/lib/projectsStorage'
 
 export function Projects() {
   const navigate = useNavigate()
-  const [projects, setProjects] = useState<Project[]>(() =>
-    loadProjectsFromStorage(),
-  )
+  const [projects, setProjects] = useState<Project[]>([])
   const [projectIdsWithBrief, setProjectIdsWithBrief] = useState<Set<string>>(
     () => getProjectIdsWithBriefs(),
   )
@@ -30,6 +30,23 @@ export function Projects() {
   const [activeProject, setActiveProject] = useState<Project | undefined>()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [addClientModalOpen, setAddClientModalOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    apiGetProjects()
+      .then((rows) => {
+        if (cancelled) return
+        setProjects(rows)
+      })
+      .catch(() => {
+        // Keep UI intact; on failure we simply show an empty list for now.
+        if (cancelled) return
+        setProjects([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     setClients(readStoredClients())
@@ -44,11 +61,6 @@ export function Projects() {
     return () => window.removeEventListener(BRIEFS_CHANGED_EVENT, refresh)
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects))
-  }, [projects])
-
   function handleAdd() {
     setFormMode('create')
     setActiveProject(undefined)
@@ -61,24 +73,45 @@ export function Projects() {
     setFormOpen(true)
   }
 
-  function handleFormSubmit(project: Project) {
-    setProjects((prev) => {
-      const idx = prev.findIndex((p) => p.id === project.id)
-      if (idx >= 0) {
-        const next = [...prev]
-        next[idx] = project
-        return next
-      }
-      return [...prev, project]
+  async function handleFormSubmit(project: Project) {
+    if (formMode === 'edit') {
+      const updated = await apiUpdateProject(project.id, {
+        projectName: project.projectName,
+        clientId: project.clientId,
+        clientName: project.clientName,
+        projectType: project.projectType,
+        status: project.status,
+        totalAmount: project.totalAmount,
+        paidAmount: project.paidAmount,
+        remainingAmount: project.remainingAmount,
+        hourlyRate: project.hourlyRate,
+        workedHours: project.workedHours,
+        billableTotal: project.billableTotal,
+        notes: project.notes ?? null,
+      })
+
+      setProjects((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p)),
+      )
+      setFormOpen(false)
+      return
+    }
+
+    const created = await apiCreateProject({
+      projectName: project.projectName,
+      clientName: project.clientName,
+      projectType: project.projectType,
+      status: project.status,
     })
+
+    setProjects((prev) => [created, ...prev])
     setFormOpen(false)
   }
 
-  function handleStatusChange(project: Project, status: ProjectStatus) {
+  async function handleStatusChange(project: Project, status: ProjectStatus) {
+    const updated = await apiUpdateProject(project.id, { status })
     setProjects((prev) =>
-      prev.map((p) =>
-        p.id === project.id ? { ...p, status } : p,
-      ),
+      prev.map((p) => (p.id === updated.id ? updated : p)),
     )
   }
 
@@ -87,9 +120,11 @@ export function Projects() {
     setDeleteOpen(true)
   }
 
-  function handleDeleteConfirm() {
+  async function handleDeleteConfirm() {
     if (!activeProject) return
-    setProjects((prev) => prev.filter((p) => p.id !== activeProject.id))
+    const id = activeProject.id
+    await apiDeleteProject(id)
+    setProjects((prev) => prev.filter((p) => p.id !== id))
     setDeleteOpen(false)
   }
 

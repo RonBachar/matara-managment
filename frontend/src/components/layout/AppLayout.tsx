@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import { BackendHealthTest } from "@/components/BackendHealthTest";
-import { ProjectsApiTest } from "@/components/ProjectsApiTest";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { cn } from "@/lib/utils";
@@ -14,7 +13,6 @@ export function AppLayout() {
         <main className="px-6 pb-6 pt-4">
           <AppHeader />
           <BackendHealthTest />
-          <ProjectsApiTest />
           <Outlet />
         </main>
       </div>
