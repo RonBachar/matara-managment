@@ -1,60 +1,50 @@
 import type { ProjectBriefInput } from "@/types/projectBrief";
 
-/** Flat shape aligned with the core brief fields (export / GPT layer). */
-export type BriefFormExportInput = {
-  projectType: string;
-  businessName: string;
-  goal: string;
-  mainAction: string;
-
-  audienceType: string;
-  audienceIdeal: string;
-  audiencePain: string;
-  differentiation: string;
-
-  servicesDescription: string;
-  mainService: string;
-
-  pagesCount: string;
-  pageList: string;
-  siteEmphasis: string;
-
-  tone: string[];
-  languageStyle: string[];
-  linguisticAddressing: string;
-};
-
+/**
+ * GPT-oriented brief: mirrors the five questionnaire sections
+ * (פרטי העסק · קהל ומטרה · מבנה האתר · שפה וניסוח · הנחיות נוספות)
+ * without rewriting user content.
+ */
 export type NormalizedBriefJSON = {
-  project: {
-    type: string;
+  business: {
     businessName: string;
-    goal: string;
-    mainAction: string;
-  };
-  audience: {
-    type: string;
-    idealClient: string;
-    pain: string;
+    whatTheyDo: string;
+    servicesOrProductsOnSite: string;
     differentiation: string;
   };
-  services: {
-    offerDescription: string;
-    main: string;
+  audience: {
+    targetAudience: string;
+    idealCustomer: string;
+    mainPainOrNeed: string;
+  };
+  goals: {
+    siteGoal: string;
+    mainCallToAction: string;
   };
   structure: {
-    pagesCount: number | null;
+    websiteType: string;
+    /** Heuristic from the first line of the מבנה field (may be null). */
+    pageCount: number | null;
+    /** Parsed page names/lines (empty if none extracted). */
     pages: string[];
-    allowAI: boolean;
-    emphasis: string;
+    /**
+     * When true, no discrete page list was parsed — AI may propose pages,
+     * still respecting pageCount, structureFieldAsProvided, and notes.
+     */
+    allowAiStructure: boolean;
+    /** Verbatim trimmed text from "עמודים ומבנה" (user wording preserved). */
+    structureFieldAsProvided: string;
+    whatToEmphasizeOnTheSite: string;
   };
   toneAndLanguage: {
     tone: string[];
     languageStyle: string[];
-    addressing: string;
+    linguisticAddressing: string;
   };
-  guidelines: {
-    avoid: string;
+  constraints: {
+    whatToAvoid: string;
   };
+  /** הערות / דוגמאות / השראות (deduped from the מבנה field when identical). */
   notes: string;
 };
 
@@ -131,68 +121,43 @@ function normalizedFreeNotes(input: ProjectBriefInput): string {
   return freeText;
 }
 
-export function projectBriefInputToBriefFormExport(
-  input: ProjectBriefInput,
-): BriefFormExportInput {
-  return {
-    projectType: input.websiteType,
-    businessName: input.businessNameSnapshot,
-    goal: input.sitePrimaryBusinessGoal,
-    mainAction: input.mainUserAction,
-
-    audienceType: input.targetAudience,
-    audienceIdeal: input.idealClient,
-    audiencePain: input.audiencePainPoints,
-    differentiation: input.differentiators,
-
-    servicesDescription: input.businessWhatTheyDo,
-    mainService: input.servicesProductsOnSite,
-
-    pagesCount: String(parsePagesCountFromStructure(input.sitePagesAndStructure) ?? ""),
-    pageList: input.sitePagesAndStructure,
-    siteEmphasis: input.siteEmphasis,
-
-    tone: input.toneSelections,
-    languageStyle: input.languageStyleSelections,
-    linguisticAddressing: input.linguisticAddressing,
-  };
-}
-
 export function generateBriefJSON(input: ProjectBriefInput): NormalizedBriefJSON {
+  const structureFieldAsProvided = trimStr(input.sitePagesAndStructure);
   const pages = parsePageListString(input.sitePagesAndStructure);
-  const allowAI = pages.length === 0;
+  const allowAiStructure = pages.length === 0;
   const notes = normalizedFreeNotes(input);
 
   return {
-    project: {
-      type: trimStr(input.websiteType),
+    business: {
       businessName: trimStr(input.businessNameSnapshot),
-      goal: trimStr(input.sitePrimaryBusinessGoal),
-      mainAction: trimStr(input.mainUserAction),
-    },
-    audience: {
-      type: trimStr(input.targetAudience),
-      idealClient: trimStr(input.idealClient),
-      pain: trimStr(input.audiencePainPoints),
+      whatTheyDo: trimStr(input.businessWhatTheyDo),
+      servicesOrProductsOnSite: trimStr(input.servicesProductsOnSite),
       differentiation: trimStr(input.differentiators),
     },
-    services: {
-      offerDescription: trimStr(input.businessWhatTheyDo),
-      main: trimStr(input.servicesProductsOnSite),
+    audience: {
+      targetAudience: trimStr(input.targetAudience),
+      idealCustomer: trimStr(input.idealClient),
+      mainPainOrNeed: trimStr(input.audiencePainPoints),
+    },
+    goals: {
+      siteGoal: trimStr(input.sitePrimaryBusinessGoal),
+      mainCallToAction: trimStr(input.mainUserAction),
     },
     structure: {
-      pagesCount: parsePagesCountFromStructure(input.sitePagesAndStructure),
+      websiteType: trimStr(input.websiteType),
+      pageCount: parsePagesCountFromStructure(input.sitePagesAndStructure),
       pages,
-      allowAI,
-      emphasis: trimStr(input.siteEmphasis),
+      allowAiStructure,
+      structureFieldAsProvided,
+      whatToEmphasizeOnTheSite: trimStr(input.siteEmphasis),
     },
     toneAndLanguage: {
       tone: cleanStringArray(input.toneSelections),
       languageStyle: cleanStringArray(input.languageStyleSelections),
-      addressing: trimStr(input.linguisticAddressing),
+      linguisticAddressing: trimStr(input.linguisticAddressing),
     },
-    guidelines: {
-      avoid: trimStr(input.contentAvoid),
+    constraints: {
+      whatToAvoid: trimStr(input.contentAvoid),
     },
     notes,
   };
