@@ -1,0 +1,111 @@
+// Matara — initial schema for projects, briefs, and AI pipeline runs (PostgreSQL).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Work project (aligned with the app’s Project concept; `clientId` is a string ref until a Client table exists).
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId   String
+  clientName String
+  projectName String
+
+  projectType String
+  status      String
+
+  totalAmount     Decimal @default(0) @db.Decimal(14, 2)
+  paidAmount      Decimal @default(0) @db.Decimal(14, 2)
+  remainingAmount Decimal @default(0) @db.Decimal(14, 2)
+  hourlyRate      Decimal @default(0) @db.Decimal(14, 2)
+  workedHours     Decimal @default(0) @db.Decimal(14, 2)
+  billableTotal   Decimal @default(0) @db.Decimal(14, 2)
+
+  notes String?
+
+  briefs ProjectBrief[]
+}
+
+/// Questionnaire / brief content for a project; flexible JSON until fields are normalized.
+model ProjectBrief {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  /// Full brief payload (questionnaire answers, etc.).
+  data Json @default("{}")
+
+  pipelineRuns PipelineRun[]
+
+  @@index([projectId])
+}
+
+/// One execution of the AI pipeline for a given brief.
+model PipelineRun {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  briefId String
+  brief   ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  status PipelineRunStatus @default(PENDING)
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  error      String? @db.Text
+
+  steps PipelineStep[]
+
+  @@index([briefId])
+}
+
+enum PipelineRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/// A single step inside a pipeline run (ordering, I/O, status).
+model PipelineStep {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runId String
+  run   PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  /// Sequence order (0, 1, 2, …).
+  stepOrder Int
+  /// Stable key for the step type, e.g. "sitemap", "copy".
+  stepKey   String
+
+  status PipelineStepStatus @default(PENDING)
+
+  inputJson  Json?
+  outputJson Json?
+  error      String? @db.Text
+
+  @@index([runId])
+}
+
+enum PipelineStepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
