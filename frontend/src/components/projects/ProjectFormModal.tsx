@@ -36,18 +36,17 @@ const WEBSITE_STATUS_OPTIONS: ProjectStatus[] = [
 
 const FREELANCE_STATUS_OPTIONS: ProjectStatus[] = [
   "בביצוע",
-  "ממתין לתשובה",
   "הסתיים",
 ];
 
-const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ["פעיל", "בהמתנה"];
+const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ["ללא סטטוס"];
 
 function getDefaultStatusForType(projectType: ProjectType): ProjectStatus {
   switch (projectType) {
     case "פרילנסר שעתי":
       return "בביצוע";
     case "ריטיינר חודשי":
-      return "פעיל";
+      return "ללא סטטוס";
     case "בניית אתר":
     default:
       return "שיחת אפיון";

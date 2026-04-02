@@ -52,9 +52,17 @@ export async function apiGetProjects(): Promise<Project[]> {
 
 export async function apiCreateProject(input: {
   projectName: string;
+  clientId: string;
   clientName: string;
   projectType: string;
   status: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  hourlyRate: number;
+  workedHours: number;
+  billableTotal: number;
+  notes?: string | null;
 }): Promise<Project> {
   const res = await fetch("/api/projects", {
     method: "POST",

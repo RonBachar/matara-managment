@@ -23,11 +23,9 @@ export type ProjectStatus =
   | 'שלב בדיקות והשקה'
   // New hourly freelancer statuses
   | 'בביצוע'
-  | 'ממתין לתשובה'
   | 'הסתיים'
-  // Monthly retainer statuses
-  | 'פעיל'
-  | 'בהמתנה'
+  // Monthly retainer: no meaningful statuses (kept as a single placeholder for DB compatibility)
+  | 'ללא סטטוס'
 
 export type Project = {
   id: string

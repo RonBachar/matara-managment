@@ -1,0 +1,5 @@
+# Repo-wide ignores
+
+# Local backups / exports (may contain real data)
+backup/
+

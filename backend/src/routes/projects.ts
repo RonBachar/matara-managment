@@ -22,12 +22,61 @@ function readOptionalNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+type ProjectFinancials = {
+  projectType: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  hourlyRate: number;
+  workedHours: number;
+  billableTotal: number;
+};
+
+function clampNonNegative(n: number): number {
+  return n < 0 ? 0 : n;
+}
+
+function applyBusinessRules(input: ProjectFinancials): ProjectFinancials {
+  const paid = clampNonNegative(input.paidAmount);
+
+  // Hourly freelance work
+  if (input.projectType === "פרילנסר שעתי") {
+    const hourlyRate = clampNonNegative(input.hourlyRate);
+    const workedHours = clampNonNegative(input.workedHours);
+    const billableTotal = hourlyRate * workedHours;
+    const remainingAmount = clampNonNegative(billableTotal - paid);
+    return {
+      projectType: input.projectType,
+      totalAmount: 0,
+      paidAmount: paid,
+      remainingAmount,
+      hourlyRate,
+      workedHours,
+      billableTotal,
+    };
+  }
+
+  // Website project + Monthly retainer (same financial structure)
+  const totalAmount = clampNonNegative(input.totalAmount);
+  const remainingAmount = clampNonNegative(totalAmount - paid);
+  return {
+    projectType: input.projectType,
+    totalAmount,
+    paidAmount: paid,
+    remainingAmount,
+    hourlyRate: 0,
+    workedHours: 0,
+    billableTotal: 0,
+  };
+}
+
 projectsRouter.post("/", async (req, res) => {
   try {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const projectName = readNonEmptyString(body.projectName);
     const clientName = readNonEmptyString(body.clientName);
+    const clientIdFromBody = readNonEmptyString(body.clientId);
     const projectType = readNonEmptyString(body.projectType);
     const status = readNonEmptyString(body.status);
 
@@ -38,8 +87,20 @@ projectsRouter.post("/", async (req, res) => {
       });
     }
 
-    // We don't have a Client table yet. Use a stable-ish placeholder for now.
-    const clientId = clientName;
+    // Client table not migrated yet; accept the frontend id if provided, otherwise fall back.
+    const clientId = clientIdFromBody ?? clientName;
+
+    const notes = readOptionalString(body.notes);
+
+    const financials = applyBusinessRules({
+      projectType,
+      totalAmount: readOptionalNumber(body.totalAmount) ?? 0,
+      paidAmount: readOptionalNumber(body.paidAmount) ?? 0,
+      remainingAmount: readOptionalNumber(body.remainingAmount) ?? 0,
+      hourlyRate: readOptionalNumber(body.hourlyRate) ?? 0,
+      workedHours: readOptionalNumber(body.workedHours) ?? 0,
+      billableTotal: readOptionalNumber(body.billableTotal) ?? 0,
+    });
 
     const created = await prisma.project.create({
       data: {
@@ -48,6 +109,13 @@ projectsRouter.post("/", async (req, res) => {
         clientId,
         projectType,
         status,
+        totalAmount: financials.totalAmount,
+        paidAmount: financials.paidAmount,
+        remainingAmount: financials.remainingAmount,
+        hourlyRate: financials.hourlyRate,
+        workedHours: financials.workedHours,
+        billableTotal: financials.billableTotal,
+        notes: notes && notes.length > 0 ? notes : null,
       },
     });
 
@@ -79,6 +147,8 @@ projectsRouter.patch("/:id", async (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const data: Record<string, unknown> = {};
+    const requestedType = readOptionalString(body.projectType);
+    const wantsProjectType = requestedType !== undefined && requestedType.length > 0;
 
     const projectName = readOptionalString(body.projectName);
     if (projectName !== undefined && projectName.length > 0) data.projectName = projectName;
@@ -89,8 +159,7 @@ projectsRouter.patch("/:id", async (req, res) => {
     const clientId = readOptionalString(body.clientId);
     if (clientId !== undefined && clientId.length > 0) data.clientId = clientId;
 
-    const projectType = readOptionalString(body.projectType);
-    if (projectType !== undefined && projectType.length > 0) data.projectType = projectType;
+    if (wantsProjectType) data.projectType = requestedType;
 
     const status = readOptionalString(body.status);
     if (status !== undefined && status.length > 0) data.status = status;
@@ -121,10 +190,43 @@ projectsRouter.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    const updated = await prisma.project.update({
-      where: { id },
-      data,
-    });
+    const touchesFinancials =
+      wantsProjectType ||
+      totalAmount !== undefined ||
+      paidAmount !== undefined ||
+      remainingAmount !== undefined ||
+      hourlyRate !== undefined ||
+      workedHours !== undefined ||
+      billableTotal !== undefined;
+
+    const updateData = { ...data } as Record<string, unknown>;
+
+    if (touchesFinancials) {
+      const existing = await prisma.project.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ error: "Project not found" });
+
+      const mergedType = wantsProjectType ? (requestedType as string) : existing.projectType;
+
+      const merged = applyBusinessRules({
+        projectType: mergedType,
+        totalAmount: totalAmount ?? Number(existing.totalAmount),
+        paidAmount: paidAmount ?? Number(existing.paidAmount),
+        remainingAmount: remainingAmount ?? Number(existing.remainingAmount),
+        hourlyRate: hourlyRate ?? Number(existing.hourlyRate),
+        workedHours: workedHours ?? Number(existing.workedHours),
+        billableTotal: billableTotal ?? Number(existing.billableTotal),
+      });
+
+      updateData.projectType = merged.projectType;
+      updateData.totalAmount = merged.totalAmount;
+      updateData.paidAmount = merged.paidAmount;
+      updateData.remainingAmount = merged.remainingAmount;
+      updateData.hourlyRate = merged.hourlyRate;
+      updateData.workedHours = merged.workedHours;
+      updateData.billableTotal = merged.billableTotal;
+    }
+
+    const updated = await prisma.project.update({ where: { id }, data: updateData });
 
     return res.json(updated);
   } catch (err: unknown) {

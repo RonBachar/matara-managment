@@ -99,9 +99,17 @@ export function Projects() {
 
     const created = await apiCreateProject({
       projectName: project.projectName,
+      clientId: project.clientId,
       clientName: project.clientName,
       projectType: project.projectType,
       status: project.status,
+      totalAmount: project.totalAmount,
+      paidAmount: project.paidAmount,
+      remainingAmount: project.remainingAmount,
+      hourlyRate: project.hourlyRate,
+      workedHours: project.workedHours,
+      billableTotal: project.billableTotal,
+      notes: project.notes ?? null,
     })
 
     setProjects((prev) => [created, ...prev])

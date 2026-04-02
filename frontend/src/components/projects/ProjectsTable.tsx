@@ -21,7 +21,6 @@ const WEBSITE_STATUS_OPTIONS: ProjectStatus[] = [
 
 const FREELANCE_STATUS_OPTIONS: ProjectStatus[] = [
   'בביצוע',
-  'ממתין לתשובה',
   'הסתיים',
 ]
 
@@ -46,11 +45,9 @@ const STATUS_STYLES: Record<ProjectStatus, string> = {
   'שלב בדיקות והשקה': 'bg-blue-50 text-blue-700 border-blue-200/70',
   // New hourly freelancer statuses
   'בביצוע': 'bg-amber-50 text-amber-700 border-amber-200/70',
-  'ממתין לתשובה': 'bg-violet-50 text-violet-700 border-violet-200/70',
   'הסתיים': 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  // Monthly retainer statuses (legacy compatibility)
-  'פעיל': 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  'בהמתנה': 'bg-amber-50 text-amber-700 border-amber-200/70',
+  // Monthly retainer (no real status)
+  'ללא סטטוס': 'bg-muted text-muted-foreground border-border',
 }
 
 function getStatusStyle(status: ProjectStatus): string {
@@ -76,17 +73,15 @@ const STATUS_DOT_CLASSES: Record<ProjectStatus, string> = {
   'שלב סקיצות': 'bg-violet-500',
   'שלב בדיקות והשקה': 'bg-blue-500',
   'בביצוע': 'bg-amber-500',
-  'ממתין לתשובה': 'bg-violet-500',
   'הסתיים': 'bg-emerald-500',
-  'פעיל': 'bg-emerald-500',
-  'בהמתנה': 'bg-amber-500',
+  'ללא סטטוס': 'bg-muted-foreground/50',
 }
 
 function getStatusDotClass(status: ProjectStatus): string {
   return STATUS_DOT_CLASSES[status] ?? 'bg-muted-foreground/50'
 }
 
-const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ['פעיל', 'בהמתנה']
+const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ['ללא סטטוס']
 
 function getStatusOptionsForProject(project: Project): ProjectStatus[] {
   let base: ProjectStatus[]
