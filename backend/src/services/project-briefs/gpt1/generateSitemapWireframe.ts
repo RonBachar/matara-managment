@@ -1,6 +1,18 @@
 import OpenAI from "openai";
 import type { NormalizedProjectBrief } from "../buildNormalizedProjectBrief";
 
+export type Gpt1PageType =
+  | "landing-page"
+  | "homepage"
+  | "service-page"
+  | "about-page"
+  | "contact-page"
+  | "pricing-page"
+  | "faq-page"
+  | "article-page"
+  | "article-list"
+  | "custom";
+
 export type Gpt1SitemapWireframeResult = {
   provider: "openai";
   model: string;
@@ -8,11 +20,19 @@ export type Gpt1SitemapWireframeResult = {
   summary: string;
   sitemap: Array<{
     pageName: string;
+    pageType: Gpt1PageType;
     purpose: string;
+    isPrimary: boolean;
   }>;
   wireframe: Array<{
     pageName: string;
-    sections: string[];
+    pageGoal: string;
+    sections: Array<{
+      sectionName: string;
+      sectionPurpose: string;
+      sectionGoal: string;
+      keyPoints: string[];
+    }>;
   }>;
   notes: string;
 };
@@ -25,6 +45,18 @@ type RawGpt1SitemapWireframeResult = {
 };
 
 const MODEL = "gpt-4.1-mini";
+const PAGE_TYPES: Gpt1PageType[] = [
+  "landing-page",
+  "homepage",
+  "service-page",
+  "about-page",
+  "contact-page",
+  "pricing-page",
+  "faq-page",
+  "article-page",
+  "article-list",
+  "custom",
+];
 
 let cachedClient: OpenAI | null = null;
 
@@ -59,21 +91,24 @@ function readStringArray(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function parseSitemapEntries(value: unknown): Array<{ pageName: string; purpose: string }> {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((entry) => {
-      const row = asRecord(entry);
-      return {
-        pageName: readString(row.pageName),
-        purpose: readString(row.purpose),
-      };
-    })
-    .filter((entry) => entry.pageName && entry.purpose);
+function readBoolean(value: unknown): boolean {
+  return typeof value === "boolean" ? value : false;
 }
 
-function parseWireframeEntries(value: unknown): Array<{ pageName: string; sections: string[] }> {
+function readPageType(value: unknown): Gpt1PageType | null {
+  return typeof value === "string" && PAGE_TYPES.includes(value as Gpt1PageType)
+    ? (value as Gpt1PageType)
+    : null;
+}
+
+function parseSitemapEntries(
+  value: unknown,
+): Array<{
+  pageName: string;
+  pageType: Gpt1PageType;
+  purpose: string;
+  isPrimary: boolean;
+}> {
   if (!Array.isArray(value)) return [];
 
   return value
@@ -81,10 +116,67 @@ function parseWireframeEntries(value: unknown): Array<{ pageName: string; sectio
       const row = asRecord(entry);
       return {
         pageName: readString(row.pageName),
-        sections: readStringArray(row.sections),
+        pageType: readPageType(row.pageType),
+        purpose: readString(row.purpose),
+        isPrimary: readBoolean(row.isPrimary),
       };
     })
-    .filter((entry) => entry.pageName && entry.sections.length > 0);
+    .filter(
+      (
+        entry,
+      ): entry is {
+        pageName: string;
+        pageType: Gpt1PageType;
+        purpose: string;
+        isPrimary: boolean;
+      } => Boolean(entry.pageName && entry.pageType && entry.purpose),
+    );
+}
+
+function parseWireframeEntries(
+  value: unknown,
+): Array<{
+  pageName: string;
+  pageGoal: string;
+  sections: Array<{
+    sectionName: string;
+    sectionPurpose: string;
+    sectionGoal: string;
+    keyPoints: string[];
+  }>;
+}> {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => {
+      const row = asRecord(entry);
+      const sectionsRaw = Array.isArray(row.sections) ? row.sections : [];
+
+      const sections = sectionsRaw
+        .map((section) => {
+          const item = asRecord(section);
+          return {
+            sectionName: readString(item.sectionName),
+            sectionPurpose: readString(item.sectionPurpose),
+            sectionGoal: readString(item.sectionGoal),
+            keyPoints: readStringArray(item.keyPoints),
+          };
+        })
+        .filter(
+          (section) =>
+            section.sectionName &&
+            section.sectionPurpose &&
+            section.sectionGoal &&
+            section.keyPoints.length > 0,
+        );
+
+      return {
+        pageName: readString(row.pageName),
+        pageGoal: readString(row.pageGoal),
+        sections,
+      };
+    })
+    .filter((entry) => entry.pageName && entry.pageGoal && entry.sections.length > 0);
 }
 
 function parseResponsePayload(value: unknown): Gpt1SitemapWireframeResult {
@@ -112,11 +204,24 @@ function parseResponsePayload(value: unknown): Gpt1SitemapWireframeResult {
 function buildInstructions(brief: NormalizedProjectBrief): string {
   return [
     "You are GPT 1 for Matara Managment.",
-    "Your task is to create a practical sitemap and simple wireframe plan from a saved project brief.",
+    "Your task is to create a practical sitemap and wireframe plan from a saved project brief.",
     "Return only structured JSON that matches the required schema.",
-    "Keep the result concise, practical, and aligned with the brief.",
-    "Do not mention GPT 2, HTML generation, deployment, or implementation code.",
-    "If the brief is incomplete, make reasonable minimal assumptions and note them briefly in notes.",
+    "Be concise, practical, and conversion-aware.",
+    "Do not write copywriting, HTML, design styling, implementation notes, or GPT 2 planning.",
+    "",
+    "Product rules:",
+    "1. Respect the brief strictly.",
+    "2. If the brief says one landing page, do not invent extra pages.",
+    "3. Footer is a section, not a page, unless the brief explicitly requires it as a page.",
+    "4. Keep the sitemap practical and minimal.",
+    "5. Do not add fake or decorative pages.",
+    "6. Each page in sitemap must include pageName, pageType, purpose, isPrimary.",
+    "7. Each wireframe item must include pageName, pageGoal, sections.",
+    "8. Each section must include sectionName, sectionPurpose, sectionGoal, keyPoints.",
+    "9. sectionPurpose means why the section exists in the business/marketing logic.",
+    "10. sectionGoal means what the user should understand, feel, or do after this section.",
+    "11. keyPoints are content directions only, not full copy.",
+    "12. Use notes only for brief assumptions or important constraints, and keep notes short.",
     "",
     "Normalized brief JSON:",
     JSON.stringify(brief, null, 2),
@@ -137,7 +242,7 @@ export async function generateSitemapWireframe(
           content: [
             {
               type: "input_text",
-              text: "You generate sitemap and wireframe planning output for internal project briefs.",
+              text: "You generate structured sitemap and wireframe planning output for internal project briefs.",
             },
           ],
         },
@@ -169,10 +274,15 @@ export async function generateSitemapWireframe(
                 items: {
                   type: "object",
                   additionalProperties: false,
-                  required: ["pageName", "purpose"],
+                  required: ["pageName", "pageType", "purpose", "isPrimary"],
                   properties: {
                     pageName: { type: "string" },
+                    pageType: {
+                      type: "string",
+                      enum: PAGE_TYPES,
+                    },
                     purpose: { type: "string" },
+                    isPrimary: { type: "boolean" },
                   },
                 },
               },
@@ -181,12 +291,31 @@ export async function generateSitemapWireframe(
                 items: {
                   type: "object",
                   additionalProperties: false,
-                  required: ["pageName", "sections"],
+                  required: ["pageName", "pageGoal", "sections"],
                   properties: {
                     pageName: { type: "string" },
+                    pageGoal: { type: "string" },
                     sections: {
                       type: "array",
-                      items: { type: "string" },
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: [
+                          "sectionName",
+                          "sectionPurpose",
+                          "sectionGoal",
+                          "keyPoints",
+                        ],
+                        properties: {
+                          sectionName: { type: "string" },
+                          sectionPurpose: { type: "string" },
+                          sectionGoal: { type: "string" },
+                          keyPoints: {
+                            type: "array",
+                            items: { type: "string" },
+                          },
+                        },
+                      },
                     },
                   },
                 },
