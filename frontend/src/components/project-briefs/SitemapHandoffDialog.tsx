@@ -125,7 +125,7 @@ export function SitemapHandoffDialog({
 
           <section className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">
-              פלט GPT 1 (stub)
+            פלט GPT 1 (OpenAI)
             </h3>
             <pre
               dir="ltr"
