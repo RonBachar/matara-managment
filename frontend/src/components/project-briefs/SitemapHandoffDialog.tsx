@@ -1,20 +1,33 @@
 import { useCallback, useMemo, useState } from "react";
 import { copyTextToClipboard } from "@/lib/copyToClipboard";
-import type { BriefGpt1RunResult } from "@/lib/projectBriefsApi";
+import type { BriefGpt1HistoryRun } from "@/lib/projectBriefsApi";
 import { Button } from "@/components/ui/button";
 
 type SitemapHandoffDialogProps = {
   open: boolean;
   status: "idle" | "loading" | "success" | "error";
-  result: BriefGpt1RunResult | null;
+  result: BriefGpt1HistoryRun | null;
+  runs: BriefGpt1HistoryRun[];
   errorMessage: string | null;
   onClose: () => void;
 };
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("he-IL");
+}
+
+function shortErrorMessage(value: string | null): string | null {
+  if (!value) return null;
+  return value.length > 160 ? `${value.slice(0, 157)}...` : value;
+}
 
 export function SitemapHandoffDialog({
   open,
   status,
   result,
+  runs,
   errorMessage,
   onClose,
 }: SitemapHandoffDialogProps) {
@@ -67,7 +80,7 @@ export function SitemapHandoffDialog({
               יצירת Sitemap & Wireframe
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              שליחה לתזרים GPT 1 בבקאנד ותצוגת התוצאה הנוכחית.
+              תוצאת GPT 1 הנוכחית והיסטוריית הרצות.
             </p>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
@@ -93,28 +106,29 @@ export function SitemapHandoffDialog({
           <section className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">מצב</h3>
             <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground">
-              {status === "loading" && "מריץ עכשיו את תזרים GPT 1 בבקאנד..."}
-              {status === "success" && "התזרים הושלם בהצלחה. התוצאה נשמרה בבקאנד."}
-              {status === "error" && (errorMessage || "ההרצה נכשלה.")}
-              {status === "idle" && "אין כרגע תוצאה לתצוגה."}
+              {status === "loading" && "מריץ עכשיו את GPT 1 בבקאנד..."}
+              {status === "success" && "ההרצה הושלמה בהצלחה. ההיסטוריה והתוצאה עודכנו."}
+              {status === "error" &&
+                (errorMessage ||
+                  "ההרצה האחרונה נכשלה. אם קיימת תוצאה מוצלחת קודמת, היא עדיין מוצגת למעלה.")}
+              {status === "idle" && "אין כרגע הרצה חדשה. מוצגת התוצאה המוצלחת האחרונה אם קיימת."}
             </div>
           </section>
 
           {result && (
             <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground">פרטי הרצה</h3>
+              <h3 className="text-sm font-semibold text-foreground">התוצאה הראשית המוצגת</h3>
               <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground">
                 <div>Run ID: {result.runId}</div>
-                <div>Step ID: {result.stepId}</div>
                 <div>Status: {result.status}</div>
+                <div>Created At: {formatDate(result.createdAt)}</div>
+                <div>Model: {result.model || "לא זמין"}</div>
               </div>
             </section>
           )}
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-foreground">
-              בריף מנורמל (JSON)
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">בריף מנורמל (JSON)</h3>
             <pre
               dir="ltr"
               className="max-h-56 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-left font-mono text-xs leading-relaxed text-foreground"
@@ -124,15 +138,41 @@ export function SitemapHandoffDialog({
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-foreground">
-            פלט GPT 1 (OpenAI)
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">פלט GPT 1 (OpenAI)</h3>
             <pre
               dir="ltr"
               className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-dashed border-border bg-background p-3 text-left font-mono text-[11px] leading-relaxed text-muted-foreground"
             >
               {outputText}
             </pre>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold text-foreground">היסטוריית הרצות</h3>
+            <div className="space-y-2">
+              {runs.length === 0 ? (
+                <div className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  עדיין אין הרצות GPT 1 עבור האפיון הזה.
+                </div>
+              ) : (
+                runs.map((run) => (
+                  <div
+                    key={run.runId}
+                    className="rounded-md border border-border bg-muted/20 p-3 text-sm leading-relaxed text-foreground"
+                  >
+                    <div>Status: {run.status}</div>
+                    <div>Created At: {formatDate(run.createdAt)}</div>
+                    <div>Model: {run.model || "לא זמין"}</div>
+                    <div>Run ID: {run.runId}</div>
+                    {run.error && (
+                      <div className="text-destructive">
+                        Error: {shortErrorMessage(run.error)}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </section>
         </div>
       </div>

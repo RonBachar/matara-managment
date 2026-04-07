@@ -21,8 +21,9 @@ import {
   type NormalizedBriefJSON,
 } from "@/lib/generateBriefJSON";
 import {
+  apiGetBriefGpt1History,
   apiRunBriefGpt1SitemapWireframe,
-  type BriefGpt1RunResult,
+  type BriefGpt1HistoryRun,
 } from "@/lib/projectBriefsApi";
 import { SitemapHandoffDialog } from "./SitemapHandoffDialog";
 import { Button } from "@/components/ui/button";
@@ -101,8 +102,12 @@ export function ProjectBriefForm({
   onRequestDelete,
 }: ProjectBriefFormProps) {
   const [sitemapHandoffOpen, setSitemapHandoffOpen] = useState(false);
-  const [gpt1RunStatus, setGpt1RunStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [gpt1RunResult, setGpt1RunResult] = useState<BriefGpt1RunResult | null>(null);
+  const [gpt1RunStatus, setGpt1RunStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [gpt1Runs, setGpt1Runs] = useState<BriefGpt1HistoryRun[]>([]);
+  const [gpt1RunResult, setGpt1RunResult] =
+    useState<BriefGpt1HistoryRun | null>(null);
   const [gpt1RunError, setGpt1RunError] = useState<string | null>(null);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
@@ -138,6 +143,34 @@ export function ProjectBriefForm({
     const isDirty = JSON.stringify(input) !== JSON.stringify(baselineInput);
     onDirtyChange(isDirty);
   }, [input, baselineInput, onDirtyChange]);
+
+  useEffect(() => {
+    if (!initialBrief?.id) {
+      setGpt1Runs([]);
+      setGpt1RunResult(null);
+      setGpt1RunError(null);
+      setGpt1RunStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    apiGetBriefGpt1History(initialBrief.id)
+      .then((history) => {
+        if (cancelled) return;
+        setGpt1Runs(history.runs);
+        setGpt1RunResult(history.latestSuccessfulRun);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGpt1Runs([]);
+        setGpt1RunResult(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialBrief?.id]);
 
   const summaryBrief = useMemo<ProjectBrief>(
     () => ({
@@ -189,28 +222,45 @@ export function ProjectBriefForm({
     onSubmit(input);
   }
 
+  async function refreshGpt1History(briefId: string) {
+    const history = await apiGetBriefGpt1History(briefId);
+    setGpt1Runs(history.runs);
+    setGpt1RunResult(history.latestSuccessfulRun);
+  }
+
   async function handleCreateSitemapWireframe() {
     setSitemapHandoffOpen(true);
-    setGpt1RunResult(null);
     setGpt1RunError(null);
 
     if (!initialBrief?.id) {
       setGpt1RunStatus("error");
-      setGpt1RunError("יש לשמור את האפיון קודם, ורק אחר כך להריץ Create Sitemap & Wireframe.");
+      setGpt1RunError(
+        "יש לשמור את האפיון קודם, ורק אחר כך להריץ Create Sitemap & Wireframe.",
+      );
       return;
     }
 
     try {
       setGpt1RunStatus("loading");
-      const result = await apiRunBriefGpt1SitemapWireframe(initialBrief.id);
-      setGpt1RunResult(result);
+      await apiRunBriefGpt1SitemapWireframe(initialBrief.id);
+      await refreshGpt1History(initialBrief.id);
       setGpt1RunStatus("success");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setGpt1RunError(message || "ההרצה נכשלה.");
+      try {
+        await refreshGpt1History(initialBrief.id);
+      } catch {
+        // Keep existing history/result if refresh fails after a failed run.
+      }
       setGpt1RunStatus("error");
     }
   }
+
+  const gpt1ButtonLabel =
+    gpt1Runs.length > 0
+      ? "Regenerate Sitemap & Wireframe"
+      : "Create Sitemap & Wireframe";
 
   const legacyTones = (input.toneSelections ?? []).filter(
     (t) => !(TONE_SELECTION_OPTIONS as readonly string[]).includes(t),
@@ -243,19 +293,17 @@ export function ProjectBriefForm({
             </div>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            שאלון אפיון — חמישה פרקים, מותאם לשיחה חיה עם לקוח.
+            שאלון אפיון - חמישה פרקים, מותאם לשיחה חיה עם לקוח.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <SectionCard title="1 — פרטי העסק">
+          <SectionCard title="1 - פרטי העסק">
             <Field label="שם העסק" required>
               <Input
                 required
                 value={input.businessNameSnapshot}
-                onChange={(e) =>
-                  update("businessNameSnapshot", e.target.value)
-                }
+                onChange={(e) => update("businessNameSnapshot", e.target.value)}
                 placeholder="שם העסק או המותג"
               />
             </Field>
@@ -263,16 +311,14 @@ export function ProjectBriefForm({
             <FieldWithHint
               label="מה העסק עושה בפועל?"
               required
-              hint="מה העסק מציע בפועל ביום־יום, בצורה פשוטה וברורה"
+              hint="מה העסק מציע בפועל ביום-יום, בצורה פשוטה וברורה"
               examples="משרד עורכי דין לדיני משפחה / רואה חשבון לעסקים קטנים / מורה פרטי למתמטיקה / חברה לייצור מוצרי פלסטיק"
             >
               <Textarea
                 required
                 rows={3}
                 value={input.businessWhatTheyDo}
-                onChange={(e) =>
-                  update("businessWhatTheyDo", e.target.value)
-                }
+                onChange={(e) => update("businessWhatTheyDo", e.target.value)}
               />
             </FieldWithHint>
 
@@ -307,7 +353,7 @@ export function ProjectBriefForm({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="2 — קהל ומטרה">
+          <SectionCard title="2 - קהל ומטרה">
             <FieldWithHint
               label="מי קהל היעד של האתר?"
               required
@@ -397,7 +443,7 @@ export function ProjectBriefForm({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="3 — מבנה האתר">
+          <SectionCard title="3 - מבנה האתר">
             <PresetOrCustomSelect
               label="איזה סוג אתר צריך לבנות?"
               required
@@ -441,7 +487,7 @@ export function ProjectBriefForm({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="4 — שפה וניסוח">
+          <SectionCard title="4 - שפה וניסוח">
             <MultiCheckGroup
               title="איזה טון דיבור אתה רוצה?"
               hint="איך האתר צריך להישמע מבחינת אופי הדיבור"
@@ -483,12 +529,12 @@ export function ProjectBriefForm({
                 onChange={(e) =>
                   update("linguisticAddressing", e.target.value)
                 }
-                placeholder="למשל: פנייה בלשון רבים, טון נייטרלי…"
+                placeholder="למשל: פנייה בלשון רבים, טון נייטרלי..."
               />
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="5 — הנחיות נוספות">
+          <SectionCard title="5 - הנחיות נוספות">
             <FieldWithHint
               label="האם יש משהו שלא תרצה שיופיע באתר?"
               hint="דברים שחשוב להימנע מהם בתוכן, במסרים או במבנה"
@@ -550,7 +596,7 @@ export function ProjectBriefForm({
               <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
             </summary>
             <p className="mt-3 text-xs text-muted-foreground">
-              פלט פנימי לפני אינטגרציה עם GPT — מתעדכן לפי הטופס.
+              פלט פנימי לפני אינטגרציה עם GPT - מתעדכן לפי הטופס.
             </p>
             <pre
               dir="ltr"
@@ -568,7 +614,7 @@ export function ProjectBriefForm({
               className="px-4"
               onClick={handleCreateSitemapWireframe}
             >
-              צור Sitemap & Wireframe
+              {gpt1ButtonLabel}
             </Button>
           </div>
 
@@ -598,6 +644,7 @@ export function ProjectBriefForm({
           open={sitemapHandoffOpen}
           status={gpt1RunStatus}
           result={gpt1RunResult}
+          runs={gpt1Runs}
           errorMessage={gpt1RunError}
           onClose={() => setSitemapHandoffOpen(false)}
         />
@@ -716,7 +763,7 @@ function PresetOrCustomSelect({
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >
-        <option value="">בחרו…</option>
+        <option value="">בחרו...</option>
         {options.map((o) => (
           <option key={o} value={o}>
             {o}
