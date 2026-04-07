@@ -1,44 +1,46 @@
-import { useCallback, useState } from "react";
-import type { NormalizedBriefJSON } from "@/lib/generateBriefJSON";
-import { GPT1_SITEMAP_PROMPT } from "@/lib/gpt1SitemapPrompt";
-import {
-  buildGpt1SitemapFullHandoff,
-} from "@/lib/gpt1SitemapHandoff";
+import { useCallback, useMemo, useState } from "react";
 import { copyTextToClipboard } from "@/lib/copyToClipboard";
+import type { BriefGpt1RunResult } from "@/lib/projectBriefsApi";
 import { Button } from "@/components/ui/button";
 
 type SitemapHandoffDialogProps = {
   open: boolean;
-  normalizedBrief: NormalizedBriefJSON;
+  status: "idle" | "loading" | "success" | "error";
+  result: BriefGpt1RunResult | null;
+  errorMessage: string | null;
   onClose: () => void;
 };
 
 export function SitemapHandoffDialog({
   open,
-  normalizedBrief,
+  status,
+  result,
+  errorMessage,
   onClose,
 }: SitemapHandoffDialogProps) {
   const [copyHint, setCopyHint] = useState<string | null>(null);
 
-  const jsonText = JSON.stringify(normalizedBrief, null, 2);
-  const fullText = buildGpt1SitemapFullHandoff(normalizedBrief);
+  const normalizedBriefText = useMemo(
+    () => JSON.stringify(result?.normalizedBrief ?? {}, null, 2),
+    [result],
+  );
+  const outputText = useMemo(
+    () => JSON.stringify(result?.output ?? {}, null, 2),
+    [result],
+  );
 
   const flash = useCallback((ok: boolean) => {
     setCopyHint(ok ? "הועתק ללוח" : "העתקה נכשלה");
     window.setTimeout(() => setCopyHint(null), 2000);
   }, []);
 
-  const copyPrompt = useCallback(async () => {
-    flash(await copyTextToClipboard(GPT1_SITEMAP_PROMPT));
-  }, [flash]);
-
   const copyJson = useCallback(async () => {
-    flash(await copyTextToClipboard(jsonText));
-  }, [flash, jsonText]);
+    flash(await copyTextToClipboard(normalizedBriefText));
+  }, [flash, normalizedBriefText]);
 
-  const copyFull = useCallback(async () => {
-    flash(await copyTextToClipboard(fullText));
-  }, [flash, fullText]);
+  const copyOutput = useCallback(async () => {
+    flash(await copyTextToClipboard(outputText));
+  }, [flash, outputText]);
 
   if (!open) return null;
 
@@ -62,10 +64,10 @@ export function SitemapHandoffDialog({
               id="sitemap-handoff-title"
               className="text-base font-semibold text-foreground"
             >
-              יצירת Sitemap — העברה ל-GPT 1
+              יצירת Sitemap & Wireframe
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              פרומפט קבוע + JSON מנורמל — ללא קריאת API בשלב זה.
+              שליחה לתזרים GPT 1 בבקאנד ותצוגת התוצאה הנוכחית.
             </p>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
@@ -74,14 +76,11 @@ export function SitemapHandoffDialog({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/20 px-4 py-2.5">
-          <Button type="button" variant="secondary" size="sm" onClick={copyPrompt}>
-            העתקת פרומפט GPT 1
-          </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={copyJson}>
+          <Button type="button" variant="secondary" size="sm" onClick={copyJson} disabled={!result}>
             העתקת JSON מנורמל
           </Button>
-          <Button type="button" size="sm" onClick={copyFull}>
-            העתקת חבילה מלאה
+          <Button type="button" size="sm" onClick={copyOutput} disabled={!result}>
+            העתקת פלט GPT 1
           </Button>
           {copyHint && (
             <span className="self-center text-xs text-muted-foreground">
@@ -92,16 +91,25 @@ export function SitemapHandoffDialog({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 text-right">
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold text-foreground">
-              פרומפט GPT 1 (Sitemap)
-            </h3>
-            <pre
-              dir="ltr"
-              className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 text-left font-mono text-xs leading-relaxed text-foreground"
-            >
-              {GPT1_SITEMAP_PROMPT}
-            </pre>
+            <h3 className="text-sm font-semibold text-foreground">מצב</h3>
+            <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground">
+              {status === "loading" && "מריץ עכשיו את תזרים GPT 1 בבקאנד..."}
+              {status === "success" && "התזרים הושלם בהצלחה. התוצאה נשמרה בבקאנד."}
+              {status === "error" && (errorMessage || "ההרצה נכשלה.")}
+              {status === "idle" && "אין כרגע תוצאה לתצוגה."}
+            </div>
           </section>
+
+          {result && (
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">פרטי הרצה</h3>
+              <div className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground">
+                <div>Run ID: {result.runId}</div>
+                <div>Step ID: {result.stepId}</div>
+                <div>Status: {result.status}</div>
+              </div>
+            </section>
+          )}
 
           <section className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">
@@ -111,19 +119,19 @@ export function SitemapHandoffDialog({
               dir="ltr"
               className="max-h-56 overflow-auto rounded-md border border-border bg-muted/30 p-3 text-left font-mono text-xs leading-relaxed text-foreground"
             >
-              {jsonText}
+              {normalizedBriefText}
             </pre>
           </section>
 
           <section className="space-y-2">
             <h3 className="text-sm font-semibold text-foreground">
-              חבילת ייצוא מלאה (תצוגה)
+              פלט GPT 1 (stub)
             </h3>
             <pre
               dir="ltr"
               className="max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-dashed border-border bg-background p-3 text-left font-mono text-[11px] leading-relaxed text-muted-foreground"
             >
-              {fullText}
+              {outputText}
             </pre>
           </section>
         </div>

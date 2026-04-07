@@ -20,6 +20,10 @@ import {
   generateBriefJSON,
   type NormalizedBriefJSON,
 } from "@/lib/generateBriefJSON";
+import {
+  apiRunBriefGpt1SitemapWireframe,
+  type BriefGpt1RunResult,
+} from "@/lib/projectBriefsApi";
 import { SitemapHandoffDialog } from "./SitemapHandoffDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +101,9 @@ export function ProjectBriefForm({
   onRequestDelete,
 }: ProjectBriefFormProps) {
   const [sitemapHandoffOpen, setSitemapHandoffOpen] = useState(false);
+  const [gpt1RunStatus, setGpt1RunStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [gpt1RunResult, setGpt1RunResult] = useState<BriefGpt1RunResult | null>(null);
+  const [gpt1RunError, setGpt1RunError] = useState<string | null>(null);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief
@@ -180,6 +187,29 @@ export function ProjectBriefForm({
     skipNextDirtySync.current = true;
     onDirtyChange?.(false);
     onSubmit(input);
+  }
+
+  async function handleCreateSitemapWireframe() {
+    setSitemapHandoffOpen(true);
+    setGpt1RunResult(null);
+    setGpt1RunError(null);
+
+    if (!initialBrief?.id) {
+      setGpt1RunStatus("error");
+      setGpt1RunError("יש לשמור את האפיון קודם, ורק אחר כך להריץ Create Sitemap & Wireframe.");
+      return;
+    }
+
+    try {
+      setGpt1RunStatus("loading");
+      const result = await apiRunBriefGpt1SitemapWireframe(initialBrief.id);
+      setGpt1RunResult(result);
+      setGpt1RunStatus("success");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setGpt1RunError(message || "ההרצה נכשלה.");
+      setGpt1RunStatus("error");
+    }
   }
 
   const legacyTones = (input.toneSelections ?? []).filter(
@@ -536,7 +566,7 @@ export function ProjectBriefForm({
               variant="secondary"
               size="sm"
               className="px-4"
-              onClick={() => setSitemapHandoffOpen(true)}
+              onClick={handleCreateSitemapWireframe}
             >
               צור Sitemap & Wireframe
             </Button>
@@ -566,7 +596,9 @@ export function ProjectBriefForm({
 
         <SitemapHandoffDialog
           open={sitemapHandoffOpen}
-          normalizedBrief={normalizedBrief}
+          status={gpt1RunStatus}
+          result={gpt1RunResult}
+          errorMessage={gpt1RunError}
           onClose={() => setSitemapHandoffOpen(false)}
         />
       </div>

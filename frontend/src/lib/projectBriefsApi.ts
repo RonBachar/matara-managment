@@ -1,6 +1,7 @@
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
 
 type ApiBrief = Record<string, unknown>;
+type ApiObject = Record<string, unknown>;
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -9,6 +10,13 @@ function asString(value: unknown): string {
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((v): v is string => typeof v === "string");
+}
+
+function asObject(value: unknown): ApiObject {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  return value as ApiObject;
 }
 
 function briefFromApi(row: ApiBrief): ProjectBrief {
@@ -60,6 +68,15 @@ async function parseErrorMessage(res: Response): Promise<string> {
   }
   return "";
 }
+
+export type BriefGpt1RunResult = {
+  briefId: string;
+  runId: string;
+  stepId: string;
+  status: string;
+  normalizedBrief: Record<string, unknown>;
+  output: Record<string, unknown>;
+};
 
 export async function apiListBriefs(): Promise<ProjectBrief[]> {
   const res = await fetch("/api/project-briefs");
@@ -131,3 +148,22 @@ export async function apiDeleteBrief(id: string): Promise<void> {
   }
 }
 
+export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<BriefGpt1RunResult> {
+  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res);
+    throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
+  }
+
+  const data = asObject(await res.json());
+  return {
+    briefId: asString(data.briefId),
+    runId: asString(data.runId),
+    stepId: asString(data.stepId),
+    status: asString(data.status),
+    normalizedBrief: asObject(data.normalizedBrief),
+    output: asObject(data.output),
+  };
+}

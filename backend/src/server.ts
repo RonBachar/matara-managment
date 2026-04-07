@@ -3,6 +3,7 @@ import express from "express";
 import { projectsRouter } from "./routes/projects";
 import { clientsRouter } from "./routes/clients";
 import { projectBriefsRouter } from "./routes/projectBriefs";
+import { projectBriefGpt1Router } from "./routes/projectBriefGpt1";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -22,6 +23,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/projects", projectsRouter);
 app.use("/api/clients", clientsRouter);
 app.use("/api/project-briefs", projectBriefsRouter);
+app.use("/api/project-briefs", projectBriefGpt1Router);
 
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
