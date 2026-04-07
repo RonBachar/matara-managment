@@ -10,7 +10,7 @@ export function AppLayout() {
       <Sidebar />
 
       <div className={cn("min-h-dvh", "pr-64")}>
-        <main className="px-6 pb-6 pt-4">
+        <main className="px-6 pb-6">
           <AppHeader />
           <BackendHealthTest />
           <Outlet />
@@ -19,4 +19,3 @@ export function AppLayout() {
     </div>
   );
 }
-

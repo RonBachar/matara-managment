@@ -36,11 +36,8 @@ export function Sidebar() {
     >
       <div className="flex h-full flex-col p-5">
         <div className="mb-6">
-          <div className="text-base font-semibold tracking-tight text-slate-50">
-            Matara Management
-          </div>
-          <div className="mt-0.5 text-xs text-slate-400">
-            מערכת ניהול פנימית
+          <div className="text-base font-semibold tracking-tight text-slate-50 text-center">
+            Matara Studio
           </div>
         </div>
 
@@ -76,7 +73,7 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="pt-4 text-xs text-slate-500">v0 • RTL</div>
+        <div className="pt-4 text-xs text-slate-500 text-center">v0 • RTL</div>
       </div>
     </aside>
   );
