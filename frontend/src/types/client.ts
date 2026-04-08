@@ -1,10 +1,10 @@
-export type PackageType =
+﻿export type PackageType =
   | "Hosting + Elementor Pro"
   | "Hosting Only"
   | "Elementor Pro Only"
   | "None";
 
-/** Hebrew labels for package types (UI only). Internal values stay in English for storage. */
+/** Hebrew labels for legacy package types (UI only). Internal values stay in English for compatibility. */
 export const PACKAGE_TYPE_LABELS: Record<PackageType, string> = {
   None: "ללא חבילה",
   "Hosting + Elementor Pro": "אחסון + רישיון אלמנטור",
@@ -12,38 +12,44 @@ export const PACKAGE_TYPE_LABELS: Record<PackageType, string> = {
   "Elementor Pro Only": "אלמנטור בלבד",
 };
 
-export function getPackageTypeLabel(
-  packageType: PackageType | undefined,
-): string {
+export function getPackageTypeLabel(packageType: PackageType | undefined): string {
   if (packageType == null) return "—";
   return PACKAGE_TYPE_LABELS[packageType] ?? packageType;
 }
 
-/**
- * Service type (סוג שירות) — internal values kept for localStorage compatibility.
- * UI labels: "בניית אתרים" | "עבודת פרילנסר" via getClientTypeLabel().
- */
 export type ClientType = "Website Client" | "Service Client";
+
+export type ClientService = {
+  id: string;
+  clientId?: string;
+  type: string;
+  name: string;
+  provider?: string;
+  billingCycle?: string;
+  renewalPrice?: number;
+  renewalDate?: string;
+  status?: string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 export type Client = {
   id: string;
-  /** Service type (סוג שירות). "Website Client" = בניית אתרים, "Service Client" = עבודת פרילנסר. */
   clientType: ClientType;
   createdAt?: string;
-  /** שם העסק */
   businessName: string;
-  /** שם הלקוח (איש קשר / שם פרטי וכו׳) */
   clientName: string;
   phone: string;
   email: string;
   website?: string;
+  status?: string;
   notes?: string;
+  services?: ClientService[];
   packageType?: PackageType;
   renewalPrice?: number;
   renewalDate?: string;
-  /** @deprecated Legacy name-only; prefer contractFile* when present. */
   workContractFileName?: string;
-  /** Work contract blob stored in IndexedDB (same store as agreement files). */
   contractFileId?: string;
   contractFileName?: string;
   contractFileType?: string;

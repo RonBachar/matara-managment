@@ -1,4 +1,4 @@
-import type { Client } from "@/types/client";
+﻿import type { Client, ClientService } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
@@ -16,6 +16,7 @@ const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>([
 
 export type UpcomingRenewal = {
   client: Client;
+  service: ClientService;
   daysLeft: number;
 };
 
@@ -50,46 +51,59 @@ export function getTotalRemainingAmount(projects: Project[]): number {
   }, 0);
 }
 
-/** Leads not yet converted to a client (no `convertedClientId`). */
 export function getNewLeadsCount(leads: Lead[]): number {
   return leads.filter((lead) => !lead.convertedClientId).length;
 }
 
 export function getTodayTasks(tasks: Task[]): Task[] {
-  return tasks.filter(
-    (task) => task.status === "לביצוע" || task.status === "בתהליך",
-  );
+  return tasks.filter((task) => task.status === "לביצוע" || task.status === "בתהליך");
 }
 
-export function getUpcomingRenewals(
-  clients: Client[],
-  windowDays = 14,
-): UpcomingRenewal[] {
+function getRenewalServices(client: Client): ClientService[] {
+  if (Array.isArray(client.services) && client.services.length > 0) {
+    return client.services.filter(
+      (service) => typeof service.renewalDate === "string" && service.renewalDate.trim().length > 0,
+    );
+  }
+
+  if (client.packageType && client.packageType !== "None" && client.renewalDate) {
+    return [
+      {
+        id: `${client.id}-legacy-service`,
+        clientId: client.id,
+        type: "Custom service",
+        name: client.packageType,
+        renewalPrice: client.renewalPrice,
+        renewalDate: client.renewalDate,
+        status: client.status ?? "Active",
+      },
+    ];
+  }
+
+  return [];
+}
+
+export function getUpcomingRenewals(clients: Client[], windowDays = 14): UpcomingRenewal[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayInMs = 24 * 60 * 60 * 1000;
 
   return clients
-    .filter(
-      (client) =>
-        client.clientType === "Website Client" &&
-        client.packageType !== "None" &&
-        typeof client.renewalDate === "string" &&
-        client.renewalDate.trim().length > 0,
+    .flatMap((client) =>
+      getRenewalServices(client).map((service) => {
+        const renewalDate = new Date(service.renewalDate as string);
+        if (Number.isNaN(renewalDate.getTime())) return null;
+
+        const renewalDay = new Date(
+          renewalDate.getFullYear(),
+          renewalDate.getMonth(),
+          renewalDate.getDate(),
+        );
+        const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
+
+        return { client, service, daysLeft };
+      }),
     )
-    .map((client) => {
-      const renewalDate = new Date(client.renewalDate as string);
-      if (Number.isNaN(renewalDate.getTime())) return null;
-
-      const renewalDay = new Date(
-        renewalDate.getFullYear(),
-        renewalDate.getMonth(),
-        renewalDate.getDate(),
-      );
-      const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
-
-      return { client, daysLeft };
-    })
     .filter((entry): entry is UpcomingRenewal => {
       if (entry == null) return false;
       return entry.daysLeft >= 0 && entry.daysLeft <= windowDays;

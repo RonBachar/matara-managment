@@ -1,4 +1,5 @@
 import type { ClientRecord } from "@/types/clientRecord";
+import type { ClientServiceRecord } from "@/types/clientService";
 
 type ApiClient = {
   id: string;
@@ -9,13 +10,23 @@ type ApiClient = {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
-  packageType?: string | null;
-  renewalPrice?: unknown;
-  renewalDate?: string | null;
   notes?: string | null;
   agreementFileId?: string | null;
   agreementFileName?: string | null;
   agreementFileType?: string | null;
+  services?: ApiClientService[];
+};
+
+type ApiClientService = {
+  id: string;
+  clientId: string;
+  createdAt?: string;
+  updatedAt?: string;
+  name: string;
+  billingCycle?: string | null;
+  renewalPrice?: unknown;
+  renewalDate?: string | null;
+  notes?: string | null;
 };
 
 function toNumberOrNull(value: unknown): number | null {
@@ -34,13 +45,25 @@ function clientFromApi(row: ApiClient): ClientRecord {
     phone: row.phone ?? "",
     email: row.email ?? "",
     website: row.website ?? null,
-    packageType: row.packageType ?? null,
-    renewalPrice: toNumberOrNull(row.renewalPrice),
-    renewalDate: row.renewalDate ?? null,
     notes: row.notes ?? null,
     agreementFileId: row.agreementFileId ?? null,
     agreementFileName: row.agreementFileName ?? null,
     agreementFileType: row.agreementFileType ?? null,
+    services: Array.isArray(row.services) ? row.services.map(clientServiceFromApi) : [],
+  };
+}
+
+function clientServiceFromApi(row: ApiClientService): ClientServiceRecord {
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    serviceName: row.name ?? "",
+    billingCycle: row.billingCycle ?? null,
+    renewalPrice: toNumberOrNull(row.renewalPrice),
+    renewalDate: row.renewalDate ?? null,
+    notes: row.notes ?? null,
   };
 }
 
@@ -60,7 +83,9 @@ export async function apiGetClients(): Promise<ClientRecord[]> {
   return (data as ApiClient[]).map(clientFromApi);
 }
 
-export async function apiCreateClient(input: Omit<ClientRecord, "id" | "createdAt" | "updatedAt">) {
+export async function apiCreateClient(
+  input: Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">,
+) {
   const res = await fetch("/api/clients", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -76,7 +101,7 @@ export async function apiCreateClient(input: Omit<ClientRecord, "id" | "createdA
 
 export async function apiUpdateClient(
   id: string,
-  patch: Partial<Omit<ClientRecord, "id" | "createdAt" | "updatedAt">>,
+  patch: Partial<Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">>,
 ) {
   const res = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -99,4 +124,3 @@ export async function apiDeleteClient(id: string): Promise<void> {
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
   }
 }
-

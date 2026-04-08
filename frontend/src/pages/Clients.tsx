@@ -43,7 +43,9 @@ export function Clients() {
     setFormOpen(true);
   }
 
-  async function handleFormSubmit(data: Omit<ClientRecord, "id" | "createdAt" | "updatedAt">) {
+  async function handleFormSubmit(
+    data: Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">,
+  ) {
     if (formMode === "edit" && activeClient) {
       const updated = await apiUpdateClient(activeClient.id, data);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));

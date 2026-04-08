@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import type { ClientRecord } from "@/types/clientRecord";
+import type { ClientServiceRecord } from "@/types/clientService";
 import { Button } from "@/components/ui/button";
-import { getPackageTypeLabel } from "@/types/client";
 import { getAgreementFile } from "@/lib/agreementFiles";
 import { apiGetClients } from "@/lib/clientsApi";
+import {
+  apiCreateClientService,
+  apiDeleteClientService,
+  apiGetClientServices,
+  apiUpdateClientService,
+} from "@/lib/clientServicesApi";
+import { ClientServicesSection } from "@/components/clients/ClientServicesSection";
 
 type LocationState = {
   client?: ClientRecord;
@@ -15,23 +22,44 @@ export function ClientDetails() {
   const location = useLocation();
   const state = location.state as LocationState | null;
   const [client, setClient] = useState<ClientRecord | null>(state?.client ?? null);
+  const [services, setServices] = useState<ClientServiceRecord[]>(state?.client?.services ?? []);
 
   useEffect(() => {
-    if (client) return;
+    if (client && state?.client) return;
     let cancelled = false;
+
     apiGetClients()
       .then((rows) => {
         if (cancelled) return;
-        setClient(rows.find((c) => c.id === params.id) ?? null);
+        const match = rows.find((c) => c.id === params.id) ?? null;
+        setClient(match);
+        setServices(match?.services ?? []);
       })
       .catch(() => {
         if (cancelled) return;
         setClient(null);
+        setServices([]);
       });
+
     return () => {
       cancelled = true;
     };
-  }, [client, params.id]);
+  }, [client, params.id, state?.client]);
+
+  useEffect(() => {
+    if (!params.id) return;
+    let cancelled = false;
+
+    apiGetClientServices(params.id)
+      .then((rows) => {
+        if (!cancelled) setServices(rows);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
 
   const [agreementBlobUrl, setAgreementBlobUrl] = useState<string | null>(null);
   const [agreementLoading, setAgreementLoading] = useState(false);
@@ -44,6 +72,7 @@ export function ClientDetails() {
 
   useEffect(() => {
     let revokedUrl: string | null = null;
+
     async function run() {
       if (!client?.agreementFileId) return;
       setAgreementLoading(true);
@@ -65,6 +94,7 @@ export function ClientDetails() {
         setAgreementLoading(false);
       }
     }
+
     void run();
     return () => {
       if (revokedUrl) URL.revokeObjectURL(revokedUrl);
@@ -75,9 +105,7 @@ export function ClientDetails() {
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">לקוח לא נמצא</h2>
-        <p className="text-sm text-muted-foreground">
-          לא הצלחנו למצוא את פרטי הלקוח.
-        </p>
+        <p className="text-sm text-muted-foreground">לא הצלחנו למצוא את פרטי הלקוח.</p>
         <Link to="/clients">
           <Button type="button" size="sm" variant="outline">
             חזרה לרשימת הלקוחות
@@ -91,12 +119,8 @@ export function ClientDetails() {
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">
-            {client.businessName || client.clientName}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            פרטי לקוח – צפייה בלבד.
-          </p>
+          <h2 className="text-lg font-semibold">{client.businessName || client.clientName}</h2>
+          <p className="text-sm text-muted-foreground">פרטי לקוח - צפייה בלבד.</p>
         </div>
         <Link to="/clients">
           <Button type="button" size="sm" variant="outline">
@@ -106,8 +130,8 @@ export function ClientDetails() {
       </div>
 
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
-        <DetailsField label="שם העסק" value={client.businessName} />
-        <DetailsField label="שם הלקוח" value={client.clientName} />
+        <DetailsField label="שם העסק" value={client.businessName || "—"} />
+        <DetailsField label="איש קשר" value={client.clientName} />
         <DetailsField label="מספר טלפון" value={client.phone} />
         <DetailsField label="אימייל" value={client.email} />
         <DetailsField
@@ -127,38 +151,29 @@ export function ClientDetails() {
             )
           }
         />
-        <DetailsField
-          label="סוג חבילה"
-          value={getPackageTypeLabel(client.packageType as any)}
-        />
-        <DetailsField
-          label="מחיר חידוש"
-          value={
-            client.packageType && client.packageType !== "None"
-              ? `₪${Number(client.renewalPrice ?? 0).toLocaleString("he-IL")}`
-              : "—"
-          }
-        />
-        <DetailsField
-          label="תאריך חידוש"
-          value={
-            client.packageType &&
-            client.packageType !== "None" &&
-            client.renewalDate
-              ? new Date(client.renewalDate).toLocaleDateString("he-IL")
-              : "—"
-          }
-        />
         <DetailsField label="הערות" value={client.notes || "—"} />
         <DetailsField
-          label="תאריך תחילת התקשרות"
-          value={
-            client.createdAt
-              ? new Date(client.createdAt).toLocaleDateString("he-IL")
-              : "—"
-          }
+          label="תאריך תחילת ההתקשרות"
+          value={client.createdAt ? new Date(client.createdAt).toLocaleDateString("he-IL") : "—"}
         />
       </div>
+
+      <ClientServicesSection
+        services={services}
+        onCreate={async (input) => {
+          if (!client) return;
+          const created = await apiCreateClientService(client.id, input);
+          setServices((prev) => [...prev, created]);
+        }}
+        onUpdate={async (id, patch) => {
+          const updated = await apiUpdateClientService(id, patch);
+          setServices((prev) => prev.map((service) => (service.id === updated.id ? updated : service)));
+        }}
+        onDelete={async (id) => {
+          await apiDeleteClientService(id);
+          setServices((prev) => prev.filter((service) => service.id !== id));
+        }}
+      />
 
       {hasAgreementRef && (
         <div className="rounded-xl border border-border bg-card p-4">
@@ -167,9 +182,7 @@ export function ClientDetails() {
             <div className="text-sm text-muted-foreground">
               {client.agreementFileName}
               {agreementMissing && (
-                <span className="ms-2 text-xs text-destructive">
-                  (הקובץ לא נמצא בדפדפן)
-                </span>
+                <span className="ms-2 text-xs text-destructive">(הקובץ לא נמצא בדפדפן)</span>
               )}
             </div>
             <div className="flex flex-wrap gap-2">

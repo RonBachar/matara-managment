@@ -1,28 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
-import type { PackageType } from "@/types/client";
-import { getPackageTypeLabel } from "@/types/client";
-import { PACKAGE_OPTIONS } from "@/data/mockClients";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  deleteAgreementFile,
-  saveAgreementFile,
-} from "@/lib/agreementFiles";
+import { deleteAgreementFile, saveAgreementFile } from "@/lib/agreementFiles";
 import type { ClientRecord } from "@/types/clientRecord";
 
 const AGREEMENT_ACCEPT =
   ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-type ClientInput = Omit<ClientRecord, "id" | "createdAt" | "updatedAt">;
+type ClientInput = Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">;
 
 type ClientFormModalProps = {
   open: boolean;
@@ -32,7 +19,31 @@ type ClientFormModalProps = {
   onSubmit: (client: ClientInput) => void;
 };
 
-type ClientFormState = Omit<ClientInput, "renewalPrice"> & { renewalPrice: string };
+type ClientFormState = {
+  businessName: string;
+  clientName: string;
+  phone: string;
+  email: string;
+  website: string;
+  notes: string;
+  agreementFileId: string | null;
+  agreementFileName: string | null;
+  agreementFileType: string | null;
+};
+
+function createEmptyForm(): ClientFormState {
+  return {
+    businessName: "",
+    clientName: "",
+    phone: "",
+    email: "",
+    website: "",
+    notes: "",
+    agreementFileId: null,
+    agreementFileName: null,
+    agreementFileType: null,
+  };
+}
 
 export function ClientFormModal({
   open,
@@ -44,27 +55,19 @@ export function ClientFormModal({
   const [form, setForm] = useState<ClientFormState>(() =>
     initialClient
       ? {
-          ...initialClient,
-          renewalPrice: String(initialClient.renewalPrice ?? ""),
+          businessName: initialClient.businessName,
+          clientName: initialClient.clientName,
+          phone: initialClient.phone,
+          email: initialClient.email,
+          website: initialClient.website ?? "",
+          notes: initialClient.notes ?? "",
+          agreementFileId: initialClient.agreementFileId ?? null,
+          agreementFileName: initialClient.agreementFileName ?? null,
+          agreementFileType: initialClient.agreementFileType ?? null,
         }
-      : {
-          businessName: "",
-          clientName: "",
-          phone: "",
-          email: "",
-          website: "",
-          notes: "",
-          packageType: "Hosting + Elementor Pro",
-          renewalPrice: "",
-          renewalDate: "",
-          agreementFileId: null,
-          agreementFileName: null,
-          agreementFileType: null,
-        },
+      : createEmptyForm(),
   );
-  const [pendingContractFile, setPendingContractFile] = useState<File | null>(
-    null,
-  );
+  const [pendingContractFile, setPendingContractFile] = useState<File | null>(null);
   const [contractClearRequested, setContractClearRequested] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -73,47 +76,33 @@ export function ClientFormModal({
     setPendingContractFile(null);
     setContractClearRequested(false);
     setIsSaving(false);
+
     if (initialClient) {
       setForm({
-        ...initialClient,
-        renewalPrice: String(initialClient.renewalPrice ?? ""),
+        businessName: initialClient.businessName,
+        clientName: initialClient.clientName,
+        phone: initialClient.phone,
+        email: initialClient.email,
+        website: initialClient.website ?? "",
+        notes: initialClient.notes ?? "",
+        agreementFileId: initialClient.agreementFileId ?? null,
+        agreementFileName: initialClient.agreementFileName ?? null,
+        agreementFileType: initialClient.agreementFileType ?? null,
       });
-    } else {
-      setForm({
-        businessName: "",
-        clientName: "",
-        phone: "",
-        email: "",
-        website: "",
-        notes: "",
-        packageType: "Hosting + Elementor Pro",
-        renewalPrice: "",
-        renewalDate: "",
-        agreementFileId: null,
-        agreementFileName: null,
-        agreementFileType: null,
-      });
+      return;
     }
+
+    setForm(createEmptyForm());
   }, [open, initialClient]);
 
-  function handleChange<K extends keyof ClientFormState>(
-    key: K,
-    value: ClientFormState[K],
-  ) {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "packageType" && value === "None") {
-        next.renewalPrice = "";
-        next.renewalDate = "";
-      }
-      return next;
-    });
+  function handleChange<K extends keyof ClientFormState>(key: K, value: ClientFormState[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const priceNumber = Number(form.renewalPrice || 0);
     setIsSaving(true);
+
     try {
       let agreementFileId = form.agreementFileId ?? undefined;
       let agreementFileName = form.agreementFileName ?? undefined;
@@ -136,27 +125,17 @@ export function ClientFormModal({
         agreementFileType = ref.agreementFileType;
       }
 
-      const base: ClientInput = {
+      onSubmit({
         businessName: form.businessName.trim(),
         clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         website: form.website?.trim() || null,
         notes: form.notes?.trim() || null,
-        packageType: form.packageType ?? null,
-        renewalPrice:
-          form.packageType !== "None"
-            ? Number.isNaN(priceNumber)
-              ? 0
-              : priceNumber
-            : null,
-        renewalDate: form.packageType !== "None" ? (form.renewalDate || null) : null,
         agreementFileId: agreementFileId ?? null,
         agreementFileName: agreementFileName ?? null,
         agreementFileType: agreementFileType ?? null,
-      };
-
-      onSubmit(base);
+      });
     } finally {
       setIsSaving(false);
     }
@@ -166,8 +145,7 @@ export function ClientFormModal({
 
   const title = mode === "create" ? "לקוח חדש" : "עריכת לקוח";
   const agreementDisplayName =
-    pendingContractFile?.name ??
-    (!contractClearRequested ? form.agreementFileName : undefined);
+    pendingContractFile?.name ?? (!contractClearRequested ? form.agreementFileName : undefined);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -191,7 +169,7 @@ export function ClientFormModal({
                 onChange={(e) => handleChange("businessName", e.target.value)}
               />
             </Field>
-            <Field label="שם הלקוח" required>
+            <Field label="איש קשר" required>
               <Input
                 value={form.clientName}
                 onChange={(e) => handleChange("clientName", e.target.value)}
@@ -220,60 +198,12 @@ export function ClientFormModal({
                 placeholder="https://"
               />
             </Field>
-            <Field label="סוג חבילה">
-              <Select
-                value={form.packageType ?? "None"}
-                onValueChange={(value) =>
-                  handleChange(
-                    "packageType",
-                    value as ClientFormState["packageType"],
-                  )
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="בחר סוג חבילה">
-                    {getPackageTypeLabel((form.packageType ?? "None") as PackageType)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PACKAGE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {getPackageTypeLabel(option as PackageType)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            {form.packageType !== "None" && (
-              <>
-                <Field label="מחיר חידוש (ש״ח)">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={form.renewalPrice}
-                    onChange={(e) =>
-                      handleChange("renewalPrice", e.target.value)
-                    }
-                    min={0}
-                  />
-                </Field>
-                <Field label="תאריך חידוש">
-                  <Input
-                    type="date"
-                    value={form.renewalDate ?? ""}
-                    onChange={(e) =>
-                      handleChange("renewalDate", e.target.value)
-                    }
-                  />
-                </Field>
-              </>
-            )}
           </div>
 
           <Field label="הערות">
             <Textarea
               rows={3}
-              value={form.notes ?? ""}
+              value={form.notes}
               onChange={(e) => handleChange("notes", e.target.value)}
             />
           </Field>
@@ -321,7 +251,7 @@ export function ClientFormModal({
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground">
-                  PDF, Word וכו׳ — נשמר מקומית בדפדפן (IndexedDB)
+                  PDF, Word וכו' - נשמר מקומית בדפדפן (IndexedDB)
                 </span>
               )}
             </div>
@@ -339,7 +269,7 @@ export function ClientFormModal({
               ביטול
             </Button>
             <Button type="submit" size="sm" className="px-4" disabled={isSaving}>
-              {isSaving ? "שומר…" : "שמירה"}
+              {isSaving ? "שומר..." : "שמירה"}
             </Button>
           </div>
         </form>

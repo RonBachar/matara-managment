@@ -1,6 +1,34 @@
-import type { Client } from "@/types/client";
+import type { Client, ClientService } from "@/types/client";
 
 export const CLIENTS_STORAGE_KEY = "matara_clients";
+
+function buildLegacyService(c: Record<string, unknown>, clientId: string): ClientService[] {
+  const packageType = typeof c.packageType === "string" ? c.packageType : "";
+  if (!packageType || packageType === "None") return [];
+
+  return [
+    {
+      id: `${clientId}-legacy-service`,
+      clientId,
+      type:
+        packageType === "Hosting Only"
+          ? "Hosting"
+          : packageType === "Elementor Pro Only"
+            ? "License"
+            : "Custom service",
+      name:
+        packageType === "Hosting Only"
+          ? "Hosting"
+          : packageType === "Elementor Pro Only"
+            ? "Elementor Pro"
+            : packageType,
+      renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
+      renewalDate: typeof c.renewalDate === "string" ? c.renewalDate : undefined,
+      status: "Active",
+      notes: "Migrated from legacy package fields.",
+    },
+  ];
+}
 
 /**
  * Maps legacy stored clients (`contactPerson`, etc.) into the current `Client` shape.
@@ -27,33 +55,28 @@ export function normalizeClientFromStorage(raw: unknown): Client | null {
     phone: typeof c.phone === "string" ? c.phone : "",
     email: typeof c.email === "string" ? c.email : "",
     website: typeof c.website === "string" ? c.website : undefined,
+    status: typeof c.status === "string" && c.status.trim() ? c.status : "Active",
     notes: typeof c.notes === "string" ? c.notes : undefined,
-    packageType: (c.packageType as Client["packageType"]) ?? "Hosting + Elementor Pro",
+    services: buildLegacyService(c, id),
+    packageType: typeof c.packageType === "string" ? (c.packageType as Client["packageType"]) : undefined,
     renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
     renewalDate: typeof c.renewalDate === "string" ? c.renewalDate : "",
     workContractFileName: undefined,
-    contractFileId:
-      typeof c.contractFileId === "string" ? c.contractFileId : undefined,
-    contractFileName:
-      typeof c.contractFileName === "string" ? c.contractFileName : undefined,
-    contractFileType:
-      typeof c.contractFileType === "string" ? c.contractFileType : undefined,
-    agreementFileId:
-      typeof c.agreementFileId === "string" ? c.agreementFileId : undefined,
-    agreementFileName:
-      typeof c.agreementFileName === "string" ? c.agreementFileName : undefined,
-    agreementFileType:
-      typeof c.agreementFileType === "string" ? c.agreementFileType : undefined,
+    contractFileId: typeof c.contractFileId === "string" ? c.contractFileId : undefined,
+    contractFileName: typeof c.contractFileName === "string" ? c.contractFileName : undefined,
+    contractFileType: typeof c.contractFileType === "string" ? c.contractFileType : undefined,
+    agreementFileId: typeof c.agreementFileId === "string" ? c.agreementFileId : undefined,
+    agreementFileName: typeof c.agreementFileName === "string" ? c.agreementFileName : undefined,
+    agreementFileType: typeof c.agreementFileType === "string" ? c.agreementFileType : undefined,
   };
 }
 
-/** Label for dropdowns / project snapshot: עסק · לקוח when both exist. */
 export function formatClientDisplayLabel(c: Pick<Client, "businessName" | "clientName">): string {
   const parts = [c.businessName?.trim(), c.clientName?.trim()].filter(
     (s): s is string => Boolean(s && s.length > 0),
   );
-  if (parts.length === 0) return "—";
-  return parts.join(" · ");
+  if (parts.length === 0) return "�";
+  return parts.join(" � ");
 }
 
 export function readStoredClients(): Client[] {

@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { projectsRouter } from "./routes/projects";
 import { clientsRouter } from "./routes/clients";
+import { clientServicesRouter } from "./routes/clientServices";
 import { projectBriefsRouter } from "./routes/projectBriefs";
 import { projectBriefGpt1Router } from "./routes/projectBriefGpt1";
 import { projectBriefGpt2Router } from "./routes/projectBriefGpt2";
@@ -24,6 +25,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/projects", projectsRouter);
 app.use("/api/clients", clientsRouter);
+app.use("/api", clientServicesRouter);
 app.use("/api/project-briefs", projectBriefsRouter);
 app.use("/api/project-briefs", projectBriefGpt1Router);
 app.use("/api/project-briefs", projectBriefGpt2Router);

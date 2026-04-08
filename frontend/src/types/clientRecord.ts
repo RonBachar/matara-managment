@@ -1,3 +1,5 @@
+import type { ClientServiceRecord } from "@/types/clientService";
+
 export type ClientRecord = {
   id: string;
   createdAt?: string;
@@ -7,12 +9,9 @@ export type ClientRecord = {
   phone: string;
   email: string;
   website?: string | null;
-  packageType?: string | null;
-  renewalPrice?: number | null;
-  renewalDate?: string | null;
   notes?: string | null;
   agreementFileId?: string | null;
   agreementFileName?: string | null;
   agreementFileType?: string | null;
+  services?: ClientServiceRecord[];
 };
-

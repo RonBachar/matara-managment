@@ -46,10 +46,7 @@ model Client {
   phone        String @default("")
   email        String @default("")
   website      String?
-
-  packageType  String?
-  renewalPrice Decimal? @db.Decimal(14, 2)
-  renewalDate  String?
+  status       String   @default("Active")
 
   notes String? @db.Text
 
@@ -58,7 +55,30 @@ model Client {
   agreementFileName String?
   agreementFileType String?
 
+  services ClientService[]
+
   @@index([clientName])
+}
+
+model ClientService {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  type         String
+  name         String
+  provider     String?
+  billingCycle String?
+  renewalPrice Decimal? @db.Decimal(14, 2)
+  renewalDate  String?
+  status       String   @default("Active")
+  notes        String?  @db.Text
+
+  @@index([clientId])
+  @@index([type])
 }
 
 /// Questionnaire / brief content for a project; flexible JSON until fields are normalized.

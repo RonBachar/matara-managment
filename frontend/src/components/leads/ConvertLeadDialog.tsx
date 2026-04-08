@@ -1,4 +1,4 @@
-import type { Client } from "@/types/client";
+﻿import type { Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import { Button } from "@/components/ui/button";
 
@@ -24,19 +24,13 @@ function buildClientFromLead(lead: Lead): Client {
     phone: lead.phone,
     email: lead.email?.trim() ?? "",
     website: undefined,
+    status: "Active",
     notes,
-    packageType: "None",
-    renewalPrice: 0,
-    renewalDate: "",
+    services: [],
   };
 }
 
-export function ConvertLeadDialog({
-  open,
-  lead,
-  onClose,
-  onConvert,
-}: ConvertLeadDialogProps) {
+export function ConvertLeadDialog({ open, lead, onClose, onConvert }: ConvertLeadDialogProps) {
   if (!open || !lead) return null;
 
   function handleConfirm() {
@@ -45,10 +39,7 @@ export function ConvertLeadDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-      dir="rtl"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" dir="rtl">
       <div className="w-full max-w-sm rounded-xl border border-border bg-background shadow-lg">
         <div className="border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">המרה ללקוח</h2>

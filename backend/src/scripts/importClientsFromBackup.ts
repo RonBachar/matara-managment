@@ -70,6 +70,28 @@ async function main() {
       const renewalPrice = asNumber(c.renewalPrice, 0);
       const renewalDate = asString(c.renewalDate).trim();
 
+      const legacyService =
+        packageType && packageType !== "None"
+          ? {
+              type:
+                packageType === "Hosting Only"
+                  ? "Hosting"
+                  : packageType === "Elementor Pro Only"
+                    ? "License"
+                    : "Custom service",
+              name:
+                packageType === "Hosting Only"
+                  ? "Hosting"
+                  : packageType === "Elementor Pro Only"
+                    ? "Elementor Pro"
+                    : packageType,
+              renewalPrice,
+              renewalDate: renewalDate || null,
+              status: "Active",
+              notes: "Imported from legacy client package data.",
+            }
+          : null;
+
       return {
         id,
         clientName,
@@ -77,16 +99,12 @@ async function main() {
         phone,
         email,
         website: website || null,
+        status: "Active",
         notes: notes || null,
-        packageType: packageType || null,
-        renewalPrice: packageType && packageType !== "None" ? renewalPrice : null,
-        renewalDate: packageType && packageType !== "None" ? (renewalDate || null) : null,
-        contractFileId: asString(c.contractFileId).trim() || null,
-        contractFileName: asString(c.contractFileName).trim() || null,
-        contractFileType: asString(c.contractFileType).trim() || null,
         agreementFileId: asString(c.agreementFileId).trim() || null,
         agreementFileName: asString(c.agreementFileName).trim() || null,
         agreementFileType: asString(c.agreementFileType).trim() || null,
+        legacyService,
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -102,13 +120,26 @@ async function main() {
     return;
   }
 
-  const result = await prisma.client.createMany({
-    data,
-    skipDuplicates: true,
-  });
+  let insertedCount = 0;
+  for (const row of data) {
+    const exists = await prisma.client.findUnique({
+      where: { id: row.id },
+      select: { id: true },
+    });
+    if (exists) continue;
+
+    const { legacyService, ...clientData } = row;
+    await prisma.client.create({
+      data: {
+        ...clientData,
+        services: legacyService ? { create: legacyService } : undefined,
+      },
+    });
+    insertedCount += 1;
+  }
 
   // eslint-disable-next-line no-console
-  console.log(`Inserted ${result.count} clients. (Duplicates skipped by id.)`);
+  console.log(`Inserted ${insertedCount} clients. (Duplicates skipped by id.)`);
 }
 
 main()
@@ -120,4 +151,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect().catch(() => undefined);
   });
-

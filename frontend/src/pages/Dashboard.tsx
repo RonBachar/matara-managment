@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type { Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
@@ -93,37 +93,22 @@ export function Dashboard() {
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">דשבורד</h2>
-        <p className="text-sm text-muted-foreground">
-          תמונת מצב יומית מהירה של המערכת.
-        </p>
+        <p className="text-sm text-muted-foreground">תמונת מצב יומית מהירה של המערכת.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <SummaryCard title="סך כל הלידים" value={String(summary.totalLeads)} />
         <SummaryCard title="סך כל הלקוחות" value={String(summary.totalClients)} />
-        <SummaryCard
-          title="סך כל הפרויקטים הפעילים"
-          value={String(summary.activeProjects)}
-        />
-        <SummaryCard
-          title="סך כל המשימות הפתוחות"
-          value={String(summary.openTasks)}
-        />
-        <SummaryCard
-          title="סך הכל נותר לתשלום"
-          value={formatCurrency(summary.remainingToPay)}
-        />
+        <SummaryCard title="סך כל הפרויקטים הפעילים" value={String(summary.activeProjects)} />
+        <SummaryCard title="סך כל המשימות הפתוחות" value={String(summary.openTasks)} />
+        <SummaryCard title="סך הכל נותר לתשלום" value={formatCurrency(summary.remainingToPay)} />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="text-sm font-semibold">לידים פתוחים</div>
-          <div className="mt-2 text-2xl font-bold text-foreground">
-            {summary.newLeads}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            לידים שטרם הומרו ללקוחות.
-          </p>
+          <div className="mt-2 text-2xl font-bold text-foreground">{summary.newLeads}</div>
+          <p className="mt-1 text-xs text-muted-foreground">לידים שטרם הומרו ללקוחות.</p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4">
@@ -138,9 +123,7 @@ export function Dashboard() {
                   className="flex items-center justify-between gap-3 rounded-md border border-border/70 px-3 py-2"
                 >
                   <span className="truncate text-sm text-foreground">{task.title}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {task.status}
-                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{task.status}</span>
                 </li>
               ))}
             </ul>
@@ -152,29 +135,26 @@ export function Dashboard() {
         <div className="text-sm font-semibold">חידושים קרובים (14 ימים)</div>
 
         {summary.upcomingRenewals.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            אין חידושים קרובים בשבועיים הקרובים.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">אין חידושים קרובים בשבועיים הקרובים.</p>
         ) : (
           <div className="mt-3 space-y-2">
-            {summary.upcomingRenewals.map(({ client, daysLeft }) => (
+            {summary.upcomingRenewals.map(({ client, service, daysLeft }) => (
               <div
-                key={client.id}
-                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center md:gap-3"
+                key={`${client.id}-${service.id}`}
+                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center md:gap-3"
               >
                 <div className="font-medium text-foreground">
                   {client.businessName || client.clientName}
-                  {client.businessName && client.clientName
-                    ? ` / ${client.clientName}`
-                    : ""}
+                  {client.businessName && client.clientName ? ` / ${client.clientName}` : ""}
                 </div>
+                <div className="text-muted-foreground">{service.name}</div>
                 <div className="text-muted-foreground">
-                  {client.renewalDate
-                    ? new Date(client.renewalDate).toLocaleDateString("he-IL")
+                  {service.renewalDate
+                    ? new Date(service.renewalDate).toLocaleDateString("he-IL")
                     : "—"}
                 </div>
                 <div className="text-muted-foreground">
-                  {formatCurrency(Number(client.renewalPrice ?? 0))}
+                  {formatCurrency(Number(service.renewalPrice ?? 0))}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {daysLeft === 0 ? "היום" : `בעוד ${daysLeft} ימים`}
@@ -201,4 +181,3 @@ function SummaryCard({ title, value }: SummaryCardProps) {
     </div>
   );
 }
-
