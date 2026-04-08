@@ -152,26 +152,23 @@ function parseGpt2Output(value: unknown): Gpt2WebsiteCopyResult {
   return parsed;
 }
 
-function validateStructureCompatibility(
+function validateLightweightStructure(
   gpt1: Gpt1SitemapWireframeResult,
   gpt2: Gpt2WebsiteCopyResult,
 ): void {
-  const gpt1Pages = new Map(gpt1.wireframe.map((page) => [page.pageName, page]));
+  if (gpt1.wireframe.length === 0) {
+    throw new Error("GPT 1 outputJson is missing or invalid");
+  }
 
-  for (const gpt2Page of gpt2.pages) {
-    const gpt1Page = gpt1Pages.get(gpt2Page.pageName);
-    if (!gpt1Page) {
-      throw new Error(`Page structure mismatch: GPT 2 page "${gpt2Page.pageName}" does not exist in GPT 1`);
-    }
+  if (gpt2.pages.length === 0) {
+    throw new Error("GPT 2 outputJson is missing or invalid");
+  }
 
-    const gpt1Sections = new Set(gpt1Page.sections.map((section) => section.sectionName));
-    for (const gpt2Section of gpt2Page.sections) {
-      if (!gpt1Sections.has(gpt2Section.sectionName)) {
-        throw new Error(
-          `Section structure mismatch: GPT 2 section "${gpt2Section.sectionName}" does not exist in GPT 1 page "${gpt2Page.pageName}"`,
-        );
-      }
-    }
+  const gpt1HasSections = gpt1.wireframe.some((page) => page.sections.length > 0);
+  const gpt2HasSections = gpt2.pages.some((page) => page.sections.length > 0);
+
+  if (!gpt1HasSections || !gpt2HasSections) {
+    throw new Error("GPT 3 requires GPT 1 and GPT 2 to contain page sections");
   }
 }
 
@@ -258,7 +255,7 @@ export async function buildGpt3Input(briefId: string): Promise<Gpt3Input> {
   const gpt1 = parseGpt1Output(gpt1Step.outputJson);
   const gpt2 = parseGpt2Output(gpt2Step.outputJson);
 
-  validateStructureCompatibility(gpt1, gpt2);
+  validateLightweightStructure(gpt1, gpt2);
 
   return {
     briefId: brief.id,

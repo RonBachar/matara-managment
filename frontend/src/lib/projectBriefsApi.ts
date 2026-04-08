@@ -96,6 +96,36 @@ export type BriefGpt1HistoryResponse = {
   latestSuccessfulRun: BriefGpt1HistoryRun | null;
 };
 
+export type BriefGpt3ArtifactPage = {
+  pageName: string;
+  fileName: string;
+  html: string;
+};
+
+export type BriefGpt3Artifact = {
+  type: string;
+  framework: string;
+  globalCss: string;
+  globalJs: string;
+  pages: BriefGpt3ArtifactPage[];
+};
+
+export type BriefGpt3RunResult = {
+  briefId: string;
+  runId: string;
+  stepId: string;
+  status: string;
+  input: Record<string, unknown>;
+  output: {
+    provider: string;
+    model: string;
+    generatedAt: string;
+    summary: string;
+    artifact: BriefGpt3Artifact;
+    notes: string;
+  };
+};
+
 export async function apiListBriefs(): Promise<ProjectBrief[]> {
   const res = await fetch("/api/project-briefs");
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -260,5 +290,49 @@ export async function apiGetBriefGpt1History(id: string): Promise<BriefGpt1Histo
     briefId: asString(data.briefId),
     runs,
     latestSuccessfulRun,
+  };
+}
+
+export async function apiRunBriefGpt3WireframeSite(id: string): Promise<BriefGpt3RunResult> {
+  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}/gpt3/wireframe-site`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const msg = await parseErrorMessage(res);
+    throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
+  }
+
+  const data = asObject(await res.json());
+  const output = asObject(data.output);
+  const artifact = asObject(output.artifact);
+  const pagesRaw = Array.isArray(artifact.pages) ? artifact.pages : [];
+
+  return {
+    briefId: asString(data.briefId),
+    runId: asString(data.runId),
+    stepId: asString(data.stepId),
+    status: asString(data.status),
+    input: asObject(data.input),
+    output: {
+      provider: asString(output.provider),
+      model: asString(output.model),
+      generatedAt: asString(output.generatedAt),
+      summary: asString(output.summary),
+      artifact: {
+        type: asString(artifact.type),
+        framework: asString(artifact.framework),
+        globalCss: asString(artifact.globalCss),
+        globalJs: asString(artifact.globalJs),
+        pages: pagesRaw.map((item) => {
+          const row = asObject(item);
+          return {
+            pageName: asString(row.pageName),
+            fileName: asString(row.fileName),
+            html: asString(row.html),
+          } satisfies BriefGpt3ArtifactPage;
+        }),
+      },
+      notes: asString(output.notes),
+    },
   };
 }

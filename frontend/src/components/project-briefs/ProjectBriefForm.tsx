@@ -22,10 +22,13 @@ import {
 } from "@/lib/generateBriefJSON";
 import {
   apiGetBriefGpt1History,
+  apiRunBriefGpt3WireframeSite,
   apiRunBriefGpt1SitemapWireframe,
   type BriefGpt1HistoryRun,
+  type BriefGpt3RunResult,
 } from "@/lib/projectBriefsApi";
 import { SitemapHandoffDialog } from "./SitemapHandoffDialog";
+import { WireframeSitePreviewDialog } from "./WireframeSitePreviewDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,6 +112,14 @@ export function ProjectBriefForm({
   const [gpt1RunResult, setGpt1RunResult] =
     useState<BriefGpt1HistoryRun | null>(null);
   const [gpt1RunError, setGpt1RunError] = useState<string | null>(null);
+  const [wireframePreviewOpen, setWireframePreviewOpen] = useState(false);
+  const [gpt3RunStatus, setGpt3RunStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [gpt3RunResult, setGpt3RunResult] = useState<BriefGpt3RunResult | null>(
+    null,
+  );
+  const [gpt3RunError, setGpt3RunError] = useState<string | null>(null);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief
@@ -254,6 +265,32 @@ export function ProjectBriefForm({
         // Keep existing history/result if refresh fails after a failed run.
       }
       setGpt1RunStatus("error");
+    }
+  }
+
+  async function handleCreateWireframeSitePreview() {
+    setWireframePreviewOpen(true);
+    setGpt3RunError(null);
+    setGpt3RunResult(null);
+
+    if (!initialBrief?.id) {
+      setGpt3RunStatus("error");
+      setGpt3RunError(
+        "Please save the brief first, and only then run Create Wireframe Site Preview.",
+      );
+      return;
+    }
+
+    try {
+      setGpt3RunStatus("loading");
+      const result = await apiRunBriefGpt3WireframeSite(initialBrief.id);
+      setGpt3RunResult(result);
+      setGpt3RunStatus("success");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setGpt3RunError(message || "GPT 3 generation failed.");
+      setGpt3RunResult(null);
+      setGpt3RunStatus("error");
     }
   }
 
@@ -616,6 +653,15 @@ export function ProjectBriefForm({
             >
               {gpt1ButtonLabel}
             </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="px-4"
+              onClick={handleCreateWireframeSitePreview}
+            >
+              Create Wireframe Site Preview
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -647,6 +693,14 @@ export function ProjectBriefForm({
           runs={gpt1Runs}
           errorMessage={gpt1RunError}
           onClose={() => setSitemapHandoffOpen(false)}
+        />
+
+        <WireframeSitePreviewDialog
+          open={wireframePreviewOpen}
+          status={gpt3RunStatus}
+          result={gpt3RunResult}
+          errorMessage={gpt3RunError}
+          onClose={() => setWireframePreviewOpen(false)}
         />
       </div>
     </section>
