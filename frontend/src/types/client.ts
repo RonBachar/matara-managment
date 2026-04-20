@@ -22,13 +22,11 @@ export type ClientType = "Website Client" | "Service Client";
 export type ClientService = {
   id: string;
   clientId?: string;
-  type: string;
-  name: string;
-  provider?: string;
+  serviceName: string;
   billingCycle?: string;
   renewalPrice?: number;
   renewalDate?: string;
-  status?: string;
+  reminderDaysBefore?: number;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -43,7 +41,6 @@ export type Client = {
   phone: string;
   email: string;
   website?: string;
-  status?: string;
   notes?: string;
   services?: ClientService[];
   packageType?: PackageType;

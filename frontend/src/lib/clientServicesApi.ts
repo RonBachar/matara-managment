@@ -9,6 +9,7 @@ type ApiClientService = {
   billingCycle?: string | null;
   renewalPrice?: unknown;
   renewalDate?: string | null;
+  reminderDaysBefore?: unknown;
   notes?: string | null;
 };
 
@@ -28,6 +29,7 @@ function fromApi(row: ApiClientService): ClientServiceRecord {
     billingCycle: row.billingCycle ?? null,
     renewalPrice: toNumberOrNull(row.renewalPrice),
     renewalDate: row.renewalDate ?? null,
+    reminderDaysBefore: toNumberOrNull(row.reminderDaysBefore),
     notes: row.notes ?? null,
   };
 }
@@ -64,6 +66,7 @@ export async function apiCreateClientService(
       billingCycle: input.billingCycle,
       renewalPrice: input.renewalPrice,
       renewalDate: input.renewalDate,
+      reminderDaysBefore: input.reminderDaysBefore,
       notes: input.notes,
     }),
   });
@@ -86,6 +89,7 @@ export async function apiUpdateClientService(
       billingCycle: patch.billingCycle,
       renewalPrice: patch.renewalPrice,
       renewalDate: patch.renewalDate,
+      reminderDaysBefore: patch.reminderDaysBefore,
       notes: patch.notes,
     }),
   });

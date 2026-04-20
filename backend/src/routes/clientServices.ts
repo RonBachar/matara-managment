@@ -1,27 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { materializeLegacyClientServices } from "../services/clientServices";
+import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../utils/validation";
 
 export const clientServicesRouter = Router();
-
-function readNonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function readOptionalString(value: unknown): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string") return undefined;
-  return value.trim();
-}
-
-function readOptionalNumber(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  const n =
-    typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  return Number.isFinite(n) ? n : undefined;
-}
 
 clientServicesRouter.get("/clients/:clientId/services", async (req, res) => {
   try {
@@ -68,6 +50,7 @@ clientServicesRouter.post("/clients/:clientId/services", async (req, res) => {
         billingCycle: readOptionalString(body.billingCycle) || null,
         renewalPrice: readOptionalNumber(body.renewalPrice) ?? null,
         renewalDate: readOptionalString(body.renewalDate) || null,
+        reminderDaysBefore: readOptionalNumber(body.reminderDaysBefore) ?? null,
         status: readOptionalString(body.status) || "Active",
         notes: readOptionalString(body.notes) || null,
       },
@@ -106,6 +89,10 @@ clientServicesRouter.patch("/client-services/:id", async (req, res) => {
 
     const renewalDate = readOptionalString(body.renewalDate);
     if (renewalDate !== undefined) data.renewalDate = renewalDate.length > 0 ? renewalDate : null;
+
+    const reminderDaysBefore = readOptionalNumber(body.reminderDaysBefore);
+    if (reminderDaysBefore !== undefined) data.reminderDaysBefore = reminderDaysBefore;
+    if (body.reminderDaysBefore === null) data.reminderDaysBefore = null;
 
     const status = readOptionalString(body.status);
     if (status !== undefined) data.status = status.length > 0 ? status : "Active";

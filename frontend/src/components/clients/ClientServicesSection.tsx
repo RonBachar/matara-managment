@@ -11,7 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CLIENT_BILLING_CYCLE_OPTIONS, type ClientServiceRecord } from "@/types/clientService";
+import {
+  CLIENT_BILLING_CYCLE_OPTIONS,
+  CLIENT_SERVICE_REMINDER_OPTIONS,
+  type ClientServiceRecord,
+} from "@/types/clientService";
 
 type ClientServicesSectionProps = {
   services: ClientServiceRecord[];
@@ -27,6 +31,7 @@ type ServiceFormState = {
   billingCycle: string;
   renewalPrice: string;
   renewalDate: string;
+  reminderDaysBefore: string;
   notes: string;
 };
 
@@ -35,6 +40,7 @@ const EMPTY_FORM: ServiceFormState = {
   billingCycle: "",
   renewalPrice: "",
   renewalDate: "",
+  reminderDaysBefore: "",
   notes: "",
 };
 
@@ -45,6 +51,8 @@ function toFormState(service?: ClientServiceRecord): ServiceFormState {
     billingCycle: service.billingCycle ?? "",
     renewalPrice: service.renewalPrice == null ? "" : String(service.renewalPrice),
     renewalDate: service.renewalDate ?? "",
+    reminderDaysBefore:
+      service.reminderDaysBefore == null ? "" : String(service.reminderDaysBefore),
     notes: service.notes ?? "",
   };
 }
@@ -91,6 +99,8 @@ export function ClientServicesSection({ services, onCreate, onUpdate, onDelete }
         billingCycle: form.billingCycle.trim() || null,
         renewalPrice: Number.isFinite(renewalPriceNumber) ? renewalPriceNumber : null,
         renewalDate: form.renewalDate || null,
+        reminderDaysBefore:
+          form.reminderDaysBefore.trim() === "" ? null : Number(form.reminderDaysBefore),
         notes: form.notes.trim() || null,
       };
 
@@ -158,6 +168,14 @@ export function ClientServicesSection({ services, onCreate, onUpdate, onDelete }
                 <Row
                   label="תאריך חידוש"
                   value={service.renewalDate ? new Date(service.renewalDate).toLocaleDateString("he-IL") : "—"}
+                />
+                <Row
+                  label="תזכורת"
+                  value={
+                    service.reminderDaysBefore == null
+                      ? "No reminder"
+                      : `${service.reminderDaysBefore} days before`
+                  }
                 />
                 <Row label="הערות" value={service.notes || "—"} />
               </dl>
@@ -229,6 +247,31 @@ export function ClientServicesSection({ services, onCreate, onUpdate, onDelete }
                     value={form.renewalDate}
                     onChange={(e) => setForm((prev) => ({ ...prev, renewalDate: e.target.value }))}
                   />
+                </Field>
+                <Field label="Reminder">
+                  <Select
+                    value={form.reminderDaysBefore || "__none__"}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        reminderDaysBefore: !value || value === "__none__" ? "" : value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select reminder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLIENT_SERVICE_REMINDER_OPTIONS.map((option) => (
+                        <SelectItem
+                          key={option.value === "" ? "__none__" : option.value}
+                          value={option.value === "" ? "__none__" : option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
               </div>
 

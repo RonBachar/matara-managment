@@ -39,6 +39,7 @@ function buildLegacyServiceData(row: LegacyClientServiceRow): Prisma.ClientServi
     name: getLegacyServiceName(packageType),
     renewalPrice: normalizeLegacyPrice(row.renewalPrice),
     renewalDate: row.renewalDate?.trim() || null,
+    reminderDaysBefore: null,
     status: "Active",
     notes: "Migrated from legacy client package data.",
   };

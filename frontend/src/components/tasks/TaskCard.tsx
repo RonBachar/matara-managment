@@ -47,7 +47,7 @@ export function TaskCard({
         setIsDragging(true);
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/taskId", task.id);
-
+        // here I want to make sure that it will arrange the rows order by importance
         const source = e.currentTarget;
         const rect = source.getBoundingClientRect();
         const clone = source.cloneNode(true) as HTMLElement;

@@ -26,6 +26,7 @@ type ApiClientService = {
   billingCycle?: string | null;
   renewalPrice?: unknown;
   renewalDate?: string | null;
+  reminderDaysBefore?: unknown;
   notes?: string | null;
 };
 
@@ -63,6 +64,7 @@ function clientServiceFromApi(row: ApiClientService): ClientServiceRecord {
     billingCycle: row.billingCycle ?? null,
     renewalPrice: toNumberOrNull(row.renewalPrice),
     renewalDate: row.renewalDate ?? null,
+    reminderDaysBefore: toNumberOrNull(row.reminderDaysBefore),
     notes: row.notes ?? null,
   };
 }

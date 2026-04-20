@@ -1,27 +1,9 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { includeServicesForAllClients, includeServicesForClient } from "../services/clientServices";
+import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../utils/validation";
 
 export const clientsRouter = Router();
-
-function readNonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function readOptionalString(value: unknown): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string") return undefined;
-  return value.trim();
-}
-
-function readOptionalNumber(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  const n =
-    typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  return Number.isFinite(n) ? n : undefined;
-}
 
 clientsRouter.get("/", async (_req, res) => {
   try {

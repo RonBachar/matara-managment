@@ -24,7 +24,6 @@ function buildClientFromLead(lead: Lead): Client {
     phone: lead.phone,
     email: lead.email?.trim() ?? "",
     website: undefined,
-    status: "Active",
     notes,
     services: [],
   };

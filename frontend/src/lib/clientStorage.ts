@@ -1,4 +1,4 @@
-import type { Client, ClientService } from "@/types/client";
+ï»¿import type { Client, ClientService } from "@/types/client";
 
 export const CLIENTS_STORAGE_KEY = "matara_clients";
 
@@ -10,13 +10,7 @@ function buildLegacyService(c: Record<string, unknown>, clientId: string): Clien
     {
       id: `${clientId}-legacy-service`,
       clientId,
-      type:
-        packageType === "Hosting Only"
-          ? "Hosting"
-          : packageType === "Elementor Pro Only"
-            ? "License"
-            : "Custom service",
-      name:
+      serviceName:
         packageType === "Hosting Only"
           ? "Hosting"
           : packageType === "Elementor Pro Only"
@@ -24,7 +18,7 @@ function buildLegacyService(c: Record<string, unknown>, clientId: string): Clien
             : packageType,
       renewalPrice: typeof c.renewalPrice === "number" ? c.renewalPrice : 0,
       renewalDate: typeof c.renewalDate === "string" ? c.renewalDate : undefined,
-      status: "Active",
+      reminderDaysBefore: undefined,
       notes: "Migrated from legacy package fields.",
     },
   ];
@@ -55,7 +49,6 @@ export function normalizeClientFromStorage(raw: unknown): Client | null {
     phone: typeof c.phone === "string" ? c.phone : "",
     email: typeof c.email === "string" ? c.email : "",
     website: typeof c.website === "string" ? c.website : undefined,
-    status: typeof c.status === "string" && c.status.trim() ? c.status : "Active",
     notes: typeof c.notes === "string" ? c.notes : undefined,
     services: buildLegacyService(c, id),
     packageType: typeof c.packageType === "string" ? (c.packageType as Client["packageType"]) : undefined,
@@ -75,8 +68,8 @@ export function formatClientDisplayLabel(c: Pick<Client, "businessName" | "clien
   const parts = [c.businessName?.trim(), c.clientName?.trim()].filter(
     (s): s is string => Boolean(s && s.length > 0),
   );
-  if (parts.length === 0) return "—";
-  return parts.join(" · ");
+  if (parts.length === 0) return "â€”";
+  return parts.join(" Â· ");
 }
 
 export function readStoredClients(): Client[] {

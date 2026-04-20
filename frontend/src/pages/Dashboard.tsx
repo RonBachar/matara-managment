@@ -4,7 +4,6 @@ import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
 import {
-  CLIENTS_STORAGE_KEY,
   LEADS_STORAGE_KEY,
   PROJECTS_STORAGE_KEY,
   TASKS_STORAGE_KEY,
@@ -17,7 +16,8 @@ import {
   readStoredArray,
 } from "@/lib/dashboard";
 import { readStoredLeads } from "@/lib/leads";
-import { readStoredClients } from "@/lib/clientStorage";
+import { apiGetClients } from "@/lib/clientsApi";
+import { apiGetProjects } from "@/lib/projectsApi";
 
 type DashboardData = {
   leads: Lead[];
@@ -29,8 +29,8 @@ type DashboardData = {
 function readDashboardData(): DashboardData {
   return {
     leads: readStoredLeads(),
-    clients: readStoredClients(),
-    projects: readStoredArray<Project>(PROJECTS_STORAGE_KEY),
+    clients: [],
+    projects: [],
     tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
   };
 }
@@ -43,27 +43,79 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData>(() => readDashboardData());
 
   useEffect(() => {
-    const refresh = () => setData(readDashboardData());
+    let cancelled = false;
+
+    const refreshStatic = () => {
+      setData((prev) => ({
+        ...prev,
+        leads: readStoredLeads(),
+        tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
+      }));
+    };
+
+    const refreshApi = async () => {
+      try {
+        const [clients, projects] = await Promise.all([apiGetClients(), apiGetProjects()]);
+        if (cancelled) return;
+        setData((prev) => ({
+          ...prev,
+          clients: clients.map((client) => ({
+            id: client.id,
+            clientType: "Website Client",
+            createdAt: client.createdAt,
+            businessName: client.businessName,
+            clientName: client.clientName,
+            phone: client.phone,
+            email: client.email,
+            website: client.website ?? undefined,
+            notes: client.notes ?? undefined,
+            services: (client.services ?? []).map((service) => ({
+              id: service.id,
+              clientId: service.clientId,
+              serviceName: service.serviceName,
+              billingCycle: service.billingCycle ?? undefined,
+              renewalPrice: service.renewalPrice ?? undefined,
+              renewalDate: service.renewalDate ?? undefined,
+              reminderDaysBefore: service.reminderDaysBefore ?? undefined,
+              notes: service.notes ?? undefined,
+              createdAt: service.createdAt,
+              updatedAt: service.updatedAt,
+            })),
+            agreementFileId: client.agreementFileId ?? undefined,
+            agreementFileName: client.agreementFileName ?? undefined,
+            agreementFileType: client.agreementFileType ?? undefined,
+          })),
+          projects,
+        }));
+      } catch {
+        if (cancelled) return;
+      }
+    };
+
     const onStorage = (event: StorageEvent) => {
       if (
         event.key == null ||
         event.key === LEADS_STORAGE_KEY ||
-        event.key === CLIENTS_STORAGE_KEY ||
         event.key === PROJECTS_STORAGE_KEY ||
         event.key === TASKS_STORAGE_KEY
       ) {
-        refresh();
+        refreshStatic();
+        void refreshApi();
       }
     };
 
+    refreshStatic();
+    void refreshApi();
+
     window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refreshApi);
+    document.addEventListener("visibilitychange", refreshApi);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refreshApi);
+      document.removeEventListener("visibilitychange", refreshApi);
     };
   }, []);
 
@@ -75,7 +127,7 @@ export function Dashboard() {
     const remainingToPay = getTotalRemainingAmount(data.projects);
     const newLeads = getNewLeadsCount(data.leads);
     const todayTasks = getTodayTasks(data.tasks);
-    const upcomingRenewals = getUpcomingRenewals(data.clients, 14);
+    const upcomingRenewals = getUpcomingRenewals(data.clients, 30);
 
     return {
       totalLeads,
@@ -132,32 +184,26 @@ export function Dashboard() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="text-sm font-semibold">חידושים קרובים (14 ימים)</div>
+        <div className="text-sm font-semibold">Upcoming Renewals</div>
 
         {summary.upcomingRenewals.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">אין חידושים קרובים בשבועיים הקרובים.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No client service renewals are coming up in the next 30 days.</p>
         ) : (
           <div className="mt-3 space-y-2">
             {summary.upcomingRenewals.map(({ client, service, daysLeft }) => (
               <div
                 key={`${client.id}-${service.id}`}
-                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center md:gap-3"
+                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center md:gap-3"
               >
-                <div className="font-medium text-foreground">
-                  {client.businessName || client.clientName}
-                  {client.businessName && client.clientName ? ` / ${client.clientName}` : ""}
-                </div>
-                <div className="text-muted-foreground">{service.name}</div>
+                <div className="font-medium text-foreground">{client.businessName || client.clientName}</div>
+                <div className="text-muted-foreground">{service.serviceName}</div>
                 <div className="text-muted-foreground">
                   {service.renewalDate
                     ? new Date(service.renewalDate).toLocaleDateString("he-IL")
                     : "—"}
                 </div>
-                <div className="text-muted-foreground">
-                  {formatCurrency(Number(service.renewalPrice ?? 0))}
-                </div>
                 <div className="text-xs text-muted-foreground">
-                  {daysLeft === 0 ? "היום" : `בעוד ${daysLeft} ימים`}
+                  {daysLeft === 0 ? "Today" : `${daysLeft} days left`}
                 </div>
               </div>
             ))}

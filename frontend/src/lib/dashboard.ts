@@ -71,11 +71,10 @@ function getRenewalServices(client: Client): ClientService[] {
       {
         id: `${client.id}-legacy-service`,
         clientId: client.id,
-        type: "Custom service",
-        name: client.packageType,
+        serviceName: client.packageType,
         renewalPrice: client.renewalPrice,
         renewalDate: client.renewalDate,
-        status: client.status ?? "Active",
+        reminderDaysBefore: undefined,
       },
     ];
   }
@@ -83,7 +82,7 @@ function getRenewalServices(client: Client): ClientService[] {
   return [];
 }
 
-export function getUpcomingRenewals(clients: Client[], windowDays = 14): UpcomingRenewal[] {
+export function getUpcomingRenewals(clients: Client[], windowDays = 30): UpcomingRenewal[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayInMs = 24 * 60 * 60 * 1000;

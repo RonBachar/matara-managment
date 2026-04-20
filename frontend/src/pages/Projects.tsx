@@ -13,7 +13,7 @@ import {
   apiGetProjects,
   apiUpdateProject,
 } from '@/lib/projectsApi'
-import { BRIEFS_CHANGED_EVENT } from '@/lib/projectBriefStorage'
+import { BRIEFS_CHANGED_EVENT } from '@/lib/briefEvents'
 import { apiListBriefs } from '@/lib/projectBriefsApi'
 
 export function Projects() {

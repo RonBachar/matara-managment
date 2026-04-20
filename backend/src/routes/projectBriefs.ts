@@ -1,19 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
+import { readNonEmptyString, asRecord } from "../utils/validation";
 
 export const projectBriefsRouter = Router();
-
-function readNonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== "object" || value === null) return null;
-  if (Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
 
 function briefFromDb(row: { id: string; createdAt: Date; updatedAt: Date; data: unknown }) {
   const data = asRecord(row.data) ?? {};

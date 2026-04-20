@@ -8,7 +8,7 @@ import { DeleteProjectBriefDialog } from "@/components/project-briefs/DeleteProj
 import { ProjectBriefProjectPicker } from "@/components/project-briefs/ProjectBriefProjectPicker";
 import { Button } from "@/components/ui/button";
 import { PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
-import { notifyBriefsChanged } from "@/lib/projectBriefStorage";
+import { notifyBriefsChanged } from "@/lib/briefEvents";
 import { apiGetProjects } from "@/lib/projectsApi";
 import {
   apiCreateBrief,

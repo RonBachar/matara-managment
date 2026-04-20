@@ -74,6 +74,7 @@ model ClientService {
   billingCycle String?
   renewalPrice Decimal? @db.Decimal(14, 2)
   renewalDate  String?
+  reminderDaysBefore Int?
   status       String   @default("Active")
   notes        String?  @db.Text
 
