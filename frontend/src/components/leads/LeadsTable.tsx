@@ -29,7 +29,7 @@ export function LeadsTable({
         <div>
           <h2 className="text-lg font-semibold">לידים</h2>
           <p className="text-sm text-muted-foreground">
-            ניהול לידים מקומי – ללא שרת.
+            ניהול ומעקב לידים.
           </p>
         </div>
         <Button

@@ -1,4 +1,5 @@
 import type { Project } from "@/types/project";
+import { apiUrl } from "@/lib/api";
 
 type ApiProject = {
   id: string;
@@ -43,7 +44,7 @@ export function projectFromApi(row: ApiProject): Project {
 }
 
 export async function apiGetProjects(): Promise<Project[]> {
-  const res = await fetch("/api/projects");
+  const res = await fetch(apiUrl("/api/projects"));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -64,7 +65,7 @@ export async function apiCreateProject(input: {
   billableTotal: number;
   notes?: string | null;
 }): Promise<Project> {
-  const res = await fetch("/api/projects", {
+  const res = await fetch(apiUrl("/api/projects"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -98,7 +99,7 @@ export async function apiUpdateProject(
     notes: string | null;
   }>,
 ): Promise<Project> {
-  const res = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
+  const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(id)}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -116,7 +117,7 @@ export async function apiUpdateProject(
 }
 
 export async function apiDeleteProject(id: string): Promise<void> {
-  const res = await fetch(`/api/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(id)}`), { method: "DELETE" });
   if (res.status === 204) return;
   if (!res.ok) {
     const maybeJson = await res.json().catch(() => null as unknown);

@@ -158,3 +158,32 @@ enum PipelineStepStatus {
   FAILED
   SKIPPED
 }
+
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientName String
+  phone      String  @default("")
+  email      String?
+  leadSource String  @default("")
+  status     String  @default("חדש")
+  notes      String? @db.Text
+
+  convertedClientId String?
+  agreementFileId   String?
+  agreementFileName String?
+  agreementFileType String?
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  title       String
+  description String? @db.Text
+  status      String  @default("לביצוע")
+  priority    String  @default("בינונית")
+}

@@ -1,5 +1,6 @@
 import type { ClientRecord } from "@/types/clientRecord";
 import type { ClientServiceRecord } from "@/types/clientService";
+import { apiUrl } from "@/lib/api";
 
 type ApiClient = {
   id: string;
@@ -78,7 +79,7 @@ async function parseErrorMessage(res: Response): Promise<string> {
 }
 
 export async function apiGetClients(): Promise<ClientRecord[]> {
-  const res = await fetch("/api/clients");
+  const res = await fetch(apiUrl("/api/clients"));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -88,7 +89,7 @@ export async function apiGetClients(): Promise<ClientRecord[]> {
 export async function apiCreateClient(
   input: Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">,
 ) {
-  const res = await fetch("/api/clients", {
+  const res = await fetch(apiUrl("/api/clients"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -105,7 +106,7 @@ export async function apiUpdateClient(
   id: string,
   patch: Partial<Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">>,
 ) {
-  const res = await fetch(`/api/clients/${encodeURIComponent(id)}`, {
+  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -119,7 +120,7 @@ export async function apiUpdateClient(
 }
 
 export async function apiDeleteClient(id: string): Promise<void> {
-  const res = await fetch(`/api/clients/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), { method: "DELETE" });
   if (res.status === 204) return;
   if (!res.ok) {
     const msg = await parseErrorMessage(res);

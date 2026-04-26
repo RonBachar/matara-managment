@@ -3,3 +3,20 @@
 # Local backups / exports (may contain real data)
 backup/
 
+# Environment variables (never commit these)
+.env
+.env.local
+.env.production
+.env*.local
+backend/.env
+frontend/.env.local
+frontend/.env.production
+
+# Build outputs
+backend/dist/
+frontend/dist/
+
+# Dependencies
+node_modules/
+**/node_modules/
+

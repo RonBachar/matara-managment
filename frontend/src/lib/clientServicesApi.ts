@@ -1,4 +1,5 @@
 import type { ClientServiceRecord } from "@/types/clientService";
+import { apiUrl } from "@/lib/api";
 
 type ApiClientService = {
   id: string;
@@ -43,7 +44,7 @@ async function parseErrorMessage(res: Response): Promise<string> {
 }
 
 export async function apiGetClientServices(clientId: string): Promise<ClientServiceRecord[]> {
-  const res = await fetch(`/api/clients/${encodeURIComponent(clientId)}/services`);
+  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(clientId)}/services`));
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
@@ -57,7 +58,7 @@ export async function apiCreateClientService(
   clientId: string,
   input: Omit<ClientServiceRecord, "id" | "clientId" | "createdAt" | "updatedAt">,
 ) {
-  const res = await fetch(`/api/clients/${encodeURIComponent(clientId)}/services`, {
+  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(clientId)}/services`), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -81,7 +82,7 @@ export async function apiUpdateClientService(
   id: string,
   patch: Partial<Omit<ClientServiceRecord, "id" | "clientId" | "createdAt" | "updatedAt">>,
 ) {
-  const res = await fetch(`/api/client-services/${encodeURIComponent(id)}`, {
+  const res = await fetch(apiUrl(`/api/client-services/${encodeURIComponent(id)}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -101,7 +102,7 @@ export async function apiUpdateClientService(
 }
 
 export async function apiDeleteClientService(id: string): Promise<void> {
-  const res = await fetch(`/api/client-services/${encodeURIComponent(id)}`, {
+  const res = await fetch(apiUrl(`/api/client-services/${encodeURIComponent(id)}`), {
     method: "DELETE",
   });
   if (res.status === 204) return;

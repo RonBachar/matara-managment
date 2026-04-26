@@ -1,4 +1,5 @@
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
+import { apiUrl } from "@/lib/api";
 
 type ApiBrief = Record<string, unknown>;
 type ApiObject = Record<string, unknown>;
@@ -127,7 +128,7 @@ export type BriefGpt3RunResult = {
 };
 
 export async function apiListBriefs(): Promise<ProjectBrief[]> {
-  const res = await fetch("/api/project-briefs");
+  const res = await fetch(apiUrl("/api/project-briefs"));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -135,7 +136,7 @@ export async function apiListBriefs(): Promise<ProjectBrief[]> {
 }
 
 export async function apiGetBriefByProjectId(projectId: string): Promise<ProjectBrief> {
-  const res = await fetch(`/api/project-briefs/by-project/${encodeURIComponent(projectId)}`);
+  const res = await fetch(apiUrl(`/api/project-briefs/by-project/${encodeURIComponent(projectId)}`));
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
@@ -145,7 +146,7 @@ export async function apiGetBriefByProjectId(projectId: string): Promise<Project
 }
 
 export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}`);
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`));
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
@@ -155,7 +156,7 @@ export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
 }
 
 export async function apiCreateBrief(projectId: string, input: ProjectBriefInput): Promise<ProjectBrief> {
-  const res = await fetch("/api/project-briefs", {
+  const res = await fetch(apiUrl("/api/project-briefs"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -172,7 +173,7 @@ export async function apiCreateBrief(projectId: string, input: ProjectBriefInput
 }
 
 export async function apiUpdateBrief(id: string, input: ProjectBriefInput): Promise<ProjectBrief> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}`, {
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -188,7 +189,7 @@ export async function apiUpdateBrief(id: string, input: ProjectBriefInput): Prom
 }
 
 export async function apiDeleteBrief(id: string): Promise<void> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), { method: "DELETE" });
   if (res.status === 204) return;
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
@@ -197,7 +198,7 @@ export async function apiDeleteBrief(id: string): Promise<void> {
 }
 
 export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<BriefGpt1RunResult> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe`, {
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe`), {
     method: "POST",
   });
   if (!res.ok) {
@@ -217,7 +218,7 @@ export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<Brief
 }
 
 export async function apiGetBriefGpt1History(id: string): Promise<BriefGpt1HistoryResponse> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe/runs`);
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe/runs`));
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
@@ -294,7 +295,7 @@ export async function apiGetBriefGpt1History(id: string): Promise<BriefGpt1Histo
 }
 
 export async function apiRunBriefGpt3WireframeSite(id: string): Promise<BriefGpt3RunResult> {
-  const res = await fetch(`/api/project-briefs/${encodeURIComponent(id)}/gpt3/wireframe-site`, {
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt3/wireframe-site`), {
     method: "POST",
   });
   if (!res.ok) {

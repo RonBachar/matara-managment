@@ -9,6 +9,7 @@ type SitemapHandoffDialogProps = {
   result: BriefGpt1HistoryRun | null;
   runs: BriefGpt1HistoryRun[];
   errorMessage: string | null;
+  onRegenerate: () => void;
   onClose: () => void;
 };
 
@@ -29,6 +30,7 @@ export function SitemapHandoffDialog({
   result,
   runs,
   errorMessage,
+  onRegenerate,
   onClose,
 }: SitemapHandoffDialogProps) {
   const [copyHint, setCopyHint] = useState<string | null>(null);
@@ -89,6 +91,15 @@ export function SitemapHandoffDialog({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2 border-b border-border bg-muted/20 px-4 py-2.5">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onRegenerate}
+            disabled={status === "loading"}
+          >
+            {runs.length > 0 ? "Regenerate Sitemap & Wireframe" : "Create Sitemap & Wireframe"}
+          </Button>
           <Button type="button" variant="secondary" size="sm" onClick={copyJson} disabled={!result}>
             העתקת JSON מנורמל
           </Button>

@@ -5,14 +5,19 @@ import { LeadsTable } from "@/components/leads/LeadsTable";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { ConvertLeadDialog } from "@/components/leads/ConvertLeadDialog";
-import { readStoredLeads, writeStoredLeads } from "@/lib/leads";
+import {
+  createLead,
+  deleteLead,
+  fetchLeads,
+  updateLead,
+} from "@/lib/leadsApi";
 import {
   CLIENTS_STORAGE_KEY,
   readStoredClients,
 } from "@/lib/clientStorage";
 
 export function Leads() {
-  const [leads, setLeads] = useState<Lead[]>(() => readStoredLeads());
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeLead, setActiveLead] = useState<Lead | undefined>();
@@ -20,9 +25,23 @@ export function Leads() {
   const [convertOpen, setConvertOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    writeStoredLeads(leads);
-  }, [leads]);
+    let cancelled = false;
+
+    async function loadLeads() {
+      try {
+        const data = await fetchLeads();
+        if (!cancelled) setLeads(data);
+      } catch (error) {
+        console.error("Failed to load leads", error);
+      }
+    }
+
+    void loadLeads();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleAdd() {
     setFormMode("create");
@@ -36,39 +55,19 @@ export function Leads() {
     setFormOpen(true);
   }
 
-  function handleFormSubmit(data: Omit<Lead, "id">) {
-    setLeads((prev) => {
+  async function handleFormSubmit(data: Omit<Lead, "id">) {
+    try {
       if (formMode === "edit" && activeLead) {
-        if (activeLead.convertedClientId) {
-          return prev.map((l) =>
-            l.id === activeLead.id
-              ? {
-                  ...data,
-                  id: activeLead.id,
-                  createdAt: activeLead.createdAt,
-                  convertedClientId: activeLead.convertedClientId,
-                  status: "הפך ללקוח",
-                }
-              : l,
-          );
-        }
-        return prev.map((l) =>
-          l.id === activeLead.id
-            ? { ...data, id: activeLead.id, createdAt: activeLead.createdAt }
-            : l,
-        );
+        const updated = await updateLead(activeLead.id, data);
+        setLeads((prev) => prev.map((lead) => (lead.id === updated.id ? updated : lead)));
+      } else {
+        const created = await createLead(data);
+        setLeads((prev) => [...prev, created]);
       }
-      const newId = String(Date.now());
-      return [
-        ...prev,
-        {
-          ...data,
-          id: newId,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-    });
-    setFormOpen(false);
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Failed to save lead", error);
+    }
   }
 
   function handleDeleteRequest(lead: Lead) {
@@ -76,10 +75,15 @@ export function Leads() {
     setDeleteOpen(true);
   }
 
-  function handleDeleteConfirm() {
+  async function handleDeleteConfirm() {
     if (!activeLead) return;
-    setLeads((prev) => prev.filter((l) => l.id !== activeLead.id));
-    setDeleteOpen(false);
+    try {
+      await deleteLead(activeLead.id);
+      setLeads((prev) => prev.filter((l) => l.id !== activeLead.id));
+      setDeleteOpen(false);
+    } catch (error) {
+      console.error("Failed to delete lead", error);
+    }
   }
 
   function handleConvertRequest(lead: Lead) {
@@ -88,40 +92,42 @@ export function Leads() {
     setConvertOpen(true);
   }
 
-  function handleStatusChange(leadId: string, status: LeadEditableStatus) {
-    setLeads((prev) =>
-      prev.map((l) => {
-        if (l.id !== leadId || l.convertedClientId) return l;
-        return { ...l, status };
-      }),
-    );
+  async function handleStatusChange(leadId: string, status: LeadEditableStatus) {
+    const lead = leads.find((item) => item.id === leadId);
+    if (!lead || lead.convertedClientId) return;
+
+    try {
+      const updated = await updateLead(leadId, { status });
+      setLeads((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      console.error("Failed to update lead status", error);
+    }
   }
 
-  function handleConvertToClient(newClient: Client) {
-    const storedClients = readStoredClients();
-    const nextClients = [...storedClients, newClient];
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        CLIENTS_STORAGE_KEY,
-        JSON.stringify(nextClients),
-      );
-    }
+  async function handleConvertToClient(newClient: Client) {
+    const lead = activeLead;
+    if (!lead) return;
 
-    if (activeLead) {
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === activeLead.id
-            ? {
-                ...l,
-                convertedClientId: newClient.id,
-                status: "הפך ללקוח",
-              }
-            : l,
-        ),
-      );
-    }
+    try {
+      const updated = await updateLead(lead.id, {
+        convertedClientId: newClient.id,
+        status: "הפך ללקוח",
+      });
 
-    setConvertOpen(false);
+      const storedClients = readStoredClients();
+      const nextClients = [...storedClients, newClient];
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          CLIENTS_STORAGE_KEY,
+          JSON.stringify(nextClients),
+        );
+      }
+
+      setLeads((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setConvertOpen(false);
+    } catch (error) {
+      console.error("Failed to convert lead", error);
+    }
   }
 
   return (

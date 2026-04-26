@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BriefGpt3RunResult } from "@/lib/projectBriefsApi";
 import { Button } from "@/components/ui/button";
+import { copyTextToClipboard } from "@/lib/copyToClipboard";
 
 type WireframeSitePreviewDialogProps = {
   open: boolean;
   status: "idle" | "loading" | "success" | "error";
   result: BriefGpt3RunResult | null;
   errorMessage: string | null;
+  onRegenerate: () => void;
   onClose: () => void;
 };
 
@@ -46,10 +48,12 @@ export function WireframeSitePreviewDialog({
   status,
   result,
   errorMessage,
+  onRegenerate,
   onClose,
 }: WireframeSitePreviewDialogProps) {
   const pages = result?.output.artifact.pages ?? [];
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
   const normalizedErrorMessage = normalizeErrorMessage(errorMessage);
 
   useEffect(() => {
@@ -68,6 +72,16 @@ export function WireframeSitePreviewDialog({
       result.output.artifact.globalJs,
     );
   }, [result, selectedPage]);
+
+  const flashCopyHint = useCallback((ok: boolean) => {
+    setCopyHint(ok ? "HTML copied" : "Copy failed");
+    window.setTimeout(() => setCopyHint(null), 2000);
+  }, []);
+
+  const handleCopyHtml = useCallback(async () => {
+    if (!srcDoc) return;
+    flashCopyHint(await copyTextToClipboard(srcDoc));
+  }, [flashCopyHint, srcDoc]);
 
   if (!open) return null;
 
@@ -100,6 +114,27 @@ export function WireframeSitePreviewDialog({
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Close
           </Button>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-muted/20 px-4 py-2.5">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onRegenerate}
+            disabled={status === "loading"}
+          >
+            Regenerate Wireframe Preview
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleCopyHtml}
+            disabled={!srcDoc || status === "loading"}
+          >
+            Copy Full HTML
+          </Button>
+          {copyHint && <span className="text-xs text-muted-foreground">{copyHint}</span>}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -194,6 +229,9 @@ export function WireframeSitePreviewDialog({
                   </div>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Copy Full HTML copies the complete document for the currently selected page.
+              </p>
 
               <div className="h-[70vh] overflow-hidden rounded-lg border border-border bg-muted/20">
                 {status === "loading" ? (

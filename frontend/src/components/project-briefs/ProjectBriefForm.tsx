@@ -692,6 +692,7 @@ export function ProjectBriefForm({
           result={gpt1RunResult}
           runs={gpt1Runs}
           errorMessage={gpt1RunError}
+          onRegenerate={handleCreateSitemapWireframe}
           onClose={() => setSitemapHandoffOpen(false)}
         />
 
@@ -700,6 +701,7 @@ export function ProjectBriefForm({
           status={gpt3RunStatus}
           result={gpt3RunResult}
           errorMessage={gpt3RunError}
+          onRegenerate={handleCreateWireframeSitePreview}
           onClose={() => setWireframePreviewOpen(false)}
         />
       </div>

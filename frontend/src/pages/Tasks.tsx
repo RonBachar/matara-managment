@@ -4,53 +4,38 @@ import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskFormModal } from "@/components/tasks/TaskFormModal";
 import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
 import { Button } from "@/components/ui/button";
-
-const TASKS_STORAGE_KEY = "matara_tasks";
-
-function normalizeTask(raw: Record<string, unknown>): Task {
-  const status = raw.status as Task["status"];
-  const priority = raw.priority as Task["priority"];
-  const validStatuses: Task["status"][] = [
-    "לביצוע",
-    "בתהליך",
-    "ממתין",
-    "הושלם",
-  ];
-  const validPriorities: Task["priority"][] = ["נמוכה", "בינונית", "גבוהה"];
-  return {
-    id: String(raw.id ?? ""),
-    title: String(raw.title ?? ""),
-    description:
-      typeof raw.description === "string" ? raw.description : undefined,
-    status: validStatuses.includes(status) ? status : "לביצוע",
-    priority: validPriorities.includes(priority) ? priority : "בינונית",
-  };
-}
-
-function loadInitialTasks(): Task[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(TASKS_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((t) => normalizeTask(t as Record<string, unknown>));
-  } catch {
-    return [];
-  }
-}
+import {
+  createTask,
+  deleteTask,
+  fetchTasks,
+  updateTask,
+} from "@/lib/tasksApi";
 
 export function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>(() => loadInitialTasks());
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeTask, setActiveTask] = useState<Task | undefined>();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+    let cancelled = false;
+
+    async function loadTasks() {
+      try {
+        const data = await fetchTasks();
+        if (!cancelled) setTasks(data);
+      } catch (error) {
+        console.error("Failed to load tasks", error);
+      }
+    }
+
+    void loadTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleAdd() {
     setFormMode("create");
@@ -64,17 +49,19 @@ export function Tasks() {
     setFormOpen(true);
   }
 
-  function handleFormSubmit(data: Omit<Task, "id">) {
-    setTasks((prev) => {
+  async function handleFormSubmit(data: Omit<Task, "id">) {
+    try {
       if (formMode === "edit" && activeTask) {
-        return prev.map((t) =>
-          t.id === activeTask.id ? { ...data, id: activeTask.id } : t,
-        );
+        const updated = await updateTask(activeTask.id, data);
+        setTasks((prev) => prev.map((task) => (task.id === updated.id ? updated : task)));
+      } else {
+        const created = await createTask(data);
+        setTasks((prev) => [...prev, created]);
       }
-      const newId = String(Date.now());
-      return [...prev, { ...data, id: newId }];
-    });
-    setFormOpen(false);
+      setFormOpen(false);
+    } catch (error) {
+      console.error("Failed to save task", error);
+    }
   }
 
   function handleDeleteRequest(task: Task) {
@@ -82,16 +69,24 @@ export function Tasks() {
     setDeleteOpen(true);
   }
 
-  function handleDeleteConfirm() {
+  async function handleDeleteConfirm() {
     if (!activeTask) return;
-    setTasks((prev) => prev.filter((t) => t.id !== activeTask.id));
-    setDeleteOpen(false);
+    try {
+      await deleteTask(activeTask.id);
+      setTasks((prev) => prev.filter((t) => t.id !== activeTask.id));
+      setDeleteOpen(false);
+    } catch (error) {
+      console.error("Failed to delete task", error);
+    }
   }
 
-  function handleStatusChange(task: Task, status: TaskStatus) {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, status } : t)),
-    );
+  async function handleStatusChange(task: Task, status: TaskStatus) {
+    try {
+      const updated = await updateTask(task.id, { status });
+      setTasks((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      console.error("Failed to update task status", error);
+    }
   }
 
   return (
@@ -101,7 +96,7 @@ export function Tasks() {
           <div>
             <h2 className="text-lg font-semibold">לוח משימות</h2>
             <p className="text-sm text-muted-foreground">
-              ניהול משימות יומי – מקומי בלבד.
+              ניהול משימות יומי.
             </p>
           </div>
           <Button
