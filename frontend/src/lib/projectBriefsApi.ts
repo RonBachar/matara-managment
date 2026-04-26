@@ -90,6 +90,13 @@ export type BriefGpt1HistoryResponse = {
   latestSuccessfulRun: BriefGpt1HistoryRun | null;
 };
 
+export type BriefGpt2RunResult = {
+  briefId: string;
+  runId: string;
+  status: string;
+  output: Record<string, unknown>;
+};
+
 export type BriefGpt3ArtifactPage = {
   pageName: string;
   fileName: string;
@@ -275,6 +282,17 @@ export async function apiGetBriefGpt1History(id: string): Promise<BriefGpt1Histo
     runs,
     latestSuccessfulRun,
   };
+}
+
+export async function apiRunBriefGpt2Content(
+  id: string
+): Promise<BriefGpt2RunResult> {
+  const res = await fetch(
+    apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt2/content`),
+    { method: "POST" }
+  );
+  if (!res.ok) throw new Error(`GPT2 failed: HTTP ${res.status}`);
+  return res.json() as Promise<BriefGpt2RunResult>;
 }
 
 export async function apiRunBriefGpt3WireframeSite(id: string): Promise<BriefGpt3RunResult> {

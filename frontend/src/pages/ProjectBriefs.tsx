@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
 import { ProjectBriefTable } from "@/components/project-briefs/ProjectBriefTable";
 import { ProjectBriefForm } from "@/components/project-briefs/ProjectBriefForm";
+import { PipelinePanel } from "@/components/project-briefs/PipelinePanel";
 import { DeleteProjectBriefDialog } from "@/components/project-briefs/DeleteProjectBriefDialog";
 import { Button } from "@/components/ui/button";
 import { PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
@@ -27,9 +28,11 @@ export function ProjectBriefs() {
   const inForm = mode !== null;
   const blocker = useBlocker(inForm && dirty);
 
-  useEffect(() => {
-    if (!mode) setDirty(false);
-  }, [mode]);
+  const clearFormView = useCallback(() => {
+    setMode(null);
+    setActiveBrief(undefined);
+    setDirty(false);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +72,7 @@ export function ProjectBriefs() {
     window.addEventListener(PROJECT_BRIEFS_SHOW_LIST_EVENT, onShowList);
     return () =>
       window.removeEventListener(PROJECT_BRIEFS_SHOW_LIST_EVENT, onShowList);
-  }, [mode, dirty]);
+  }, [clearFormView, mode, dirty]);
 
   const briefsSorted = useMemo(
     () =>
@@ -81,12 +84,6 @@ export function ProjectBriefs() {
       ),
     [briefs],
   );
-
-  function clearFormView() {
-    setMode(null);
-    setActiveBrief(undefined);
-    setDirty(false);
-  }
 
   function openCreateBrief() {
     setMode("create");
@@ -174,6 +171,14 @@ export function ProjectBriefs() {
             onDirtyChange={setDirty}
             onRequestDelete={mode === "edit" ? handleDeleteRequest : undefined}
           />
+          {mode === "edit" && activeBrief && (
+            <div className="space-y-4">
+              <div className="border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-foreground">פייפליין יצירה</h3>
+              </div>
+              <PipelinePanel briefId={activeBrief.id} />
+            </div>
+          )}
         </div>
       )}
 

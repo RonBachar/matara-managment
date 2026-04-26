@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   LANGUAGE_STYLE_SELECTION_OPTIONS,
-  MAIN_ACTION_SUGGESTIONS,
   TONE_SELECTION_OPTIONS,
   WEBSITE_TYPE_OPTIONS,
   type ProjectBrief,
@@ -16,22 +15,25 @@ import {
 } from "@/types/projectBrief";
 import { buildProjectBriefSummary } from "@/lib/projectBriefSummary";
 import {
-  generateBriefJSON,
-  type NormalizedBriefJSON,
-} from "@/lib/generateBriefJSON";
-import {
   apiGetBriefGpt1History,
-  apiRunBriefGpt3WireframeSite,
   apiRunBriefGpt1SitemapWireframe,
   type BriefGpt1HistoryRun,
-  type BriefGpt3RunResult,
 } from "@/lib/projectBriefsApi";
 import { SitemapHandoffDialog } from "./SitemapHandoffDialog";
-import { WireframeSitePreviewDialog } from "./WireframeSitePreviewDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ChevronDown, FileText } from "lucide-react";
 
@@ -45,8 +47,26 @@ type ProjectBriefFormProps = {
 };
 
 function briefToInput(brief: ProjectBrief): ProjectBriefInput {
-  const { id, createdAt, updatedAt, ...rest } = brief;
-  return rest;
+  return {
+    title: brief.title,
+    businessNameSnapshot: brief.businessNameSnapshot,
+    businessWhatTheyDo: brief.businessWhatTheyDo,
+    servicesProductsOnSite: brief.servicesProductsOnSite,
+    differentiators: brief.differentiators,
+    targetAudience: brief.targetAudience,
+    idealClient: brief.idealClient,
+    audiencePainPoints: brief.audiencePainPoints,
+    sitePrimaryBusinessGoal: brief.sitePrimaryBusinessGoal,
+    mainUserAction: brief.mainUserAction,
+    websiteType: brief.websiteType,
+    sitePagesAndStructure: brief.sitePagesAndStructure,
+    siteEmphasis: brief.siteEmphasis,
+    toneSelections: brief.toneSelections,
+    languageStyleSelections: brief.languageStyleSelections,
+    linguisticAddressing: brief.linguisticAddressing,
+    contentAvoid: brief.contentAvoid,
+    additionalNotes: brief.additionalNotes,
+  };
 }
 
 const EMPTY_INPUT: ProjectBriefInput = {
@@ -80,6 +100,27 @@ export function ProjectBriefForm({
   onDirtyChange,
   onRequestDelete,
 }: ProjectBriefFormProps) {
+  return (
+    <ProjectBriefFormContent
+      key={`${mode}:${initialBrief?.id ?? "new"}`}
+      mode={mode}
+      initialBrief={initialBrief}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+      onDirtyChange={onDirtyChange}
+      onRequestDelete={onRequestDelete}
+    />
+  );
+}
+
+function ProjectBriefFormContent({
+  mode,
+  initialBrief,
+  onCancel,
+  onSubmit,
+  onDirtyChange,
+  onRequestDelete,
+}: ProjectBriefFormProps) {
   const [sitemapHandoffOpen, setSitemapHandoffOpen] = useState(false);
   const [gpt1RunStatus, setGpt1RunStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -88,14 +129,7 @@ export function ProjectBriefForm({
   const [gpt1RunResult, setGpt1RunResult] =
     useState<BriefGpt1HistoryRun | null>(null);
   const [gpt1RunError, setGpt1RunError] = useState<string | null>(null);
-  const [wireframePreviewOpen, setWireframePreviewOpen] = useState(false);
-  const [gpt3RunStatus, setGpt3RunStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
-  const [gpt3RunResult, setGpt3RunResult] = useState<BriefGpt3RunResult | null>(
-    null,
-  );
-  const [gpt3RunError, setGpt3RunError] = useState<string | null>(null);
+  const [confirmGpt1Open, setConfirmGpt1Open] = useState(false);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
@@ -109,12 +143,6 @@ export function ProjectBriefForm({
   const skipNextDirtySync = useRef(false);
 
   useEffect(() => {
-    setInput(
-      initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
-    );
-  }, [initialBrief]);
-
-  useEffect(() => {
     if (!onDirtyChange) return;
     if (skipNextDirtySync.current) {
       skipNextDirtySync.current = false;
@@ -125,13 +153,7 @@ export function ProjectBriefForm({
   }, [input, baselineInput, onDirtyChange]);
 
   useEffect(() => {
-    if (!initialBrief?.id) {
-      setGpt1Runs([]);
-      setGpt1RunResult(null);
-      setGpt1RunError(null);
-      setGpt1RunStatus("idle");
-      return;
-    }
+    if (!initialBrief?.id) return;
 
     let cancelled = false;
 
@@ -160,16 +182,6 @@ export function ProjectBriefForm({
       ...input,
     }),
     [initialBrief?.createdAt, initialBrief?.id, input],
-  );
-
-  const normalizedBrief = useMemo<NormalizedBriefJSON>(
-    () => generateBriefJSON(input),
-    [input],
-  );
-
-  const normalizedBriefJsonText = useMemo(
-    () => JSON.stringify(normalizedBrief, null, 2),
-    [normalizedBrief],
   );
 
   function update<K extends keyof ProjectBriefInput>(
@@ -237,37 +249,6 @@ export function ProjectBriefForm({
     }
   }
 
-  async function handleCreateWireframeSitePreview() {
-    setWireframePreviewOpen(true);
-    setGpt3RunError(null);
-    setGpt3RunResult(null);
-
-    if (!initialBrief?.id) {
-      setGpt3RunStatus("error");
-      setGpt3RunError(
-        "Please save the brief first, and only then run Create Wireframe Site Preview.",
-      );
-      return;
-    }
-
-    try {
-      setGpt3RunStatus("loading");
-      const result = await apiRunBriefGpt3WireframeSite(initialBrief.id);
-      setGpt3RunResult(result);
-      setGpt3RunStatus("success");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setGpt3RunError(message || "GPT 3 generation failed.");
-      setGpt3RunResult(null);
-      setGpt3RunStatus("error");
-    }
-  }
-
-  const gpt1ButtonLabel =
-    gpt1Runs.length > 0
-      ? "Regenerate Sitemap & Wireframe"
-      : "Create Sitemap & Wireframe";
-
   const legacyTones = (input.toneSelections ?? []).filter(
     (t) => !(TONE_SELECTION_OPTIONS as readonly string[]).includes(t),
   );
@@ -305,18 +286,16 @@ export function ProjectBriefForm({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <SectionCard title="1 - פרטי העסק">
-            <Field label="כותרת האפיון" required>
+            <Field label="כותרת האפיון">
               <Input
-                required
                 value={input.title}
                 onChange={(e) => update("title", e.target.value)}
                 placeholder="למשל: אפיון אתר תדמית לעסק"
               />
             </Field>
 
-            <Field label="שם העסק" required>
+            <Field label="שם העסק">
               <Input
-                required
                 value={input.businessNameSnapshot}
                 onChange={(e) => update("businessNameSnapshot", e.target.value)}
                 placeholder="שם העסק או המותג"
@@ -325,12 +304,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה העסק עושה בפועל?"
-              required
               hint="מה העסק מציע בפועל ביום-יום, בצורה פשוטה וברורה"
               examples="משרד עורכי דין לדיני משפחה / רואה חשבון לעסקים קטנים / מורה פרטי למתמטיקה / חברה לייצור מוצרי פלסטיק"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.businessWhatTheyDo}
                 onChange={(e) => update("businessWhatTheyDo", e.target.value)}
@@ -339,12 +316,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה השירותים / המוצרים שצריך להציג באתר?"
-              required
               hint="רשום את השירותים או המוצרים העיקריים שצריכים להופיע באתר"
               examples="הנהלת חשבונות, דוחות שנתיים, החזרי מס / עיצוב מטבחים, ליווי שיפוץ, הדמיות / קורס דיגיטלי, פגישות ייעוץ, סדנאות"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.servicesProductsOnSite}
                 onChange={(e) =>
@@ -355,12 +330,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה מבדל אותך ממתחרים?"
-              required
               hint="למה שלקוח יבחר דווקא בך ולא באחרים"
               examples="ניסיון של 15 שנה / שירות אישי / זמינות גבוהה / התמחות בתחום מאוד ספציפי / תהליך עבודה מסודר / מחיר נגיש"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.differentiators}
                 onChange={(e) => update("differentiators", e.target.value)}
@@ -371,12 +344,10 @@ export function ProjectBriefForm({
           <SectionCard title="2 - קהל ומטרה">
             <FieldWithHint
               label="מי קהל היעד של האתר?"
-              required
               hint="למי האתר צריך לדבר ולמי הוא מיועד בפועל"
               examples="בעלי עסקים קטנים / זוגות לפני גירושין / הורים לתלמידי תיכון / חברות תעשייה / לקוחות פרטיים"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.targetAudience}
                 onChange={(e) => update("targetAudience", e.target.value)}
@@ -385,12 +356,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מי הלקוח האידיאלי שאתה רוצה למשוך?"
-              required
               hint="איזה סוג לקוחות הכי נכון לך למשוך דרך האתר"
               examples="לקוחות רציניים שמבינים ערך / עסקים שצריכים ליווי קבוע / אנשים שמחפשים פתרון מקצועי ולא זול בלבד"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.idealClient}
                 onChange={(e) => update("idealClient", e.target.value)}
@@ -399,12 +368,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה הבעיה / הצורך המרכזי של הלקוח?"
-              required
               hint="מה הכאב, הבעיה או הצורך שהלקוח מגיע איתו"
               examples="צריך סדר מול הרשויות / מחפש יותר לידים / לא מבין מה השירות כולל / רוצה אתר שייראה מקצועי / צריך פתרון מהיר ואמין"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.audiencePainPoints}
                 onChange={(e) =>
@@ -415,12 +382,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה המטרה המרכזית של האתר?"
-              required
               hint="מה האתר צריך להשיג ברמה העסקית"
               examples="לייצר פניות / לקבוע שיחות / למכור מוצר / לחזק אמון / להציג שירותים בצורה ברורה"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.sitePrimaryBusinessGoal}
                 onChange={(e) =>
@@ -431,29 +396,13 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה הפעולה המרכזית שאתה רוצה שהגולש יבצע?"
-              required
               hint="מה ה-CTA המרכזי שצריך להוביל את האתר"
               examples="להשאיר פרטים / לשלוח וואטסאפ / לקבוע פגישה / להתקשר / לבצע רכישה"
             >
-              <div className="flex flex-wrap gap-2">
-                {MAIN_ACTION_SUGGESTIONS.map((s) => (
-                  <Button
-                    key={s}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs font-normal"
-                    onClick={() => update("mainUserAction", s)}
-                  >
-                    {s}
-                  </Button>
-                ))}
-              </div>
               <Input
-                required
-                className="mt-2"
                 value={input.mainUserAction}
                 onChange={(e) => update("mainUserAction", e.target.value)}
+                placeholder="כתוב כאן את הפעולה המרכזית שתרצה שהגולש יבצע"
               />
             </FieldWithHint>
           </SectionCard>
@@ -461,7 +410,6 @@ export function ProjectBriefForm({
           <SectionCard title="3 - מבנה האתר">
             <PresetOrCustomSelect
               label="איזה סוג אתר צריך לבנות?"
-              required
               options={WEBSITE_TYPE_OPTIONS}
               value={input.websiteType}
               onChange={(v) => update("websiteType", v)}
@@ -472,12 +420,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="כמה עמודים האתר צריך לכלול? האם יש עמודים שחייבים להופיע?"
-              required
               hint="אם יש מספר עמודים ידוע או עמודים שחייבים להיכלל, רשום אותם כאן"
               examples="דף בית, אודות, שירותים, המלצות, שאלות נפוצות, יצירת קשר / או רק דף נחיתה אחד ממוקד"
             >
               <Textarea
-                required
                 rows={4}
                 value={input.sitePagesAndStructure}
                 onChange={(e) =>
@@ -489,12 +435,10 @@ export function ProjectBriefForm({
 
             <FieldWithHint
               label="מה חשוב במיוחד להבליט באתר?"
-              required
               hint="מה הדבר שהכי חשוב לך שהגולש ירגיש או יבין"
               examples="מקצועיות / אמינות / תוצאות / שירות אישי / מהירות / ניסיון / פתרון מותאם / מחירים נגישים"
             >
               <Textarea
-                required
                 rows={3}
                 value={input.siteEmphasis}
                 onChange={(e) => update("siteEmphasis", e.target.value)}
@@ -605,43 +549,6 @@ export function ProjectBriefForm({
             </div>
           </details>
 
-          <details className="group rounded-xl border border-dashed border-border bg-muted/10 p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
-              <span>JSON מנורמל (תצוגה / debug)</span>
-              <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
-            </summary>
-            <p className="mt-3 text-xs text-muted-foreground">
-              פלט פנימי לפני אינטגרציה עם GPT - מתעדכן לפי הטופס.
-            </p>
-            <pre
-              dir="ltr"
-              className="mt-2 max-h-80 overflow-auto rounded-md border border-border bg-background p-3 text-left font-mono text-xs leading-relaxed text-foreground"
-            >
-              {normalizedBriefJsonText}
-            </pre>
-          </details>
-
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="px-4"
-              onClick={handleCreateSitemapWireframe}
-            >
-              {gpt1ButtonLabel}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="px-4"
-              onClick={handleCreateWireframeSitePreview}
-            >
-              Create Wireframe Site Preview
-            </Button>
-          </div>
-
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
             <div className="flex flex-wrap items-center gap-2">
               {mode === "edit" && onRequestDelete && (
@@ -658,11 +565,39 @@ export function ProjectBriefForm({
                 ביטול
               </Button>
             </div>
-            <Button type="submit" className="px-5 text-sm">
-              שמירה
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="px-5 text-sm"
+                onClick={() => setConfirmGpt1Open(true)}
+              >
+                צור מפת אתר ותכנון
+              </Button>
+              <Button type="submit" className="px-5 text-sm">
+                שמירה
+              </Button>
+            </div>
           </div>
         </form>
+
+        <AlertDialog open={confirmGpt1Open} onOpenChange={setConfirmGpt1Open}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>יצירת מפת אתר ותכנון</AlertDialogTitle>
+              <AlertDialogDescription>
+                פעולה זו תיצור מפת אתר ותכנון דפים על בסיס פרטי האפיון שמילאת.
+                האם אתה בטוח שברצונך להמשיך?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>ביטול</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleCreateSitemapWireframe()}>
+                כן, צור
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <SitemapHandoffDialog
           open={sitemapHandoffOpen}
@@ -673,15 +608,6 @@ export function ProjectBriefForm({
           onRegenerate={handleCreateSitemapWireframe}
           onClose={() => setSitemapHandoffOpen(false)}
         />
-
-        <WireframeSitePreviewDialog
-          open={wireframePreviewOpen}
-          status={gpt3RunStatus}
-          result={gpt3RunResult}
-          errorMessage={gpt3RunError}
-          onRegenerate={handleCreateWireframeSitePreview}
-          onClose={() => setWireframePreviewOpen(false)}
-        />
       </div>
     </section>
   );
@@ -690,18 +616,17 @@ export function ProjectBriefForm({
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm shadow-black/[0.02]">
-      <div className="text-base font-semibold text-foreground">{title}</div>
+      <div className="select-text text-base font-semibold text-foreground">{title}</div>
       <div className="space-y-4">{children}</div>
     </div>
   );
 }
 
-function Field({ label, required, children }: FieldProps) {
+function Field({ label, children }: FieldProps) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium leading-snug">
+      <Label className="!select-text text-sm font-medium leading-snug">
         {label}
-        {required && <span className="text-destructive">*</span>}
       </Label>
       {children}
     </div>
@@ -710,28 +635,24 @@ function Field({ label, required, children }: FieldProps) {
 
 type FieldProps = {
   label: string;
-  required?: boolean;
   children: ReactNode;
 };
 
 function FieldWithHint({
   label,
-  required,
   hint,
   examples,
   children,
 }: {
   label: string;
-  required?: boolean;
   hint?: string;
   examples?: string;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium leading-snug">
+      <Label className="!select-text text-sm font-medium leading-snug">
         {label}
-        {required && <span className="text-destructive">*</span>}
       </Label>
       {hint ? (
         <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
@@ -748,7 +669,6 @@ function FieldWithHint({
 
 function PresetOrCustomSelect({
   label,
-  required,
   options,
   value,
   onChange,
@@ -757,7 +677,6 @@ function PresetOrCustomSelect({
   examples,
 }: {
   label: string;
-  required?: boolean;
   options: readonly string[];
   value: string;
   onChange: (v: string) => void;
@@ -771,9 +690,8 @@ function PresetOrCustomSelect({
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm font-medium leading-snug">
+      <Label className="!select-text text-sm font-medium leading-snug">
         {label}
-        {required && <span className="text-destructive">*</span>}
       </Label>
       {help ? (
         <p className="text-xs leading-relaxed text-muted-foreground">{help}</p>
@@ -784,7 +702,6 @@ function PresetOrCustomSelect({
         </p>
       ) : null}
       <select
-        required={required && selectValue === ""}
         value={selectValue}
         onChange={(e) => {
           const v = e.target.value;
@@ -807,7 +724,6 @@ function PresetOrCustomSelect({
       </select>
       {(selectValue === CUSTOM || (!presetMatch && trimmed)) && (
         <Input
-          required={required && selectValue === CUSTOM && !trimmed}
           value={trimmed}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholderCustom}
@@ -834,7 +750,7 @@ function MultiCheckGroup({
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-sm font-medium">{title}</div>
+      <div className="select-text text-sm font-medium">{title}</div>
       {hint ? (
         <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
       ) : null}

@@ -19,12 +19,6 @@ export const WEBSITE_TYPE_OPTIONS = [
   "אתר טכני",
 ] as const;
 
-export const MAIN_ACTION_SUGGESTIONS = [
-  "השארת פרטים",
-  "רכישה",
-  "שיחה",
-] as const;
-
 export const TONE_SELECTION_OPTIONS = [
   "מקצועי",
   "ישיר",
