@@ -110,29 +110,18 @@ function getStatusOptionsForProject(project: Project): ProjectStatus[] {
 
 type ProjectsTableProps = {
   projects: Project[]
-  /** Project IDs that have a saved specification brief */
-  projectIdsWithBrief: Set<string>
   onAdd: () => void
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
   onStatusChange: (project: Project, status: ProjectStatus) => void
-  onOpenProjectBrief: (project: Project) => void
-  canAdd: boolean
-  noClientsMessage?: string
-  onAddClient?: () => void
 }
 
 export function ProjectsTable({
   projects,
-  projectIdsWithBrief,
   onAdd,
   onEdit,
   onDelete,
   onStatusChange,
-  onOpenProjectBrief,
-  canAdd,
-  noClientsMessage,
-  onAddClient,
 }: ProjectsTableProps) {
   const totalProjectValue = projects.reduce((sum, p) => {
     const isHourly = p.projectType === 'פרילנסר שעתי'
@@ -146,29 +135,16 @@ export function ProjectsTable({
         <div>
           <h2 className="text-lg font-semibold">פרויקטים</h2>
           <p className="text-sm text-muted-foreground">
-            {noClientsMessage ??
-              'ניהול פרויקטים לפי לקוחות. יש ליצור לקוח לפני הוספת פרויקט.'}
+            ניהול פרויקטים עצמאי ללא תלות במודולים אחרים.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {onAddClient && (
-            <Button
-              size="sm"
-              onClick={onAddClient}
-              className="bg-[#10B981] text-white hover:bg-[#059669]"
-            >
-              הוסף לקוח כדי להתחיל
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={onAdd}
-            disabled={!canAdd}
-            className="bg-[#10B981] text-white hover:bg-[#059669] disabled:opacity-50"
-          >
-            פרויקט חדש
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={onAdd}
+          className="bg-[#10B981] text-white hover:bg-[#059669]"
+        >
+          פרויקט חדש
+        </Button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -182,7 +158,6 @@ export function ProjectsTable({
               <th className="px-3 py-2 font-medium">סה״כ</th>
               <th className="px-3 py-2 font-medium">שולם</th>
               <th className="px-3 py-2 font-medium">נותר</th>
-              <th className="px-3 py-2 font-medium">אפיון</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
           </thead>
@@ -190,10 +165,10 @@ export function ProjectsTable({
             {projects.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={8}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
-                  {canAdd ? 'אין פרויקטים. הוסף פרויקט חדש.' : 'הוסף קודם לקוח כדי ליצור פרויקט.'}
+                  אין פרויקטים. הוסף פרויקט חדש.
                 </td>
               </tr>
             ) : (
@@ -257,19 +232,6 @@ export function ProjectsTable({
                     </td>
                     <td className="px-3 py-2 align-middle">
                       ₪{project.remainingAmount.toLocaleString('he-IL')}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      {projectIdsWithBrief.has(project.id) ? (
-                        <button
-                          type="button"
-                          className="text-sm font-medium text-[#10B981] underline-offset-2 hover:underline"
-                          onClick={() => onOpenProjectBrief(project)}
-                        >
-                          פתח אפיון
-                        </button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
                     </td>
                     <td className="px-3 py-2 align-middle text-center">
                       <div className="flex flex-wrap items-center justify-center gap-2">

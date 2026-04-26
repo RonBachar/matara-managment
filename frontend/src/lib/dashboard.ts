@@ -1,10 +1,8 @@
-﻿import type { Client, ClientService } from "@/types/client";
+﻿import { PACKAGE_TYPE_LABELS, type Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
 
-export { LEADS_STORAGE_KEY } from "@/lib/leads";
-export { CLIENTS_STORAGE_KEY } from "@/lib/clientStorage";
 export const PROJECTS_STORAGE_KEY = "matara_projects";
 export const TASKS_STORAGE_KEY = "matara_tasks";
 
@@ -16,7 +14,8 @@ const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>([
 
 export type UpcomingRenewal = {
   client: Client;
-  service: ClientService;
+  packageLabel: string;
+  renewalDate: string;
   daysLeft: number;
 };
 
@@ -52,34 +51,11 @@ export function getTotalRemainingAmount(projects: Project[]): number {
 }
 
 export function getNewLeadsCount(leads: Lead[]): number {
-  return leads.filter((lead) => !lead.convertedClientId).length;
+  return leads.filter((lead) => lead.status !== "לא מעוניין").length;
 }
 
 export function getTodayTasks(tasks: Task[]): Task[] {
   return tasks.filter((task) => task.status === "לביצוע" || task.status === "בתהליך");
-}
-
-function getRenewalServices(client: Client): ClientService[] {
-  if (Array.isArray(client.services) && client.services.length > 0) {
-    return client.services.filter(
-      (service) => typeof service.renewalDate === "string" && service.renewalDate.trim().length > 0,
-    );
-  }
-
-  if (client.packageType && client.packageType !== "None" && client.renewalDate) {
-    return [
-      {
-        id: `${client.id}-legacy-service`,
-        clientId: client.id,
-        serviceName: client.packageType,
-        renewalPrice: client.renewalPrice,
-        renewalDate: client.renewalDate,
-        reminderDaysBefore: undefined,
-      },
-    ];
-  }
-
-  return [];
 }
 
 export function getUpcomingRenewals(clients: Client[], windowDays = 30): UpcomingRenewal[] {
@@ -88,21 +64,26 @@ export function getUpcomingRenewals(clients: Client[], windowDays = 30): Upcomin
   const dayInMs = 24 * 60 * 60 * 1000;
 
   return clients
-    .flatMap((client) =>
-      getRenewalServices(client).map((service) => {
-        const renewalDate = new Date(service.renewalDate as string);
-        if (Number.isNaN(renewalDate.getTime())) return null;
+    .map((client) => {
+      if (!client.renewalDate) return null;
 
-        const renewalDay = new Date(
-          renewalDate.getFullYear(),
-          renewalDate.getMonth(),
-          renewalDate.getDate(),
-        );
-        const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
+      const renewalDate = new Date(client.renewalDate);
+      if (Number.isNaN(renewalDate.getTime())) return null;
 
-        return { client, service, daysLeft };
-      }),
-    )
+      const renewalDay = new Date(
+        renewalDate.getFullYear(),
+        renewalDate.getMonth(),
+        renewalDate.getDate(),
+      );
+      const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
+
+      return {
+        client,
+        packageLabel: PACKAGE_TYPE_LABELS[client.packageType] ?? PACKAGE_TYPE_LABELS.none,
+        renewalDate: client.renewalDate,
+        daysLeft,
+      };
+    })
     .filter((entry): entry is UpcomingRenewal => {
       if (entry == null) return false;
       return entry.daysLeft >= 0 && entry.daysLeft <= windowDays;

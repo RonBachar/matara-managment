@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Lead, LeadEditableStatus } from "@/types/lead";
-import { LEAD_EDITABLE_STATUS_OPTIONS } from "@/types/lead";
+import type { Lead } from "@/types/lead";
+import { LEAD_STATUS_OPTIONS } from "@/types/lead";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 const LEAD_SOURCE_OPTIONS = [
   "פנייה מהאתר",
@@ -61,7 +60,6 @@ export function LeadFormModal({
 }: LeadFormModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
-  const isConverted = Boolean(initialLead?.convertedClientId);
 
   useEffect(() => {
     if (!open) return;
@@ -89,21 +87,13 @@ export function LeadFormModal({
     setIsSaving(true);
     try {
       const emailTrim = form.email.trim();
-      const statusValue: Lead["status"] = isConverted
-        ? "הפך ללקוח"
-        : (form.status as LeadEditableStatus);
-
       const next: LeadInput = {
         clientName: form.clientName.trim(),
         phone: form.phone.trim(),
         email: emailTrim.length > 0 ? emailTrim : undefined,
         leadSource: form.leadSource.trim(),
-        status: statusValue,
+        status: form.status as Lead["status"],
         notes: (form.notes ?? "").trim() || undefined,
-        convertedClientId: initialLead?.convertedClientId,
-        agreementFileId: initialLead?.agreementFileId,
-        agreementFileName: initialLead?.agreementFileName,
-        agreementFileType: initialLead?.agreementFileType,
       };
       onSubmit(next);
     } finally {
@@ -130,16 +120,6 @@ export function LeadFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
-          {isConverted && (
-            <div
-              className={cn(
-                "rounded-lg border border-emerald-200/70 bg-emerald-50/70 px-3 py-2 text-sm text-emerald-800",
-              )}
-            >
-              ליד זה כבר הומר ללקוח. ניתן לעדכן פרטים בסיסיים בלבד; ההמרה נשמרת.
-            </div>
-          )}
-
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="שם הלקוח" required>
               <Input
@@ -182,29 +162,21 @@ export function LeadFormModal({
               </Select>
             </Field>
             <Field label="סטטוס">
-              {isConverted ? (
-                <Input
-                  readOnly
-                  value="הפך ללקוח"
-                  className="bg-muted/50"
-                />
-              ) : (
-                <Select
-                  value={form.status}
-                  onValueChange={(value) => handleChange("status", value ?? "חדש")}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="סטטוס" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_EDITABLE_STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={form.status}
+                onValueChange={(value) => handleChange("status", value ?? "חדש")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="סטטוס" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 

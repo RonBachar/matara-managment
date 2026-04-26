@@ -2,11 +2,7 @@ type ProjectBriefRecord = Record<string, unknown>;
 
 export type NormalizedProjectBrief = {
   briefId: string;
-  projectId: string;
-  projectName: string;
-  clientId: string;
-  clientName: string;
-  briefTitle: string;
+  title: string;
   business: {
     businessName: string;
     whatTheyDo: string;
@@ -59,18 +55,13 @@ function readStringArray(value: unknown): string[] {
 
 export function buildNormalizedProjectBrief(args: {
   briefId: string;
-  projectId: string;
   data: unknown;
 }): NormalizedProjectBrief {
   const brief = asRecord(args.data);
 
   return {
     briefId: args.briefId,
-    projectId: args.projectId,
-    projectName: readString(brief.projectNameSnapshot),
-    clientId: readString(brief.clientId),
-    clientName: readString(brief.clientNameSnapshot),
-    briefTitle: readString(brief.briefTitle),
+    title: readString(brief.title),
     business: {
       businessName: readString(brief.businessNameSnapshot),
       whatTheyDo: readString(brief.businessWhatTheyDo),

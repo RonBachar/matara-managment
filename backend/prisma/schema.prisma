@@ -9,13 +9,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Work project (aligned with the app’s Project concept; `clientId` is a string ref until a Client table exists).
+/// Work project; `clientName` is plain text only.
 model Project {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  clientId   String
   clientName String
   projectName String
 
@@ -30,12 +29,9 @@ model Project {
   billableTotal   Decimal @default(0) @db.Decimal(14, 2)
 
   notes String?
-
-  /// One brief per project (optional until created).
-  brief ProjectBrief?
 }
 
-/// A client/customer record (service/work type belongs to Project, not Client).
+/// A client/customer record with flat package metadata.
 model Client {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -46,58 +42,32 @@ model Client {
   phone        String @default("")
   email        String @default("")
   website      String?
-  status       String   @default("Active")
-
   notes String? @db.Text
 
-  // Signed agreement metadata (file blob remains in browser IndexedDB for now)
+  packageType        String   @default("none")
+  packagePrice       Decimal? @db.Decimal(14, 2)
+  renewalDate        String?
+  reminderDaysBefore Int?
+
   agreementFileId   String?
   agreementFileName String?
   agreementFileType String?
 
-  services ClientService[]
-
   @@index([clientName])
 }
 
-model ClientService {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  clientId String
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  type         String
-  name         String
-  provider     String?
-  billingCycle String?
-  renewalPrice Decimal? @db.Decimal(14, 2)
-  renewalDate  String?
-  reminderDaysBefore Int?
-  status       String   @default("Active")
-  notes        String?  @db.Text
-
-  @@index([clientId])
-  @@index([type])
-}
-
-/// Questionnaire / brief content for a project; flexible JSON until fields are normalized.
+/// Standalone questionnaire / brief content; flexible JSON until fields are normalized.
 model ProjectBrief {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /// Enforces "one brief per project" at the DB level.
-  projectId String  @unique
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title String @default("")
 
   /// Full brief payload (questionnaire answers, etc.).
   data Json @default("{}")
 
   pipelineRuns PipelineRun[]
-
-  @@index([projectId])
 }
 
 /// One execution of the AI pipeline for a given brief.
@@ -170,11 +140,6 @@ model Lead {
   leadSource String  @default("")
   status     String  @default("חדש")
   notes      String? @db.Text
-
-  convertedClientId String?
-  agreementFileId   String?
-  agreementFileName String?
-  agreementFileType String?
 }
 
 model Task {

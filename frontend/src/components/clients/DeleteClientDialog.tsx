@@ -1,9 +1,9 @@
-import type { ClientRecord } from '@/types/clientRecord'
+import type { Client } from '@/types/client'
 import { Button } from '@/components/ui/button'
 
 type DeleteClientDialogProps = {
   open: boolean
-  client?: ClientRecord
+  client?: Client
   onCancel: () => void
   onConfirm: () => void
   blockedMessage?: string

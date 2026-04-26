@@ -58,7 +58,6 @@ projectsRouter.post("/", async (req, res) => {
 
     const projectName = readNonEmptyString(body.projectName);
     const clientName = readNonEmptyString(body.clientName);
-    const clientIdFromBody = readNonEmptyString(body.clientId);
     const projectType = readNonEmptyString(body.projectType);
     const status = readNonEmptyString(body.status);
 
@@ -68,9 +67,6 @@ projectsRouter.post("/", async (req, res) => {
           "Invalid body. Required string fields: projectName, clientName, projectType, status",
       });
     }
-
-    // Client table not migrated yet; accept the frontend id if provided, otherwise fall back.
-    const clientId = clientIdFromBody ?? clientName;
 
     const notes = readOptionalString(body.notes);
 
@@ -88,7 +84,6 @@ projectsRouter.post("/", async (req, res) => {
       data: {
         projectName,
         clientName,
-        clientId,
         projectType,
         status,
         totalAmount: financials.totalAmount,
@@ -137,9 +132,6 @@ projectsRouter.patch("/:id", async (req, res) => {
 
     const clientName = readOptionalString(body.clientName);
     if (clientName !== undefined && clientName.length > 0) data.clientName = clientName;
-
-    const clientId = readOptionalString(body.clientId);
-    if (clientId !== undefined && clientId.length > 0) data.clientId = clientId;
 
     if (wantsProjectType) data.projectType = requestedType;
 

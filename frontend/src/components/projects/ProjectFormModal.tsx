@@ -1,11 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { ClientRecord } from "@/types/clientRecord";
 import type { Project, ProjectType, ProjectStatus } from "@/types/project";
 import {
   getBillableTotal,
   getRemainingAmount,
 } from "@/lib/project-calculations";
-import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,16 +86,14 @@ function normalizeStatusForType(
 type ProjectFormModalProps = {
   open: boolean;
   mode: "create" | "edit";
-  clients: ClientRecord[];
   initialProject?: Project;
   onClose: () => void;
   onSubmit: (project: Project) => void;
-  onClientAdded?: (client: ClientRecord) => void;
 };
 
 type FormState = {
   projectName: string;
-  clientId: string;
+  clientName: string;
   projectType: ProjectType;
   status: ProjectStatus;
   totalAmount: string;
@@ -109,7 +105,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   projectName: "",
-  clientId: "",
+  clientName: "",
   projectType: "בניית אתר",
   status: getDefaultStatusForType("בניית אתר"),
   totalAmount: "",
@@ -122,21 +118,18 @@ const emptyForm: FormState = {
 export function ProjectFormModal({
   open,
   mode,
-  clients,
   initialProject,
   onClose,
   onSubmit,
-  onClientAdded,
 }: ProjectFormModalProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
-  const [addClientOpen, setAddClientOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (initialProject) {
       setForm({
         projectName: initialProject.projectName,
-        clientId: initialProject.clientId,
+        clientName: initialProject.clientName,
         projectType: initialProject.projectType,
         status: initialProject.status,
         totalAmount: String(initialProject.totalAmount),
@@ -146,22 +139,9 @@ export function ProjectFormModal({
         notes: initialProject.notes ?? "",
       });
     } else {
-      // In create mode we intentionally don't reset again when `clients` changes
-      // (e.g. after nested "Add New Client"), to avoid wiping form state.
       setForm(emptyForm);
     }
   }, [open, initialProject]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (initialProject) return;
-    setForm((prev) => {
-      if (!prev.clientId) return prev;
-      if (clients.some((c) => c.id === prev.clientId)) return prev;
-      const fallbackId = clients[0]?.id ?? "";
-      return { ...prev, clientId: fallbackId };
-    });
-  }, [open, initialProject, clients]);
 
   function handleChange<K extends keyof FormState>(
     key: K,
@@ -173,8 +153,7 @@ export function ProjectFormModal({
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const paid = Number(form.paidAmount) || 0;
-    const client = clients.find((c) => c.id === form.clientId);
-    const clientName = client ? client.clientName : "";
+    const clientName = form.clientName.trim();
 
     if (form.projectType === "בניית אתר" || form.projectType === "ריטיינר חודשי") {
       const totalAmount = Number(form.totalAmount) || 0;
@@ -182,7 +161,6 @@ export function ProjectFormModal({
       onSubmit({
         id: initialProject?.id ?? String(Date.now()),
         projectName: form.projectName.trim(),
-        clientId: form.clientId,
         clientName,
         projectType: form.projectType,
         status: form.status,
@@ -202,7 +180,6 @@ export function ProjectFormModal({
       onSubmit({
         id: initialProject?.id ?? String(Date.now()),
         projectName: form.projectName.trim(),
-        clientId: form.clientId,
         clientName,
         projectType: form.projectType,
         status: form.status,
@@ -225,39 +202,23 @@ export function ProjectFormModal({
     isHourly &&
     (Number(form.hourlyRate) || 0) * (Number(form.workedHours) || 0);
 
-  const selectedClient = clients.find((c) => c.id === form.clientId);
-  const selectedClientName = selectedClient ? selectedClient.clientName : "";
-
   return (
-    <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-        <div className="w-full max-w-xl rounded-xl border border-border bg-background shadow-lg">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              {mode === "create" ? "פרויקט חדש" : "עריכת פרויקט"}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              סגירה
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="w-full max-w-xl rounded-xl border border-border bg-background shadow-lg">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            {mode === "create" ? "פרויקט חדש" : "עריכת פרויקט"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            סגירה
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
-            {onClientAdded && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-[#10B981] text-white hover:bg-[#059669]"
-                  onClick={() => setAddClientOpen(true)}
-                >
-                  הוסף לקוח חדש
-                </Button>
-              </div>
-            )}
+        <form onSubmit={handleSubmit} className="space-y-4 px-4 py-4">
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="שם הפרויקט" required>
                 <Input
@@ -266,29 +227,12 @@ export function ProjectFormModal({
                   required
                 />
               </Field>
-              <Field label="לקוח" required>
-                <Select
-                  value={form.clientId}
-                  onValueChange={(v) => handleChange("clientId", v ?? "")}
+              <Field label="שם הלקוח" required>
+                <Input
+                  value={form.clientName}
+                  onChange={(e) => handleChange("clientName", e.target.value)}
                   required
-                >
-                  <SelectTrigger className="w-full">
-                    {form.clientId ? (
-                      <SelectValue>
-                        {selectedClientName || "לקוח לא זמין"}
-                      </SelectValue>
-                    ) : (
-                      <SelectValue placeholder="בחר לקוח" />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.clientName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </Field>
               <Field label="סוג עבודה">
                 <Select
@@ -431,28 +375,9 @@ export function ProjectFormModal({
                 שמירה
               </Button>
             </div>
-          </form>
-        </div>
+        </form>
       </div>
-
-      {addClientOpen && onClientAdded && (
-        <ClientFormModal
-          open={addClientOpen}
-          mode="create"
-          onClose={() => setAddClientOpen(false)}
-          onSubmit={(data) => {
-            const newClient: ClientRecord = {
-              ...data,
-              id: String(Date.now()),
-              createdAt: new Date().toISOString(),
-            };
-            onClientAdded(newClient);
-            setForm((prev) => ({ ...prev, clientId: newClient.id }));
-            setAddClientOpen(false);
-          }}
-        />
-      )}
-    </>
+    </div>
   );
 }
 

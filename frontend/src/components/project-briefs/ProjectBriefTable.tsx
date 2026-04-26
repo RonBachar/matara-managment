@@ -2,20 +2,6 @@ import type { ProjectBrief } from "@/types/projectBrief";
 import { getBriefDisplayTitle } from "@/types/projectBrief";
 import { Button } from "@/components/ui/button";
 
-function displayClientName(raw: string | undefined): string {
-  const s = (raw ?? "").trim();
-  if (!s) return "—";
-  // In some places we store "Business · ClientName". For this table we want just the client name.
-  if (s.includes("·")) {
-    const parts = s
-      .split("·")
-      .map((p) => p.trim())
-      .filter(Boolean);
-    return parts[parts.length - 1] || "—";
-  }
-  return s;
-}
-
 type ProjectBriefTableProps = {
   briefs: ProjectBrief[];
   onCreate: () => void;
@@ -31,16 +17,16 @@ export function ProjectBriefTable({
     <section className="space-y-5 text-base">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">אפיון פרויקטים</h2>
+          <h2 className="text-xl font-semibold tracking-tight">אפיונים</h2>
           <p className="mt-1 text-base leading-relaxed text-muted-foreground">
-            אפיון אחד לכל פרויקט — נשמר בבסיס הנתונים.
+            אפיונים עצמאיים הנשמרים בבסיס הנתונים.
           </p>
         </div>
         <Button
           onClick={onCreate}
           className="bg-[#10B981] px-4 text-sm text-white hover:bg-[#059669]"
         >
-          אפיון לפרויקט
+          אפיון חדש
         </Button>
       </div>
 
@@ -48,8 +34,8 @@ export function ProjectBriefTable({
         <table className="w-full border-collapse text-base">
           <thead className="bg-muted/60 text-sm font-semibold">
             <tr className="text-start">
-              <th className="px-3 py-2.5 font-medium">שם פרויקט</th>
-              <th className="px-3 py-2.5 font-medium">שם לקוח</th>
+              <th className="px-3 py-2.5 font-medium">כותרת</th>
+              <th className="px-3 py-2.5 font-medium">שם העסק</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +45,7 @@ export function ProjectBriefTable({
                   colSpan={2}
                   className="px-3 py-8 text-center text-base text-muted-foreground"
                 >
-                  אין אפיונים עדיין. בחרו פרויקט כדי ליצור אפיון.
+                  אין אפיונים עדיין. צרו אפיון חדש.
                 </td>
               </tr>
             ) : (
@@ -73,7 +59,7 @@ export function ProjectBriefTable({
                     {getBriefDisplayTitle(brief)}
                   </td>
                   <td className="px-3 py-2.5 align-middle leading-snug">
-                    {displayClientName(brief.clientNameSnapshot)}
+                    {brief.businessNameSnapshot?.trim() || "—"}
                   </td>
                 </tr>
               ))

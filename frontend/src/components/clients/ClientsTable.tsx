@@ -1,16 +1,23 @@
 ﻿import { Link } from "react-router-dom";
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import type { ClientRecord } from "@/types/clientRecord";
+import { PACKAGE_TYPE_LABELS, type Client } from "@/types/client";
 import { Button } from "@/components/ui/button";
 
 type ClientsTableProps = {
-  clients: ClientRecord[];
+  clients: Client[];
   onAdd: () => void;
-  onEdit: (client: ClientRecord) => void;
-  onDelete: (client: ClientRecord) => void;
+  onEdit: (client: Client) => void;
+  onDelete: (client: Client) => void;
 };
 
 export function ClientsTable({ clients, onAdd, onEdit, onDelete }: ClientsTableProps) {
+  function formatRenewalDate(value?: string) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString("en-GB");
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -38,6 +45,8 @@ export function ClientsTable({ clients, onAdd, onEdit, onDelete }: ClientsTableP
               <th className="px-2.5 py-1.5 font-medium">טלפון</th>
               <th className="px-2.5 py-1.5 font-medium">אימייל</th>
               <th className="px-2.5 py-1.5 font-medium">אתר</th>
+              <th className="px-2.5 py-1.5 font-medium">חבילה</th>
+              <th className="px-2.5 py-1.5 font-medium">חידוש</th>
               <th className="px-2.5 py-1.5 text-center font-medium">פעולות</th>
             </tr>
           </thead>
@@ -62,6 +71,10 @@ export function ClientsTable({ clients, onAdd, onEdit, onDelete }: ClientsTableP
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </td>
+                <td className="px-2.5 py-1.5 align-middle">
+                  {PACKAGE_TYPE_LABELS[client.packageType] ?? PACKAGE_TYPE_LABELS.none}
+                </td>
+                <td className="px-2.5 py-1.5 align-middle">{formatRenewalDate(client.renewalDate)}</td>
                 <td className="px-2.5 py-1.5 align-middle text-center">
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <Link

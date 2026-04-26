@@ -108,7 +108,6 @@ export async function buildGpt2Input(briefId: string): Promise<Gpt2Input> {
 
   const normalizedBrief = buildNormalizedProjectBrief({
     briefId: brief.id,
-    projectId: brief.projectId,
     data: brief.data,
   });
 

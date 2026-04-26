@@ -4,8 +4,6 @@ import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
 import {
-  LEADS_STORAGE_KEY,
-  PROJECTS_STORAGE_KEY,
   TASKS_STORAGE_KEY,
   getActiveProjectsCount,
   getNewLeadsCount,
@@ -15,8 +13,8 @@ import {
   getUpcomingRenewals,
   readStoredArray,
 } from "@/lib/dashboard";
-import { readStoredLeads } from "@/lib/leads";
 import { apiGetClients } from "@/lib/clientsApi";
+import { fetchLeads } from "@/lib/leadsApi";
 import { apiGetProjects } from "@/lib/projectsApi";
 
 type DashboardData = {
@@ -28,7 +26,7 @@ type DashboardData = {
 
 function readDashboardData(): DashboardData {
   return {
-    leads: readStoredLeads(),
+    leads: [],
     clients: [],
     projects: [],
     tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
@@ -48,43 +46,22 @@ export function Dashboard() {
     const refreshStatic = () => {
       setData((prev) => ({
         ...prev,
-        leads: readStoredLeads(),
         tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
       }));
     };
 
     const refreshApi = async () => {
       try {
-        const [clients, projects] = await Promise.all([apiGetClients(), apiGetProjects()]);
+        const [leads, clients, projects] = await Promise.all([
+          fetchLeads(),
+          apiGetClients(),
+          apiGetProjects(),
+        ]);
         if (cancelled) return;
         setData((prev) => ({
           ...prev,
-          clients: clients.map((client) => ({
-            id: client.id,
-            clientType: "Website Client",
-            createdAt: client.createdAt,
-            businessName: client.businessName,
-            clientName: client.clientName,
-            phone: client.phone,
-            email: client.email,
-            website: client.website ?? undefined,
-            notes: client.notes ?? undefined,
-            services: (client.services ?? []).map((service) => ({
-              id: service.id,
-              clientId: service.clientId,
-              serviceName: service.serviceName,
-              billingCycle: service.billingCycle ?? undefined,
-              renewalPrice: service.renewalPrice ?? undefined,
-              renewalDate: service.renewalDate ?? undefined,
-              reminderDaysBefore: service.reminderDaysBefore ?? undefined,
-              notes: service.notes ?? undefined,
-              createdAt: service.createdAt,
-              updatedAt: service.updatedAt,
-            })),
-            agreementFileId: client.agreementFileId ?? undefined,
-            agreementFileName: client.agreementFileName ?? undefined,
-            agreementFileType: client.agreementFileType ?? undefined,
-          })),
+          leads,
+          clients,
           projects,
         }));
       } catch {
@@ -95,8 +72,6 @@ export function Dashboard() {
     const onStorage = (event: StorageEvent) => {
       if (
         event.key == null ||
-        event.key === LEADS_STORAGE_KEY ||
-        event.key === PROJECTS_STORAGE_KEY ||
         event.key === TASKS_STORAGE_KEY
       ) {
         refreshStatic();
@@ -160,7 +135,7 @@ export function Dashboard() {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="text-sm font-semibold">לידים פתוחים</div>
           <div className="mt-2 text-2xl font-bold text-foreground">{summary.newLeads}</div>
-          <p className="mt-1 text-xs text-muted-foreground">לידים שטרם הומרו ללקוחות.</p>
+          <p className="mt-1 text-xs text-muted-foreground">לידים פעילים שאינם מסומנים כלא מעוניין.</p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4">
@@ -190,17 +165,15 @@ export function Dashboard() {
           <p className="mt-2 text-sm text-muted-foreground">No client service renewals are coming up in the next 30 days.</p>
         ) : (
           <div className="mt-3 space-y-2">
-            {summary.upcomingRenewals.map(({ client, service, daysLeft }) => (
+            {summary.upcomingRenewals.map(({ client, packageLabel, renewalDate, daysLeft }) => (
               <div
-                key={`${client.id}-${service.id}`}
+                key={`${client.id}-${renewalDate}`}
                 className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center md:gap-3"
               >
                 <div className="font-medium text-foreground">{client.businessName || client.clientName}</div>
-                <div className="text-muted-foreground">{service.serviceName}</div>
+                <div className="text-muted-foreground">{packageLabel}</div>
                 <div className="text-muted-foreground">
-                  {service.renewalDate
-                    ? new Date(service.renewalDate).toLocaleDateString("he-IL")
-                    : "—"}
+                  {renewalDate ? new Date(renewalDate).toLocaleDateString("he-IL") : "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {daysLeft === 0 ? "Today" : `${daysLeft} days left`}

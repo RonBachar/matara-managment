@@ -31,7 +31,6 @@ export async function runProjectBriefGpt1Flow(
 
   const normalizedBrief = buildNormalizedProjectBrief({
     briefId: brief.id,
-    projectId: brief.projectId,
     data: brief.data,
   });
 

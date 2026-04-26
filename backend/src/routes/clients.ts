@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { includeServicesForAllClients, includeServicesForClient } from "../services/clientServices";
 import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../utils/validation";
 
 export const clientsRouter = Router();
 
 clientsRouter.get("/", async (_req, res) => {
   try {
-    const clients = await includeServicesForAllClients();
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: "desc" },
+    });
     return res.json(clients);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -26,12 +27,12 @@ clientsRouter.post("/", async (req, res) => {
     const phone = readOptionalString(body.phone) ?? "";
     const email = readOptionalString(body.email) ?? "";
     const website = readOptionalString(body.website);
-    const status = readOptionalString(body.status) ?? "Active";
     const notes = readOptionalString(body.notes);
 
-    const packageType = readOptionalString(body.packageType);
-    const renewalPrice = readOptionalNumber(body.renewalPrice);
+    const packageType = readOptionalString(body.packageType) ?? "none";
+    const packagePrice = readOptionalNumber(body.packagePrice);
     const renewalDate = readOptionalString(body.renewalDate);
+    const reminderDaysBefore = readOptionalNumber(body.reminderDaysBefore);
 
     const created = await prisma.client.create({
       data: {
@@ -40,36 +41,15 @@ clientsRouter.post("/", async (req, res) => {
         phone,
         email,
         website: website && website.length > 0 ? website : null,
-        status: status.length > 0 ? status : "Active",
         notes: notes && notes.length > 0 ? notes : null,
+        packageType: packageType.length > 0 ? packageType : "none",
+        packagePrice: packagePrice ?? null,
+        renewalDate: renewalDate && renewalDate.length > 0 ? renewalDate : null,
+        reminderDaysBefore: reminderDaysBefore ?? null,
         agreementFileId: readOptionalString(body.agreementFileId) ?? null,
         agreementFileName: readOptionalString(body.agreementFileName) ?? null,
         agreementFileType: readOptionalString(body.agreementFileType) ?? null,
-        services:
-          packageType && packageType.length > 0 && packageType !== "None"
-            ? {
-                create: {
-                  type:
-                    packageType === "Hosting Only"
-                      ? "Hosting"
-                      : packageType === "Elementor Pro Only"
-                        ? "License"
-                        : "Custom service",
-                  name:
-                    packageType === "Hosting Only"
-                      ? "Hosting"
-                      : packageType === "Elementor Pro Only"
-                        ? "Elementor Pro"
-                        : packageType,
-                  renewalPrice: renewalPrice ?? null,
-                  renewalDate: renewalDate && renewalDate.length > 0 ? renewalDate : null,
-                  status: "Active",
-                  notes: "Created from legacy client package fields.",
-                },
-              }
-            : undefined,
       },
-      include: { services: { orderBy: [{ renewalDate: "asc" }, { createdAt: "asc" }] } },
     });
 
     return res.status(201).json(created);
@@ -103,12 +83,24 @@ clientsRouter.patch("/:id", async (req, res) => {
     const website = readOptionalString(body.website);
     if (website !== undefined) data.website = website.length > 0 ? website : null;
 
-    const status = readOptionalString(body.status);
-    if (status !== undefined) data.status = status.length > 0 ? status : "Active";
-
     const notes = readOptionalString(body.notes);
     if (notes !== undefined) data.notes = notes.length > 0 ? notes : null;
     if (body.notes === null) data.notes = null;
+
+    const packageType = readOptionalString(body.packageType);
+    if (packageType !== undefined) data.packageType = packageType.length > 0 ? packageType : "none";
+
+    const packagePrice = readOptionalNumber(body.packagePrice);
+    if (packagePrice !== undefined) data.packagePrice = packagePrice;
+    if (body.packagePrice === null) data.packagePrice = null;
+
+    const renewalDate = readOptionalString(body.renewalDate);
+    if (renewalDate !== undefined) data.renewalDate = renewalDate.length > 0 ? renewalDate : null;
+    if (body.renewalDate === null) data.renewalDate = null;
+
+    const reminderDaysBefore = readOptionalNumber(body.reminderDaysBefore);
+    if (reminderDaysBefore !== undefined) data.reminderDaysBefore = reminderDaysBefore;
+    if (body.reminderDaysBefore === null) data.reminderDaysBefore = null;
 
     const agreementFileId = readOptionalString(body.agreementFileId);
     if (agreementFileId !== undefined) data.agreementFileId = agreementFileId.length > 0 ? agreementFileId : null;
@@ -126,8 +118,7 @@ clientsRouter.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    await prisma.client.update({ where: { id }, data });
-    const updated = await includeServicesForClient(id);
+    const updated = await prisma.client.update({ where: { id }, data });
     return res.json(updated);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -142,13 +133,6 @@ clientsRouter.delete("/:id", async (req, res) => {
   try {
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing client id" });
-
-    const linkedProjects = await prisma.project.count({ where: { clientId: id } });
-    if (linkedProjects > 0) {
-      return res.status(400).json({
-        error: `Cannot delete client: ${linkedProjects} projects are linked to this client.`,
-      });
-    }
 
     await prisma.client.delete({ where: { id } });
     return res.status(204).send();

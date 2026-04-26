@@ -1,33 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { ClientRecord } from '@/types/clientRecord'
 import type { Project, ProjectStatus } from '@/types/project'
 import { ProjectsTable } from '@/components/projects/ProjectsTable'
 import { ProjectFormModal } from '@/components/projects/ProjectFormModal'
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog'
-import { ClientFormModal } from '@/components/clients/ClientFormModal'
-import { apiCreateClient, apiGetClients } from '@/lib/clientsApi'
 import {
   apiCreateProject,
   apiDeleteProject,
   apiGetProjects,
   apiUpdateProject,
 } from '@/lib/projectsApi'
-import { BRIEFS_CHANGED_EVENT } from '@/lib/briefEvents'
-import { apiListBriefs } from '@/lib/projectBriefsApi'
 
 export function Projects() {
-  const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
-  const [projectIdsWithBrief, setProjectIdsWithBrief] = useState<Set<string>>(
-    () => new Set(),
-  )
-  const [clients, setClients] = useState<ClientRecord[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
   const [activeProject, setActiveProject] = useState<Project | undefined>()
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [addClientModalOpen, setAddClientModalOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -43,51 +31,6 @@ export function Projects() {
       })
     return () => {
       cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    apiGetClients()
-      .then((rows) => {
-        if (cancelled) return
-        setClients(rows)
-      })
-      .catch(() => {
-        if (cancelled) return
-        setClients([])
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  async function fetchProjectIdsWithBriefs(): Promise<Set<string>> {
-    const briefs = await apiListBriefs()
-    return new Set(briefs.map((b) => b.projectId))
-  }
-
-  useEffect(() => {
-    let cancelled = false
-
-    const load = () => {
-      fetchProjectIdsWithBriefs()
-        .then((set) => {
-          if (cancelled) return
-          setProjectIdsWithBrief(set)
-        })
-        .catch(() => {
-          if (cancelled) return
-          setProjectIdsWithBrief(new Set())
-        })
-    }
-
-    load()
-    window.addEventListener(BRIEFS_CHANGED_EVENT, load)
-
-    return () => {
-      cancelled = true
-      window.removeEventListener(BRIEFS_CHANGED_EVENT, load)
     }
   }, [])
 
@@ -107,7 +50,6 @@ export function Projects() {
     if (formMode === 'edit') {
       const updated = await apiUpdateProject(project.id, {
         projectName: project.projectName,
-        clientId: project.clientId,
         clientName: project.clientName,
         projectType: project.projectType,
         status: project.status,
@@ -129,7 +71,6 @@ export function Projects() {
 
     const created = await apiCreateProject({
       projectName: project.projectName,
-      clientId: project.clientId,
       clientName: project.clientName,
       projectType: project.projectType,
       status: project.status,
@@ -166,55 +107,23 @@ export function Projects() {
     setDeleteOpen(false)
   }
 
-  function handleClientAdded(newClient: ClientRecord) {
-    setClients((prev) => [newClient, ...prev])
-  }
-
-  const canAdd = clients.length > 0
-  const noClientsMessage =
-    clients.length === 0
-      ? 'יש ליצור לפחות לקוח אחד לפני הוספת פרויקט. עבור לעמוד לקוחות.'
-      : undefined
-
   return (
     <>
       <ProjectsTable
         projects={projects}
-        projectIdsWithBrief={projectIdsWithBrief}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onStatusChange={handleStatusChange}
-        onOpenProjectBrief={(project) =>
-          navigate(`/project-briefs?project=${encodeURIComponent(project.id)}`)
-        }
-        canAdd={canAdd}
-        noClientsMessage={noClientsMessage}
-        onAddClient={canAdd ? undefined : () => setAddClientModalOpen(true)}
       />
 
       <ProjectFormModal
         open={formOpen}
         mode={formMode}
-        clients={clients}
         initialProject={formMode === 'edit' ? activeProject : undefined}
         onClose={() => setFormOpen(false)}
         onSubmit={handleFormSubmit}
-        onClientAdded={handleClientAdded}
       />
-
-      {addClientModalOpen && (
-        <ClientFormModal
-          open={addClientModalOpen}
-          mode="create"
-          onClose={() => setAddClientModalOpen(false)}
-          onSubmit={async (data) => {
-            const created = await apiCreateClient(data)
-            handleClientAdded(created)
-            setAddClientModalOpen(false)
-          }}
-        />
-      )}
 
       <DeleteProjectDialog
         open={deleteOpen}

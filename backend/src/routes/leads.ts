@@ -37,10 +37,6 @@ leadsRouter.post("/", async (req, res) => {
         leadSource,
         status: status.length > 0 ? status : "חדש",
         notes: notes && notes.length > 0 ? notes : null,
-        convertedClientId: readOptionalString(body.convertedClientId) ?? null,
-        agreementFileId: readOptionalString(body.agreementFileId) ?? null,
-        agreementFileName: readOptionalString(body.agreementFileName) ?? null,
-        agreementFileType: readOptionalString(body.agreementFileType) ?? null,
       },
     });
 
@@ -78,30 +74,6 @@ leadsRouter.patch("/:id", async (req, res) => {
     const notes = readOptionalString(body.notes);
     if (notes !== undefined) data.notes = notes.length > 0 ? notes : null;
     if (body.notes === null) data.notes = null;
-
-    const convertedClientId = readOptionalString(body.convertedClientId);
-    if (convertedClientId !== undefined) {
-      data.convertedClientId = convertedClientId.length > 0 ? convertedClientId : null;
-    }
-    if (body.convertedClientId === null) data.convertedClientId = null;
-
-    const agreementFileId = readOptionalString(body.agreementFileId);
-    if (agreementFileId !== undefined) {
-      data.agreementFileId = agreementFileId.length > 0 ? agreementFileId : null;
-    }
-    if (body.agreementFileId === null) data.agreementFileId = null;
-
-    const agreementFileName = readOptionalString(body.agreementFileName);
-    if (agreementFileName !== undefined) {
-      data.agreementFileName = agreementFileName.length > 0 ? agreementFileName : null;
-    }
-    if (body.agreementFileName === null) data.agreementFileName = null;
-
-    const agreementFileType = readOptionalString(body.agreementFileType);
-    if (agreementFileType !== undefined) {
-      data.agreementFileType = agreementFileType.length > 0 ? agreementFileType : null;
-    }
-    if (body.agreementFileType === null) data.agreementFileType = null;
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ error: "No valid fields to update" });

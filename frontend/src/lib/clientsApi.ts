@@ -1,6 +1,21 @@
-import type { ClientRecord } from "@/types/clientRecord";
-import type { ClientServiceRecord } from "@/types/clientService";
+import type { Client, PackageType } from "@/types/client";
 import { apiUrl } from "@/lib/api";
+
+export type ClientPayload = {
+  clientName: string;
+  businessName: string;
+  phone: string;
+  email: string;
+  website?: string | null;
+  notes?: string | null;
+  packageType: PackageType;
+  packagePrice?: number | null;
+  renewalDate?: string | null;
+  reminderDaysBefore?: number | null;
+  agreementFileId?: string | null;
+  agreementFileName?: string | null;
+  agreementFileType?: string | null;
+};
 
 type ApiClient = {
   id: string;
@@ -12,23 +27,13 @@ type ApiClient = {
   email?: string | null;
   website?: string | null;
   notes?: string | null;
+  packageType?: string | null;
+  packagePrice?: unknown;
+  renewalDate?: string | null;
+  reminderDaysBefore?: unknown;
   agreementFileId?: string | null;
   agreementFileName?: string | null;
   agreementFileType?: string | null;
-  services?: ApiClientService[];
-};
-
-type ApiClientService = {
-  id: string;
-  clientId: string;
-  createdAt?: string;
-  updatedAt?: string;
-  name: string;
-  billingCycle?: string | null;
-  renewalPrice?: unknown;
-  renewalDate?: string | null;
-  reminderDaysBefore?: unknown;
-  notes?: string | null;
 };
 
 function toNumberOrNull(value: unknown): number | null {
@@ -37,7 +42,15 @@ function toNumberOrNull(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function clientFromApi(row: ApiClient): ClientRecord {
+function normalizePackageType(value: string | null | undefined): PackageType {
+  return value === "Hosting + Elementor Pro" ||
+    value === "Hosting Only" ||
+    value === "Elementor Pro Only"
+    ? value
+    : "none";
+}
+
+function clientFromApi(row: ApiClient): Client {
   return {
     id: row.id,
     createdAt: row.createdAt,
@@ -46,27 +59,15 @@ function clientFromApi(row: ApiClient): ClientRecord {
     businessName: row.businessName ?? "",
     phone: row.phone ?? "",
     email: row.email ?? "",
-    website: row.website ?? null,
-    notes: row.notes ?? null,
-    agreementFileId: row.agreementFileId ?? null,
-    agreementFileName: row.agreementFileName ?? null,
-    agreementFileType: row.agreementFileType ?? null,
-    services: Array.isArray(row.services) ? row.services.map(clientServiceFromApi) : [],
-  };
-}
-
-function clientServiceFromApi(row: ApiClientService): ClientServiceRecord {
-  return {
-    id: row.id,
-    clientId: row.clientId,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    serviceName: row.name ?? "",
-    billingCycle: row.billingCycle ?? null,
-    renewalPrice: toNumberOrNull(row.renewalPrice),
-    renewalDate: row.renewalDate ?? null,
-    reminderDaysBefore: toNumberOrNull(row.reminderDaysBefore),
-    notes: row.notes ?? null,
+    website: row.website ?? undefined,
+    notes: row.notes ?? undefined,
+    packageType: normalizePackageType(row.packageType),
+    packagePrice: toNumberOrNull(row.packagePrice) ?? undefined,
+    renewalDate: row.renewalDate ?? undefined,
+    reminderDaysBefore: toNumberOrNull(row.reminderDaysBefore) ?? undefined,
+    agreementFileId: row.agreementFileId ?? undefined,
+    agreementFileName: row.agreementFileName ?? undefined,
+    agreementFileType: row.agreementFileType ?? undefined,
   };
 }
 
@@ -78,7 +79,7 @@ async function parseErrorMessage(res: Response): Promise<string> {
   return "";
 }
 
-export async function apiGetClients(): Promise<ClientRecord[]> {
+export async function apiGetClients(): Promise<Client[]> {
   const res = await fetch(apiUrl("/api/clients"));
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
@@ -87,7 +88,7 @@ export async function apiGetClients(): Promise<ClientRecord[]> {
 }
 
 export async function apiCreateClient(
-  input: Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">,
+  input: ClientPayload,
 ) {
   const res = await fetch(apiUrl("/api/clients"), {
     method: "POST",
@@ -104,7 +105,7 @@ export async function apiCreateClient(
 
 export async function apiUpdateClient(
   id: string,
-  patch: Partial<Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">>,
+  patch: Partial<ClientPayload>,
 ) {
   const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), {
     method: "PATCH",

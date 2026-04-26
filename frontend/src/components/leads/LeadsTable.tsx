@@ -1,7 +1,6 @@
 import type { Lead } from "@/types/lead";
-import type { LeadEditableStatus } from "@/types/lead";
-import { LEAD_EDITABLE_STATUS_OPTIONS } from "@/types/lead";
-import { Pencil, Trash2, UserCheck } from "lucide-react";
+import { LEAD_STATUS_OPTIONS } from "@/types/lead";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatLeadCreatedAt, leadStatusPillClass } from "@/lib/leads";
 import { cn } from "@/lib/utils";
@@ -11,8 +10,7 @@ type LeadsTableProps = {
   onAdd: () => void;
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
-  onConvert: (lead: Lead) => void;
-  onStatusChange: (leadId: string, status: LeadEditableStatus) => void;
+  onStatusChange: (leadId: string, status: Lead["status"]) => void;
 };
 
 export function LeadsTable({
@@ -20,7 +18,6 @@ export function LeadsTable({
   onAdd,
   onEdit,
   onDelete,
-  onConvert,
   onStatusChange,
 }: LeadsTableProps) {
   return (
@@ -66,7 +63,6 @@ export function LeadsTable({
               </tr>
             ) : (
               leads.map((lead) => {
-                const isConverted = Boolean(lead.convertedClientId);
                 return (
                   <tr
                     key={lead.id}
@@ -83,37 +79,26 @@ export function LeadsTable({
                       </span>
                     </td>
                     <td className="min-w-[9.5rem] px-2 py-1.5 align-middle">
-                      {isConverted ? (
-                        <span
-                          className={cn(
-                            "inline-flex rounded-md px-2 py-1 text-xs font-medium",
-                            leadStatusPillClass(lead.status),
-                          )}
-                        >
-                          {lead.status}
-                        </span>
-                      ) : (
-                        <select
-                          value={lead.status}
-                          onChange={(e) =>
-                            onStatusChange(
-                              lead.id,
-                              e.target.value as LeadEditableStatus,
-                            )
-                          }
-                          className={cn(
-                            "w-full min-w-[8.5rem] cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring",
-                            leadStatusPillClass(lead.status),
-                          )}
-                          aria-label="סטטוס ליד"
-                        >
-                          {LEAD_EDITABLE_STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <select
+                        value={lead.status}
+                        onChange={(e) =>
+                          onStatusChange(
+                            lead.id,
+                            e.target.value as Lead["status"],
+                          )
+                        }
+                        className={cn(
+                          "w-full min-w-[8.5rem] cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring",
+                          leadStatusPillClass(lead.status),
+                        )}
+                        aria-label="סטטוס ליד"
+                      >
+                        {LEAD_STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-3 py-2 align-middle">
                       <span className="text-xs text-muted-foreground">
@@ -139,17 +124,6 @@ export function LeadsTable({
                           aria-label="מחיקת ליד"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => onConvert(lead)}
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                          disabled={isConverted}
-                        >
-                          <UserCheck className="me-2 h-4 w-4 text-[#3B82F6]" />
-                          {isConverted ? "הפך ללקוח" : "הפוך ללקוח"}
                         </Button>
                       </div>
                     </td>

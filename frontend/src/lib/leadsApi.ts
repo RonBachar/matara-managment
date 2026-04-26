@@ -12,10 +12,6 @@ type ApiLead = {
   leadSource?: string | null;
   status?: string | null;
   notes?: string | null;
-  convertedClientId?: string | null;
-  agreementFileId?: string | null;
-  agreementFileName?: string | null;
-  agreementFileType?: string | null;
 };
 
 async function parseErrorMessage(res: Response): Promise<string> {

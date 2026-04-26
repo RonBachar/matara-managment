@@ -30,7 +30,6 @@ export type ProjectStatus =
 export type Project = {
   id: string
   projectName: string
-  clientId: string
   clientName: string
   /** Work type (סוג עבודה). Determines allowed status set and financial fields. */
   projectType: ProjectType

@@ -2,54 +2,35 @@
   | "Hosting + Elementor Pro"
   | "Hosting Only"
   | "Elementor Pro Only"
-  | "None";
+  | "none";
 
-/** Hebrew labels for legacy package types (UI only). Internal values stay in English for compatibility. */
 export const PACKAGE_TYPE_LABELS: Record<PackageType, string> = {
-  None: "ללא חבילה",
-  "Hosting + Elementor Pro": "אחסון + רישיון אלמנטור",
+  none: "ללא חבילה",
+  "Hosting + Elementor Pro": "אחסון + אלמנטור פרו",
   "Hosting Only": "אחסון בלבד",
-  "Elementor Pro Only": "אלמנטור בלבד",
+  "Elementor Pro Only": "אלמנטור פרו בלבד",
 };
 
-export function getPackageTypeLabel(packageType: PackageType | undefined): string {
-  if (packageType == null) return "—";
-  return PACKAGE_TYPE_LABELS[packageType] ?? packageType;
-}
-
-export type ClientType = "Website Client" | "Service Client";
-
-export type ClientService = {
-  id: string;
-  clientId?: string;
-  serviceName: string;
-  billingCycle?: string;
-  renewalPrice?: number;
-  renewalDate?: string;
-  reminderDaysBefore?: number;
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
+export const REMINDER_OPTIONS = [
+  { value: 3, label: "3 ימים לפני" },
+  { value: 7, label: "שבוע לפני" },
+  { value: 14, label: "שבועיים לפני" },
+] as const;
 
 export type Client = {
   id: string;
-  clientType: ClientType;
   createdAt?: string;
-  businessName: string;
+  updatedAt?: string;
   clientName: string;
+  businessName: string;
   phone: string;
   email: string;
   website?: string;
   notes?: string;
-  services?: ClientService[];
-  packageType?: PackageType;
-  renewalPrice?: number;
+  packageType: PackageType;
+  packagePrice?: number;
   renewalDate?: string;
-  workContractFileName?: string;
-  contractFileId?: string;
-  contractFileName?: string;
-  contractFileType?: string;
+  reminderDaysBefore?: number;
   agreementFileId?: string;
   agreementFileName?: string;
   agreementFileType?: string;

@@ -6,7 +6,6 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import type { Project } from "@/types/project";
 import {
   LANGUAGE_STYLE_SELECTION_OPTIONS,
   MAIN_ACTION_SUGGESTIONS,
@@ -39,7 +38,6 @@ import { ChevronDown, FileText } from "lucide-react";
 type ProjectBriefFormProps = {
   mode: "create" | "edit";
   initialBrief?: ProjectBrief;
-  linkedProject: Project;
   onCancel: () => void;
   onSubmit: (input: ProjectBriefInput) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -51,30 +49,9 @@ function briefToInput(brief: ProjectBrief): ProjectBriefInput {
   return rest;
 }
 
-function projectLinkFields(project: Project): Pick<
-  ProjectBriefInput,
-  | "projectId"
-  | "clientId"
-  | "briefTitle"
-  | "projectNameSnapshot"
-  | "clientNameSnapshot"
-> {
-  return {
-    projectId: project.id,
-    clientId: project.clientId,
-    briefTitle: project.projectName,
-    projectNameSnapshot: project.projectName,
-    clientNameSnapshot: project.clientName,
-  };
-}
-
 const EMPTY_INPUT: ProjectBriefInput = {
-  projectId: "",
-  clientId: "",
-  briefTitle: "",
+  title: "",
   businessNameSnapshot: "",
-  clientNameSnapshot: "",
-  projectNameSnapshot: undefined,
   businessWhatTheyDo: "",
   servicesProductsOnSite: "",
   differentiators: "",
@@ -98,7 +75,6 @@ const CUSTOM = "__custom__";
 export function ProjectBriefForm({
   mode,
   initialBrief,
-  linkedProject,
   onCancel,
   onSubmit,
   onDirtyChange,
@@ -122,28 +98,21 @@ export function ProjectBriefForm({
   const [gpt3RunError, setGpt3RunError] = useState<string | null>(null);
 
   const [input, setInput] = useState<ProjectBriefInput>(() =>
-    initialBrief
-      ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
-      : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
+    initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
   );
 
   const baselineInput = useMemo(
-    () =>
-      initialBrief
-        ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
-        : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
-    [initialBrief, linkedProject],
+    () => (initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT),
+    [initialBrief],
   );
 
   const skipNextDirtySync = useRef(false);
 
   useEffect(() => {
     setInput(
-      initialBrief
-        ? { ...briefToInput(initialBrief), ...projectLinkFields(linkedProject) }
-        : { ...EMPTY_INPUT, ...projectLinkFields(linkedProject) },
+      initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
     );
-  }, [initialBrief, linkedProject]);
+  }, [initialBrief]);
 
   useEffect(() => {
     if (!onDirtyChange) return;
@@ -314,18 +283,18 @@ export function ProjectBriefForm({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
-                שם פרויקט
+                כותרת האפיון
               </p>
               <p className="text-base font-semibold text-foreground">
-                {linkedProject.projectName}
+                {input.title.trim() || "ללא כותרת"}
               </p>
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">
-                שם לקוח
+                שם העסק
               </p>
               <p className="text-base font-semibold text-foreground">
-                {linkedProject.clientName}
+                {input.businessNameSnapshot.trim() || "—"}
               </p>
             </div>
           </div>
@@ -336,6 +305,15 @@ export function ProjectBriefForm({
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <SectionCard title="1 - פרטי העסק">
+            <Field label="כותרת האפיון" required>
+              <Input
+                required
+                value={input.title}
+                onChange={(e) => update("title", e.target.value)}
+                placeholder="למשל: אפיון אתר תדמית לעסק"
+              />
+            </Field>
+
             <Field label="שם העסק" required>
               <Input
                 required

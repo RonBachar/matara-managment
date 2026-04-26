@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import type { ClientRecord } from "@/types/clientRecord";
+import type { Client } from "@/types/client";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
-import { apiCreateClient, apiDeleteClient, apiGetClients, apiUpdateClient } from "@/lib/clientsApi";
+import {
+  apiCreateClient,
+  apiDeleteClient,
+  apiGetClients,
+  apiUpdateClient,
+  type ClientPayload,
+} from "@/lib/clientsApi";
 
 export function Clients() {
-  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [activeClient, setActiveClient] = useState<ClientRecord | undefined>();
+  const [activeClient, setActiveClient] = useState<Client | undefined>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBlockedMessage, setDeleteBlockedMessage] = useState<
     string | undefined
@@ -37,28 +43,24 @@ export function Clients() {
     setFormOpen(true);
   }
 
-  function handleEdit(client: ClientRecord) {
+  function handleEdit(client: Client) {
     setFormMode("edit");
     setActiveClient(client);
     setFormOpen(true);
   }
 
-  async function handleFormSubmit(
-    data: Omit<ClientRecord, "id" | "createdAt" | "updatedAt" | "services">,
-  ) {
+  async function handleFormSubmit(data: ClientPayload) {
     if (formMode === "edit" && activeClient) {
       const updated = await apiUpdateClient(activeClient.id, data);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-      setFormOpen(false);
       return;
     }
 
     const created = await apiCreateClient(data);
     setClients((prev) => [created, ...prev]);
-    setFormOpen(false);
   }
 
-  function handleDeleteRequest(client: ClientRecord) {
+  function handleDeleteRequest(client: Client) {
     setActiveClient(client);
     setDeleteOpen(true);
   }

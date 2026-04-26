@@ -5,7 +5,6 @@ type ApiProject = {
   id: string;
   createdAt?: string;
   updatedAt?: string;
-  clientId: string;
   clientName: string;
   projectName: string;
   projectType: string;
@@ -29,7 +28,6 @@ export function projectFromApi(row: ApiProject): Project {
   return {
     id: row.id,
     projectName: row.projectName ?? "",
-    clientId: row.clientId ?? "",
     clientName: row.clientName ?? "",
     projectType: row.projectType as Project["projectType"],
     status: row.status as Project["status"],
@@ -53,7 +51,6 @@ export async function apiGetProjects(): Promise<Project[]> {
 
 export async function apiCreateProject(input: {
   projectName: string;
-  clientId: string;
   clientName: string;
   projectType: string;
   status: string;
@@ -86,7 +83,6 @@ export async function apiUpdateProject(
   id: string,
   patch: Partial<{
     projectName: string;
-    clientId: string;
     clientName: string;
     projectType: string;
     status: string;

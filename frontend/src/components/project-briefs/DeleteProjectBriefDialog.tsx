@@ -27,7 +27,7 @@ export function DeleteProjectBriefDialog({
           <p>האם למחוק את הבריף הבא?</p>
           <p className="font-medium">{getBriefDisplayTitle(brief)}</p>
           <p className="text-sm text-muted-foreground">
-            הפעולה תמחק את הבריף מהמערכת המקומית בלבד.
+            הפעולה תמחק את הבריף מהמערכת.
           </p>
         </div>
         <div className="flex justify-between gap-3 px-4 pb-4">

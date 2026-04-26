@@ -23,15 +23,8 @@ function asObject(value: unknown): ApiObject {
 function briefFromApi(row: ApiBrief): ProjectBrief {
   return {
     id: asString(row.id),
-    projectId: asString(row.projectId),
-    clientId: asString(row.clientId),
-    briefTitle: asString(row.briefTitle),
+    title: asString(row.title),
     businessNameSnapshot: asString(row.businessNameSnapshot),
-    clientNameSnapshot: asString(row.clientNameSnapshot),
-    projectNameSnapshot:
-      typeof row.projectNameSnapshot === "string" && row.projectNameSnapshot.trim()
-        ? row.projectNameSnapshot.trim()
-        : undefined,
     createdAt: asString(row.createdAt),
     updatedAt: asString(row.updatedAt),
 
@@ -135,16 +128,6 @@ export async function apiListBriefs(): Promise<ProjectBrief[]> {
   return (data as ApiBrief[]).map(briefFromApi);
 }
 
-export async function apiGetBriefByProjectId(projectId: string): Promise<ProjectBrief> {
-  const res = await fetch(apiUrl(`/api/project-briefs/by-project/${encodeURIComponent(projectId)}`));
-  if (!res.ok) {
-    const msg = await parseErrorMessage(res);
-    throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as ApiBrief;
-  return briefFromApi(data);
-}
-
 export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
   const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`));
   if (!res.ok) {
@@ -155,12 +138,12 @@ export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
   return briefFromApi(data);
 }
 
-export async function apiCreateBrief(projectId: string, input: ProjectBriefInput): Promise<ProjectBrief> {
+export async function apiCreateBrief(input: ProjectBriefInput): Promise<ProjectBrief> {
   const res = await fetch(apiUrl("/api/project-briefs"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      projectId,
+      title: input.title,
       data: input,
     }),
   });

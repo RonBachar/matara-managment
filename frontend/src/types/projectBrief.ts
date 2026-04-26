@@ -66,18 +66,12 @@ export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
   "תוצאתית",
 ] as const;
 
-/**
- * Project specification — one document per project, aligned with the discovery questionnaire.
- */
+/** Standalone project brief document. */
 export type ProjectBrief = {
   id: string;
-  projectId: string;
-  clientId: string;
-  briefTitle: string;
+  title: string;
   /** שם העסק (למסמך / ייצוא) */
   businessNameSnapshot: string;
-  clientNameSnapshot: string;
-  projectNameSnapshot?: string;
   createdAt: string;
   updatedAt: string;
 
@@ -114,9 +108,7 @@ export type ProjectBrief = {
 
 export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
 
-export function getBriefDisplayTitle(
-  brief: Pick<ProjectBrief, "briefTitle" | "projectNameSnapshot">,
-): string {
-  const t = brief.projectNameSnapshot?.trim() || brief.briefTitle?.trim();
-  return t || "ללא שם פרויקט";
+export function getBriefDisplayTitle(brief: Pick<ProjectBrief, "title">): string {
+  const t = brief.title?.trim();
+  return t || "ללא כותרת";
 }
