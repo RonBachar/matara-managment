@@ -72,24 +72,6 @@ export type BriefGpt1RunResult = {
   output: Record<string, unknown>;
 };
 
-export type BriefGpt1HistoryRun = {
-  runId: string;
-  stepId: string;
-  status: string;
-  createdAt: string;
-  finishedAt: string | null;
-  model: string | null;
-  error: string | null;
-  normalizedBrief: Record<string, unknown> | null;
-  output: Record<string, unknown> | null;
-};
-
-export type BriefGpt1HistoryResponse = {
-  briefId: string;
-  runs: BriefGpt1HistoryRun[];
-  latestSuccessfulRun: BriefGpt1HistoryRun | null;
-};
-
 export type BriefGpt2RunResult = {
   briefId: string;
   runId: string;
@@ -204,83 +186,6 @@ export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<Brief
     status: asString(data.status),
     normalizedBrief: asObject(data.normalizedBrief),
     output: asObject(data.output),
-  };
-}
-
-export async function apiGetBriefGpt1History(id: string): Promise<BriefGpt1HistoryResponse> {
-  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe/runs`));
-  if (!res.ok) {
-    const msg = await parseErrorMessage(res);
-    throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
-  }
-
-  const data = asObject(await res.json());
-  const runsRaw = Array.isArray(data.runs) ? data.runs : [];
-
-  const runs = runsRaw.map((item) => {
-    const row = asObject(item);
-    return {
-      runId: asString(row.runId),
-      stepId: asString(row.stepId),
-      status: asString(row.status),
-      createdAt: asString(row.createdAt),
-      finishedAt: typeof row.finishedAt === "string" ? row.finishedAt : null,
-      model: typeof row.model === "string" ? row.model : null,
-      error: typeof row.error === "string" ? row.error : null,
-      normalizedBrief:
-        typeof row.normalizedBrief === "object" &&
-        row.normalizedBrief !== null &&
-        !Array.isArray(row.normalizedBrief)
-          ? (row.normalizedBrief as Record<string, unknown>)
-          : null,
-      output:
-        typeof row.output === "object" &&
-        row.output !== null &&
-        !Array.isArray(row.output)
-          ? (row.output as Record<string, unknown>)
-          : null,
-    } satisfies BriefGpt1HistoryRun;
-  });
-
-  const latestSuccessfulRunRaw = asObject(data.latestSuccessfulRun);
-  const latestSuccessfulRun =
-    latestSuccessfulRunRaw.runId
-      ? ({
-          runId: asString(latestSuccessfulRunRaw.runId),
-          stepId: asString(latestSuccessfulRunRaw.stepId),
-          status: asString(latestSuccessfulRunRaw.status),
-          createdAt: asString(latestSuccessfulRunRaw.createdAt),
-          finishedAt:
-            typeof latestSuccessfulRunRaw.finishedAt === "string"
-              ? latestSuccessfulRunRaw.finishedAt
-              : null,
-          model:
-            typeof latestSuccessfulRunRaw.model === "string"
-              ? latestSuccessfulRunRaw.model
-              : null,
-          error:
-            typeof latestSuccessfulRunRaw.error === "string"
-              ? latestSuccessfulRunRaw.error
-              : null,
-          normalizedBrief:
-            typeof latestSuccessfulRunRaw.normalizedBrief === "object" &&
-            latestSuccessfulRunRaw.normalizedBrief !== null &&
-            !Array.isArray(latestSuccessfulRunRaw.normalizedBrief)
-              ? (latestSuccessfulRunRaw.normalizedBrief as Record<string, unknown>)
-              : null,
-          output:
-            typeof latestSuccessfulRunRaw.output === "object" &&
-            latestSuccessfulRunRaw.output !== null &&
-            !Array.isArray(latestSuccessfulRunRaw.output)
-              ? (latestSuccessfulRunRaw.output as Record<string, unknown>)
-              : null,
-        } satisfies BriefGpt1HistoryRun)
-      : null;
-
-  return {
-    briefId: asString(data.briefId),
-    runs,
-    latestSuccessfulRun,
   };
 }
 

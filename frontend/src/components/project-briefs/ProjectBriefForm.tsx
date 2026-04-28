@@ -14,26 +14,10 @@ import {
   type ProjectBriefInput,
 } from "@/types/projectBrief";
 import { buildProjectBriefSummary } from "@/lib/projectBriefSummary";
-import {
-  apiGetBriefGpt1History,
-  apiRunBriefGpt1SitemapWireframe,
-  type BriefGpt1HistoryRun,
-} from "@/lib/projectBriefsApi";
-import { SitemapHandoffDialog } from "./SitemapHandoffDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ChevronDown, FileText } from "lucide-react";
 
@@ -121,16 +105,6 @@ function ProjectBriefFormContent({
   onDirtyChange,
   onRequestDelete,
 }: ProjectBriefFormProps) {
-  const [sitemapHandoffOpen, setSitemapHandoffOpen] = useState(false);
-  const [gpt1RunStatus, setGpt1RunStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
-  const [gpt1Runs, setGpt1Runs] = useState<BriefGpt1HistoryRun[]>([]);
-  const [gpt1RunResult, setGpt1RunResult] =
-    useState<BriefGpt1HistoryRun | null>(null);
-  const [gpt1RunError, setGpt1RunError] = useState<string | null>(null);
-  const [confirmGpt1Open, setConfirmGpt1Open] = useState(false);
-
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
   );
@@ -151,28 +125,6 @@ function ProjectBriefFormContent({
     const isDirty = JSON.stringify(input) !== JSON.stringify(baselineInput);
     onDirtyChange(isDirty);
   }, [input, baselineInput, onDirtyChange]);
-
-  useEffect(() => {
-    if (!initialBrief?.id) return;
-
-    let cancelled = false;
-
-    apiGetBriefGpt1History(initialBrief.id)
-      .then((history) => {
-        if (cancelled) return;
-        setGpt1Runs(history.runs);
-        setGpt1RunResult(history.latestSuccessfulRun);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setGpt1Runs([]);
-        setGpt1RunResult(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [initialBrief?.id]);
 
   const summaryBrief = useMemo<ProjectBrief>(
     () => ({
@@ -212,41 +164,6 @@ function ProjectBriefFormContent({
     skipNextDirtySync.current = true;
     onDirtyChange?.(false);
     onSubmit(input);
-  }
-
-  async function refreshGpt1History(briefId: string) {
-    const history = await apiGetBriefGpt1History(briefId);
-    setGpt1Runs(history.runs);
-    setGpt1RunResult(history.latestSuccessfulRun);
-  }
-
-  async function handleCreateSitemapWireframe() {
-    setSitemapHandoffOpen(true);
-    setGpt1RunError(null);
-
-    if (!initialBrief?.id) {
-      setGpt1RunStatus("error");
-      setGpt1RunError(
-        "יש לשמור את האפיון קודם, ורק אחר כך להריץ Create Sitemap & Wireframe.",
-      );
-      return;
-    }
-
-    try {
-      setGpt1RunStatus("loading");
-      await apiRunBriefGpt1SitemapWireframe(initialBrief.id);
-      await refreshGpt1History(initialBrief.id);
-      setGpt1RunStatus("success");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setGpt1RunError(message || "ההרצה נכשלה.");
-      try {
-        await refreshGpt1History(initialBrief.id);
-      } catch {
-        // Keep existing history/result if refresh fails after a failed run.
-      }
-      setGpt1RunStatus("error");
-    }
   }
 
   const legacyTones = (input.toneSelections ?? []).filter(
@@ -566,48 +483,12 @@ function ProjectBriefFormContent({
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                className="px-5 text-sm"
-                onClick={() => setConfirmGpt1Open(true)}
-              >
-                צור מפת אתר ותכנון
-              </Button>
               <Button type="submit" className="px-5 text-sm">
                 שמירה
               </Button>
             </div>
           </div>
         </form>
-
-        <AlertDialog open={confirmGpt1Open} onOpenChange={setConfirmGpt1Open}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>יצירת מפת אתר ותכנון</AlertDialogTitle>
-              <AlertDialogDescription>
-                פעולה זו תיצור מפת אתר ותכנון דפים על בסיס פרטי האפיון שמילאת.
-                האם אתה בטוח שברצונך להמשיך?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>ביטול</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void handleCreateSitemapWireframe()}>
-                כן, צור
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <SitemapHandoffDialog
-          open={sitemapHandoffOpen}
-          status={gpt1RunStatus}
-          result={gpt1RunResult}
-          runs={gpt1Runs}
-          errorMessage={gpt1RunError}
-          onRegenerate={handleCreateSitemapWireframe}
-          onClose={() => setSitemapHandoffOpen(false)}
-        />
       </div>
     </section>
   );
