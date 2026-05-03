@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
   BriefcaseBusiness,
@@ -6,7 +7,9 @@ import {
   Users,
   UserPlus,
   ClipboardList,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { navItems, PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +29,20 @@ const SIDEBAR_WIDTH_CLASS = "w-64";
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+
+    try {
+      await signOut();
+      navigate("/login", { replace: true });
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <aside
@@ -73,7 +90,22 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="pt-4 text-xs text-slate-500 text-center">v0 • RTL</div>
+        <div className="space-y-3 pt-4">
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            disabled={signingOut}
+            className={cn(
+              "flex w-full items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors",
+              "text-slate-300 hover:bg-[#1F2937] hover:text-slate-50",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            )}
+          >
+            <LogOut className="size-4 shrink-0" />
+            <span>{signingOut ? "מתנתק..." : "התנתק"}</span>
+          </button>
+          <div className="text-center text-xs text-slate-500">v0 • RTL</div>
+        </div>
       </div>
     </aside>
   );

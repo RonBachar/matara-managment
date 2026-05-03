@@ -8,6 +8,7 @@ import { projectBriefGpt1Router } from "./routes/projectBriefGpt1";
 import { projectBriefGpt2Router } from "./routes/projectBriefGpt2";
 import { projectBriefGpt3Router } from "./routes/projectBriefGpt3";
 import { tasksRouter } from "./routes/tasks";
+import { requireAuth } from "./middleware/auth";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -34,14 +35,14 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.use("/api/projects", projectsRouter);
-app.use("/api/clients", clientsRouter);
-app.use("/api/leads", leadsRouter);
-app.use("/api/tasks", tasksRouter);
-app.use("/api/project-briefs", projectBriefsRouter);
-app.use("/api/project-briefs", projectBriefGpt1Router);
-app.use("/api/project-briefs", projectBriefGpt2Router);
-app.use("/api/project-briefs", projectBriefGpt3Router);
+app.use("/api/projects", requireAuth, projectsRouter);
+app.use("/api/clients", requireAuth, clientsRouter);
+app.use("/api/leads", requireAuth, leadsRouter);
+app.use("/api/tasks", requireAuth, tasksRouter);
+app.use("/api/project-briefs", requireAuth, projectBriefsRouter);
+app.use("/api/project-briefs", requireAuth, projectBriefGpt1Router);
+app.use("/api/project-briefs", requireAuth, projectBriefGpt2Router);
+app.use("/api/project-briefs", requireAuth, projectBriefGpt3Router);
 
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);

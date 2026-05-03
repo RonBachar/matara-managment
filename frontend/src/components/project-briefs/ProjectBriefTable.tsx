@@ -1,5 +1,4 @@
 import type { ProjectBrief } from "@/types/projectBrief";
-import { getBriefDisplayTitle } from "@/types/projectBrief";
 import { Button } from "@/components/ui/button";
 
 type ProjectBriefTableProps = {
@@ -34,7 +33,6 @@ export function ProjectBriefTable({
         <table className="w-full border-collapse text-base">
           <thead className="bg-muted/60 text-sm font-semibold">
             <tr className="text-start">
-              <th className="px-3 py-2.5 font-medium">כותרת</th>
               <th className="px-3 py-2.5 font-medium">שם העסק</th>
             </tr>
           </thead>
@@ -42,7 +40,7 @@ export function ProjectBriefTable({
             {briefs.length === 0 ? (
               <tr>
                 <td
-                  colSpan={2}
+                  colSpan={1}
                   className="px-3 py-8 text-center text-base text-muted-foreground"
                 >
                   אין אפיונים עדיין. צרו אפיון חדש.
@@ -56,10 +54,7 @@ export function ProjectBriefTable({
                   onClick={() => onOpenBrief(brief)}
                 >
                   <td className="px-3 py-2.5 align-middle leading-snug">
-                    {getBriefDisplayTitle(brief)}
-                  </td>
-                  <td className="px-3 py-2.5 align-middle leading-snug">
-                    {brief.businessNameSnapshot?.trim() || "—"}
+                    {brief.businessNameSnapshot?.trim() || "ללא שם"}
                   </td>
                 </tr>
               ))

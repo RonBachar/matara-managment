@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
+import type { AuthRequest } from "../middleware/auth";
 import { readNonEmptyString, readOptionalString } from "../utils/validation";
 
 export const leadsRouter = Router();
 
-leadsRouter.get("/", async (_req, res) => {
+leadsRouter.get("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const leads = await prisma.lead.findMany({
+      where: { userId },
       orderBy: [{ createdAt: "asc" }],
     });
     return res.json(leads);
@@ -16,8 +19,9 @@ leadsRouter.get("/", async (_req, res) => {
   }
 });
 
-leadsRouter.post("/", async (req, res) => {
+leadsRouter.post("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const clientName = readNonEmptyString(body.clientName);
@@ -31,6 +35,7 @@ leadsRouter.post("/", async (req, res) => {
 
     const created = await prisma.lead.create({
       data: {
+        userId,
         clientName,
         phone,
         email: email && email.length > 0 ? email : null,
@@ -47,8 +52,9 @@ leadsRouter.post("/", async (req, res) => {
   }
 });
 
-leadsRouter.patch("/:id", async (req, res) => {
+leadsRouter.patch("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing lead id" });
 
@@ -79,6 +85,9 @@ leadsRouter.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
+    const existing = await prisma.lead.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Lead not found" });
+
     const updated = await prisma.lead.update({ where: { id }, data });
     return res.json(updated);
   } catch (err: unknown) {
@@ -90,10 +99,14 @@ leadsRouter.patch("/:id", async (req, res) => {
   }
 });
 
-leadsRouter.delete("/:id", async (req, res) => {
+leadsRouter.delete("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing lead id" });
+
+    const existing = await prisma.lead.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Lead not found" });
 
     await prisma.lead.delete({ where: { id } });
     return res.status(204).send();

@@ -97,9 +97,12 @@ function parseGpt1Output(value: unknown): Gpt1SitemapWireframeResult {
   return parsed;
 }
 
-export async function buildGpt2Input(briefId: string): Promise<Gpt2Input> {
-  const brief = await prisma.projectBrief.findUnique({
-    where: { id: briefId },
+export async function buildGpt2Input(
+  briefId: string,
+  userId: string,
+): Promise<Gpt2Input> {
+  const brief = await prisma.projectBrief.findFirst({
+    where: { id: briefId, userId },
   });
 
   if (!brief) {
@@ -114,6 +117,7 @@ export async function buildGpt2Input(briefId: string): Promise<Gpt2Input> {
   const latestSuccessfulGpt1Run = await prisma.pipelineRun.findFirst({
     where: {
       briefId: brief.id,
+      brief: { userId },
       status: "COMPLETED",
       steps: {
         some: {

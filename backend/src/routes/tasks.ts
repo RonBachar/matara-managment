@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
+import type { AuthRequest } from "../middleware/auth";
 import { readNonEmptyString, readOptionalString } from "../utils/validation";
 
 export const tasksRouter = Router();
 
-tasksRouter.get("/", async (_req, res) => {
+tasksRouter.get("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const tasks = await prisma.task.findMany({
+      where: { userId },
       orderBy: [{ createdAt: "asc" }],
     });
     return res.json(tasks);
@@ -16,8 +19,9 @@ tasksRouter.get("/", async (_req, res) => {
   }
 });
 
-tasksRouter.post("/", async (req, res) => {
+tasksRouter.post("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const title = readNonEmptyString(body.title);
@@ -29,6 +33,7 @@ tasksRouter.post("/", async (req, res) => {
 
     const created = await prisma.task.create({
       data: {
+        userId,
         title,
         description: description && description.length > 0 ? description : null,
         status: status.length > 0 ? status : "לביצוע",
@@ -43,8 +48,9 @@ tasksRouter.post("/", async (req, res) => {
   }
 });
 
-tasksRouter.patch("/:id", async (req, res) => {
+tasksRouter.patch("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing task id" });
 
@@ -68,6 +74,9 @@ tasksRouter.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
+    const existing = await prisma.task.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Task not found" });
+
     const updated = await prisma.task.update({ where: { id }, data });
     return res.json(updated);
   } catch (err: unknown) {
@@ -79,10 +88,14 @@ tasksRouter.patch("/:id", async (req, res) => {
   }
 });
 
-tasksRouter.delete("/:id", async (req, res) => {
+tasksRouter.delete("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing task id" });
+
+    const existing = await prisma.task.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Task not found" });
 
     await prisma.task.delete({ where: { id } });
     return res.status(204).send();

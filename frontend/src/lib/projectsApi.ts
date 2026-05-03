@@ -1,5 +1,5 @@
 import type { Project } from "@/types/project";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getAuthHeaders } from "@/lib/api";
 
 type ApiProject = {
   id: string;
@@ -7,14 +7,9 @@ type ApiProject = {
   updatedAt?: string;
   clientName: string;
   projectName: string;
-  projectType: string;
   status: string;
   totalAmount?: unknown;
   paidAmount?: unknown;
-  remainingAmount?: unknown;
-  hourlyRate?: unknown;
-  workedHours?: unknown;
-  billableTotal?: unknown;
   notes?: string | null;
 };
 
@@ -27,22 +22,20 @@ function toNumber(value: unknown): number {
 export function projectFromApi(row: ApiProject): Project {
   return {
     id: row.id,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
     projectName: row.projectName ?? "",
     clientName: row.clientName ?? "",
-    projectType: row.projectType as Project["projectType"],
     status: row.status as Project["status"],
     totalAmount: toNumber(row.totalAmount),
     paidAmount: toNumber(row.paidAmount),
-    remainingAmount: toNumber(row.remainingAmount),
-    hourlyRate: toNumber(row.hourlyRate),
-    workedHours: toNumber(row.workedHours),
-    billableTotal: toNumber(row.billableTotal),
     notes: row.notes ?? undefined,
   };
 }
 
 export async function apiGetProjects(): Promise<Project[]> {
-  const res = await fetch(apiUrl("/api/projects"));
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl("/api/projects"), { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -52,19 +45,15 @@ export async function apiGetProjects(): Promise<Project[]> {
 export async function apiCreateProject(input: {
   projectName: string;
   clientName: string;
-  projectType: string;
   status: string;
   totalAmount: number;
   paidAmount: number;
-  remainingAmount: number;
-  hourlyRate: number;
-  workedHours: number;
-  billableTotal: number;
   notes?: string | null;
 }): Promise<Project> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl("/api/projects"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(input),
   });
   if (!res.ok) {
@@ -84,20 +73,16 @@ export async function apiUpdateProject(
   patch: Partial<{
     projectName: string;
     clientName: string;
-    projectType: string;
     status: string;
     totalAmount: number;
     paidAmount: number;
-    remainingAmount: number;
-    hourlyRate: number;
-    workedHours: number;
-    billableTotal: number;
     notes: string | null;
   }>,
 ): Promise<Project> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(id)}`), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(patch),
   });
   if (!res.ok) {
@@ -113,7 +98,11 @@ export async function apiUpdateProject(
 }
 
 export async function apiDeleteProject(id: string): Promise<void> {
-  const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(id)}`), { method: "DELETE" });
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(id)}`), {
+    method: "DELETE",
+    headers,
+  });
   if (res.status === 204) return;
   if (!res.ok) {
     const maybeJson = await res.json().catch(() => null as unknown);
@@ -124,4 +113,3 @@ export async function apiDeleteProject(id: string): Promise<void> {
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
   }
 }
-

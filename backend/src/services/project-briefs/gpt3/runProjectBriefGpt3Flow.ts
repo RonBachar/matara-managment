@@ -17,8 +17,9 @@ export type ProjectBriefGpt3FlowResponse = {
 
 export async function runProjectBriefGpt3Flow(
   briefId: string,
+  userId: string,
 ): Promise<ProjectBriefGpt3FlowResponse> {
-  const input = await buildGpt3Input(briefId);
+  const input = await buildGpt3Input(briefId, userId);
 
   const run = await prisma.pipelineRun.create({
     data: {

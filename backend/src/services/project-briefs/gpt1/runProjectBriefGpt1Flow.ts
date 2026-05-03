@@ -20,9 +20,10 @@ export type ProjectBriefGpt1FlowResponse = {
 
 export async function runProjectBriefGpt1Flow(
   briefId: string,
+  userId: string,
 ): Promise<ProjectBriefGpt1FlowResponse> {
-  const brief = await prisma.projectBrief.findUnique({
-    where: { id: briefId },
+  const brief = await prisma.projectBrief.findFirst({
+    where: { id: briefId, userId },
   });
 
   if (!brief) {

@@ -59,8 +59,8 @@ export function buildProjectBriefSummary(brief: ProjectBrief): SummarySection[] 
       items: [
         { label: "סוג אתר", value: toSummaryValue(brief.websiteType) },
         {
-          label: "עמודים ומבנה",
-          value: toSummaryValue(brief.sitePagesAndStructure),
+          label: "עמודים נדרשים באתר",
+          value: toSummaryValue(brief.requestedPages),
         },
         {
           label: "מה להבליט",

@@ -1,12 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
+import type { AuthRequest } from "../middleware/auth";
 import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../utils/validation";
 
 export const clientsRouter = Router();
 
-clientsRouter.get("/", async (_req, res) => {
+clientsRouter.get("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const clients = await prisma.client.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
     });
     return res.json(clients);
@@ -16,8 +19,9 @@ clientsRouter.get("/", async (_req, res) => {
   }
 });
 
-clientsRouter.post("/", async (req, res) => {
+clientsRouter.post("/", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const clientName = readNonEmptyString(body.clientName);
@@ -36,6 +40,7 @@ clientsRouter.post("/", async (req, res) => {
 
     const created = await prisma.client.create({
       data: {
+        userId,
         clientName,
         businessName,
         phone,
@@ -59,8 +64,9 @@ clientsRouter.post("/", async (req, res) => {
   }
 });
 
-clientsRouter.patch("/:id", async (req, res) => {
+clientsRouter.patch("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing client id" });
 
@@ -118,6 +124,9 @@ clientsRouter.patch("/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Client not found" });
+
     const updated = await prisma.client.update({ where: { id }, data });
     return res.json(updated);
   } catch (err: unknown) {
@@ -129,10 +138,14 @@ clientsRouter.patch("/:id", async (req, res) => {
   }
 });
 
-clientsRouter.delete("/:id", async (req, res) => {
+clientsRouter.delete("/:id", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing client id" });
+
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Client not found" });
 
     await prisma.client.delete({ where: { id } });
     return res.status(204).send();

@@ -19,7 +19,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { ChevronDown, FileText } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  Check,
+  Copy,
+  FileText,
+  LayoutTemplate,
+  Lightbulb,
+  MessageSquare,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type ProjectBriefFormProps = {
   mode: "create" | "edit";
@@ -32,7 +43,6 @@ type ProjectBriefFormProps = {
 
 function briefToInput(brief: ProjectBrief): ProjectBriefInput {
   return {
-    title: brief.title,
     businessNameSnapshot: brief.businessNameSnapshot,
     businessWhatTheyDo: brief.businessWhatTheyDo,
     servicesProductsOnSite: brief.servicesProductsOnSite,
@@ -43,7 +53,7 @@ function briefToInput(brief: ProjectBrief): ProjectBriefInput {
     sitePrimaryBusinessGoal: brief.sitePrimaryBusinessGoal,
     mainUserAction: brief.mainUserAction,
     websiteType: brief.websiteType,
-    sitePagesAndStructure: brief.sitePagesAndStructure,
+    requestedPages: brief.requestedPages,
     siteEmphasis: brief.siteEmphasis,
     toneSelections: brief.toneSelections,
     languageStyleSelections: brief.languageStyleSelections,
@@ -54,7 +64,6 @@ function briefToInput(brief: ProjectBrief): ProjectBriefInput {
 }
 
 const EMPTY_INPUT: ProjectBriefInput = {
-  title: "",
   businessNameSnapshot: "",
   businessWhatTheyDo: "",
   servicesProductsOnSite: "",
@@ -65,7 +74,7 @@ const EMPTY_INPUT: ProjectBriefInput = {
   sitePrimaryBusinessGoal: "",
   mainUserAction: "",
   websiteType: "",
-  sitePagesAndStructure: "",
+  requestedPages: "",
   siteEmphasis: "",
   toneSelections: [],
   languageStyleSelections: [],
@@ -108,6 +117,9 @@ function ProjectBriefFormContent({
   const [input, setInput] = useState<ProjectBriefInput>(() =>
     initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT,
   );
+  const [summaryCopyState, setSummaryCopyState] = useState<
+    "idle" | "copied" | "failed"
+  >("idle");
 
   const baselineInput = useMemo(
     () => (initialBrief ? briefToInput(initialBrief) : EMPTY_INPUT),
@@ -115,6 +127,7 @@ function ProjectBriefFormContent({
   );
 
   const skipNextDirtySync = useRef(false);
+  const copyResetTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!onDirtyChange) return;
@@ -126,6 +139,14 @@ function ProjectBriefFormContent({
     onDirtyChange(isDirty);
   }, [input, baselineInput, onDirtyChange]);
 
+  useEffect(() => {
+    return () => {
+      if (copyResetTimer.current) {
+        window.clearTimeout(copyResetTimer.current);
+      }
+    };
+  }, []);
+
   const summaryBrief = useMemo<ProjectBrief>(
     () => ({
       id: initialBrief?.id ?? "preview",
@@ -134,6 +155,24 @@ function ProjectBriefFormContent({
       ...input,
     }),
     [initialBrief?.createdAt, initialBrief?.id, input],
+  );
+
+  const summarySections = useMemo(
+    () => buildProjectBriefSummary(summaryBrief),
+    [summaryBrief],
+  );
+
+  const summaryCopyText = useMemo(
+    () =>
+      summarySections
+        .map((section) =>
+          [
+            section.title,
+            ...section.items.map((item) => `${item.label}: ${item.value}`),
+          ].join("\n"),
+        )
+        .join("\n\n"),
+    [summarySections],
   );
 
   function update<K extends keyof ProjectBriefInput>(
@@ -166,6 +205,22 @@ function ProjectBriefFormContent({
     onSubmit(input);
   }
 
+  async function handleCopySummary() {
+    try {
+      await navigator.clipboard.writeText(summaryCopyText);
+      setSummaryCopyState("copied");
+    } catch {
+      setSummaryCopyState("failed");
+    }
+
+    if (copyResetTimer.current) {
+      window.clearTimeout(copyResetTimer.current);
+    }
+    copyResetTimer.current = window.setTimeout(() => {
+      setSummaryCopyState("idle");
+    }, 1800);
+  }
+
   const legacyTones = (input.toneSelections ?? []).filter(
     (t) => !(TONE_SELECTION_OPTIONS as readonly string[]).includes(t),
   );
@@ -177,40 +232,8 @@ function ProjectBriefFormContent({
   return (
     <section className="rounded-xl border border-border bg-card p-5 text-base [&_input]:min-h-9 [&_input]:py-2 [&_input]:text-base md:[&_input]:!text-base [&_textarea]:text-base md:[&_textarea]:!text-base">
       <div className="mx-auto w-full max-w-4xl space-y-5">
-        <div className="rounded-lg border border-[#312E81]/40 bg-[#111827]/40 px-4 py-3 text-start">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                כותרת האפיון
-              </p>
-              <p className="text-base font-semibold text-foreground">
-                {input.title.trim() || "ללא כותרת"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                שם העסק
-              </p>
-              <p className="text-base font-semibold text-foreground">
-                {input.businessNameSnapshot.trim() || "—"}
-              </p>
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            שאלון אפיון - חמישה פרקים, מותאם לשיחה חיה עם לקוח.
-          </p>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-5">
-          <SectionCard title="1 - פרטי העסק">
-            <Field label="כותרת האפיון">
-              <Input
-                value={input.title}
-                onChange={(e) => update("title", e.target.value)}
-                placeholder="למשל: אפיון אתר תדמית לעסק"
-              />
-            </Field>
-
+          <SectionCard title="1 - פרטי העסק" icon={Building2} accent="border-blue-100 bg-blue-50/40">
             <Field label="שם העסק">
               <Input
                 value={input.businessNameSnapshot}
@@ -258,7 +281,7 @@ function ProjectBriefFormContent({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="2 - קהל ומטרה">
+          <SectionCard title="2 - קהל ומטרה" icon={Users} accent="border-violet-100 bg-violet-50/40">
             <FieldWithHint
               label="מי קהל היעד של האתר?"
               hint="למי האתר צריך לדבר ולמי הוא מיועד בפועל"
@@ -324,7 +347,7 @@ function ProjectBriefFormContent({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="3 - מבנה האתר">
+          <SectionCard title="3 - מבנה האתר" icon={LayoutTemplate} accent="border-emerald-100 bg-emerald-50/40">
             <PresetOrCustomSelect
               label="איזה סוג אתר צריך לבנות?"
               options={WEBSITE_TYPE_OPTIONS}
@@ -336,17 +359,14 @@ function ProjectBriefFormContent({
             />
 
             <FieldWithHint
-              label="כמה עמודים האתר צריך לכלול? האם יש עמודים שחייבים להופיע?"
-              hint="אם יש מספר עמודים ידוע או עמודים שחייבים להיכלל, רשום אותם כאן"
-              examples="דף בית, אודות, שירותים, המלצות, שאלות נפוצות, יצירת קשר / או רק דף נחיתה אחד ממוקד"
+              label="עמודים נדרשים באתר"
+              hint="אם יש עמודים ספציפיים שחייבים להופיע — רשום אותם. אם לא, השאר ריק ו-GPT יחליט בשבילך."
+              examples="דף בית, אודות, שירותים, צור קשר / או: רק דף נחיתה אחד"
             >
               <Textarea
                 rows={4}
-                value={input.sitePagesAndStructure}
-                onChange={(e) =>
-                  update("sitePagesAndStructure", e.target.value)
-                }
-                placeholder="מספר עמודים, שמות עמודים, או תיאור קצר של המבנה"
+                value={input.requestedPages}
+                onChange={(e) => update("requestedPages", e.target.value)}
               />
             </FieldWithHint>
 
@@ -363,7 +383,7 @@ function ProjectBriefFormContent({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="4 - שפה וניסוח">
+          <SectionCard title="4 - שפה וניסוח" icon={MessageSquare} accent="border-amber-100 bg-amber-50/40">
             <MultiCheckGroup
               title="איזה טון דיבור אתה רוצה?"
               hint="איך האתר צריך להישמע מבחינת אופי הדיבור"
@@ -410,7 +430,7 @@ function ProjectBriefFormContent({
             </FieldWithHint>
           </SectionCard>
 
-          <SectionCard title="5 - הנחיות נוספות">
+          <SectionCard title="5 - הנחיות נוספות" icon={Lightbulb} accent="border-rose-100 bg-rose-50/40">
             <FieldWithHint
               label="האם יש משהו שלא תרצה שיופיע באתר?"
               hint="דברים שחשוב להימנע מהם בתוכן, במסרים או במבנה"
@@ -445,7 +465,27 @@ function ProjectBriefFormContent({
               <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" />
             </summary>
             <div className="mt-4 space-y-4 rounded-lg border border-border bg-muted/20 p-4">
-              {buildProjectBriefSummary(summaryBrief).map((section) => (
+              <div className="flex items-center justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleCopySummary()}
+                  aria-label="העתק סיכום מהיר"
+                >
+                  {summaryCopyState === "copied" ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {summaryCopyState === "copied"
+                    ? "הועתק"
+                    : summaryCopyState === "failed"
+                      ? "העתקה נכשלה"
+                      : "העתק סיכום"}
+                </Button>
+              </div>
+              {summarySections.map((section) => (
                 <div key={section.title} className="space-y-2">
                   <div className="text-sm font-semibold">{section.title}</div>
                   <div className="space-y-1">
@@ -494,10 +534,23 @@ function ProjectBriefFormContent({
   );
 }
 
-function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+function SectionCard({
+  title,
+  children,
+  icon: Icon,
+  accent,
+}: {
+  title: string;
+  children: ReactNode;
+  icon?: LucideIcon;
+  accent?: string;
+}) {
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm shadow-black/[0.02]">
-      <div className="select-text text-base font-semibold text-foreground">{title}</div>
+    <div className={`space-y-3 rounded-xl border p-4 shadow-sm ${accent ?? "border-border bg-card"}`}>
+      <div className="flex items-center gap-2 border-b border-inherit pb-1">
+        {Icon && <Icon className="h-4 w-4 shrink-0 opacity-60" />}
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      </div>
       <div className="space-y-4">{children}</div>
     </div>
   );

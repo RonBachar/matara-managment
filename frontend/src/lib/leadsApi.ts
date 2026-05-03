@@ -1,4 +1,4 @@
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getAuthHeaders } from "@/lib/api";
 import { normalizeLead } from "@/lib/leads";
 import type { Lead } from "@/types/lead";
 
@@ -29,7 +29,8 @@ function leadFromApi(row: ApiLead): Lead {
 }
 
 export async function fetchLeads(): Promise<Lead[]> {
-  const res = await fetch(apiUrl("/api/leads"));
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl("/api/leads"), { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -37,9 +38,10 @@ export async function fetchLeads(): Promise<Lead[]> {
 }
 
 export async function createLead(data: Omit<Lead, "id">): Promise<Lead> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl("/api/leads"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -53,9 +55,10 @@ export async function updateLead(
   id: string,
   data: Partial<Omit<Lead, "id">>,
 ): Promise<Lead> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/leads/${encodeURIComponent(id)}`), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -66,8 +69,10 @@ export async function updateLead(
 }
 
 export async function deleteLead(id: string): Promise<void> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/leads/${encodeURIComponent(id)}`), {
     method: "DELETE",
+    headers,
   });
   if (res.status === 204) return;
   if (!res.ok) {

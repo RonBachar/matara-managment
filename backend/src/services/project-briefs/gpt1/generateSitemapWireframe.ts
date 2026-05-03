@@ -211,17 +211,30 @@ function buildInstructions(brief: NormalizedProjectBrief): string {
     "",
     "Product rules:",
     "1. Respect the brief strictly.",
-    "2. If the brief says one landing page, do not invent extra pages.",
-    "3. Footer is a section, not a page, unless the brief explicitly requires it as a page.",
-    "4. Keep the sitemap practical and minimal.",
-    "5. Do not add fake or decorative pages.",
-    "6. Each page in sitemap must include pageName, pageType, purpose, isPrimary.",
-    "7. Each wireframe item must include pageName, pageGoal, sections.",
-    "8. Each section must include sectionName, sectionPurpose, sectionGoal, keyPoints.",
-    "9. sectionPurpose means why the section exists in the business/marketing logic.",
-    "10. sectionGoal means what the user should understand, feel, or do after this section.",
-    "11. keyPoints are content directions only, not full copy.",
-    "12. Use notes only for brief assumptions or important constraints, and keep notes short.",
+    "2. Footer is a section inside the last page, not a separate page.",
+    "3. Keep the sitemap practical — do not add fake or decorative pages.",
+    "4. Each page in sitemap must include pageName, pageType, purpose, isPrimary.",
+    "5. Each wireframe item must include pageName, pageGoal, and sections.",
+    "6. Each section must include sectionName, sectionPurpose, sectionGoal, keyPoints.",
+    "7. sectionPurpose = why this section exists in the business/marketing logic.",
+    "8. sectionGoal = what the user should understand, feel, or do after this section.",
+    "9. keyPoints = content directions only, not full copywriting.",
+    "10. Use notes only for brief assumptions or constraints. Keep notes short.",
+    "",
+    "Page structure logic:",
+    brief.structure.requestedPages && brief.structure.requestedPages.trim().length > 0
+      ? `The client has specified required pages: "${brief.structure.requestedPages}".
+Use these as the base structure. Name them correctly and professionally in Hebrew.
+You may add essential supporting pages if clearly needed (e.g. thank-you page),
+but do not add unnecessary pages beyond what the client specified.`
+      : `The client has not specified pages.
+Based on the website type ("${brief.structure.websiteType}"), the business goals,
+and the target audience from the brief — decide the best page architecture.
+Follow proven website structure principles for the given website type:
+- Landing page → single focused page with strategic sections
+- Business/service site → Home, About, Services, Service pages, Contact
+- E-commerce → Home, Category, Product, Cart, Checkout, Contact
+Name all pages correctly and professionally in Hebrew.`,
     "",
     "Normalized brief JSON:",
     JSON.stringify(brief, null, 2),

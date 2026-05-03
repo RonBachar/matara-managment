@@ -1,5 +1,5 @@
 import type { Client, PackageType } from "@/types/client";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getAuthHeaders } from "@/lib/api";
 
 export type ClientPayload = {
   clientName: string;
@@ -80,7 +80,8 @@ async function parseErrorMessage(res: Response): Promise<string> {
 }
 
 export async function apiGetClients(): Promise<Client[]> {
-  const res = await fetch(apiUrl("/api/clients"));
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl("/api/clients"), { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -90,9 +91,10 @@ export async function apiGetClients(): Promise<Client[]> {
 export async function apiCreateClient(
   input: ClientPayload,
 ) {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl("/api/clients"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(input),
   });
   if (!res.ok) {
@@ -107,9 +109,10 @@ export async function apiUpdateClient(
   id: string,
   patch: Partial<ClientPayload>,
 ) {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(patch),
   });
   if (!res.ok) {
@@ -121,7 +124,11 @@ export async function apiUpdateClient(
 }
 
 export async function apiDeleteClient(id: string): Promise<void> {
-  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), { method: "DELETE" });
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), {
+    method: "DELETE",
+    headers,
+  });
   if (res.status === 204) return;
   if (!res.ok) {
     const msg = await parseErrorMessage(res);

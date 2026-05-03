@@ -1,5 +1,5 @@
 import type { ProjectBrief, ProjectBriefInput } from "@/types/projectBrief";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, getAuthHeaders } from "@/lib/api";
 
 type ApiBrief = Record<string, unknown>;
 type ApiObject = Record<string, unknown>;
@@ -23,7 +23,6 @@ function asObject(value: unknown): ApiObject {
 function briefFromApi(row: ApiBrief): ProjectBrief {
   return {
     id: asString(row.id),
-    title: asString(row.title),
     businessNameSnapshot: asString(row.businessNameSnapshot),
     createdAt: asString(row.createdAt),
     updatedAt: asString(row.updatedAt),
@@ -39,7 +38,7 @@ function briefFromApi(row: ApiBrief): ProjectBrief {
     mainUserAction: asString(row.mainUserAction),
 
     websiteType: asString(row.websiteType),
-    sitePagesAndStructure: asString(row.sitePagesAndStructure),
+    requestedPages: asString(row.requestedPages),
     siteEmphasis: asString(row.siteEmphasis),
 
     toneSelections: asStringArray(row.toneSelections),
@@ -110,7 +109,8 @@ export type BriefGpt3RunResult = {
 };
 
 export async function apiListBriefs(): Promise<ProjectBrief[]> {
-  const res = await fetch(apiUrl("/api/project-briefs"));
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl("/api/project-briefs"), { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -118,7 +118,10 @@ export async function apiListBriefs(): Promise<ProjectBrief[]> {
 }
 
 export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
-  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`));
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), {
+    headers,
+  });
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
     throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
@@ -128,11 +131,11 @@ export async function apiGetBriefById(id: string): Promise<ProjectBrief> {
 }
 
 export async function apiCreateBrief(input: ProjectBriefInput): Promise<ProjectBrief> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl("/api/project-briefs"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({
-      title: input.title,
       data: input,
     }),
   });
@@ -145,9 +148,10 @@ export async function apiCreateBrief(input: ProjectBriefInput): Promise<ProjectB
 }
 
 export async function apiUpdateBrief(id: string, input: ProjectBriefInput): Promise<ProjectBrief> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({
       data: input,
     }),
@@ -161,7 +165,11 @@ export async function apiUpdateBrief(id: string, input: ProjectBriefInput): Prom
 }
 
 export async function apiDeleteBrief(id: string): Promise<void> {
-  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), { method: "DELETE" });
+  const headers = await getAuthHeaders();
+  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), {
+    method: "DELETE",
+    headers,
+  });
   if (res.status === 204) return;
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
@@ -170,8 +178,10 @@ export async function apiDeleteBrief(id: string): Promise<void> {
 }
 
 export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<BriefGpt1RunResult> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt1/sitemap-wireframe`), {
     method: "POST",
+    headers,
   });
   if (!res.ok) {
     const msg = await parseErrorMessage(res);
@@ -192,17 +202,20 @@ export async function apiRunBriefGpt1SitemapWireframe(id: string): Promise<Brief
 export async function apiRunBriefGpt2Content(
   id: string
 ): Promise<BriefGpt2RunResult> {
+  const headers = await getAuthHeaders();
   const res = await fetch(
     apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt2/content`),
-    { method: "POST" }
+    { method: "POST", headers }
   );
   if (!res.ok) throw new Error(`GPT2 failed: HTTP ${res.status}`);
   return res.json() as Promise<BriefGpt2RunResult>;
 }
 
 export async function apiRunBriefGpt3WireframeSite(id: string): Promise<BriefGpt3RunResult> {
+  const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}/gpt3/wireframe-site`), {
     method: "POST",
+    headers,
   });
   if (!res.ok) {
     const msg = await parseErrorMessage(res);

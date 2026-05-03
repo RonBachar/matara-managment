@@ -1,16 +1,18 @@
 import { Router } from "express";
+import type { AuthRequest } from "../middleware/auth";
 import { runProjectBriefGpt2Flow } from "../services/project-briefs/gpt2/runProjectBriefGpt2Flow";
 
 export const projectBriefGpt2Router = Router();
 
-projectBriefGpt2Router.post("/:id/gpt2/content", async (req, res) => {
+projectBriefGpt2Router.post("/:id/gpt2/content", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const briefId = String(req.params.id ?? "").trim();
     if (!briefId) {
       return res.status(400).json({ error: "Missing brief id" });
     }
 
-    const result = await runProjectBriefGpt2Flow(briefId);
+    const result = await runProjectBriefGpt2Flow(briefId, userId);
     return res.status(201).json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

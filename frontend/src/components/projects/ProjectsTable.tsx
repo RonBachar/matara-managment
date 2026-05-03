@@ -10,102 +10,26 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
-const WEBSITE_STATUS_OPTIONS: ProjectStatus[] = [
-  'שיחת אפיון',
-  'איסוף חומרים',
-  'שלב סקיצות',
-  'שלב פיתוח',
-  'שלב בדיקות והשקה',
-  'פרויקט הושלם',
-]
-
-const FREELANCE_STATUS_OPTIONS: ProjectStatus[] = [
-  'בביצוע',
-  'הסתיים',
-]
+const STATUS_OPTIONS: ProjectStatus[] = ['התחיל', 'בתהליך עבודה', 'הושלם']
 
 const STATUS_STYLES: Record<ProjectStatus, string> = {
-  New: 'bg-sky-50 text-sky-700 border-sky-200/70',
-  'In Progress': 'bg-amber-50 text-amber-700 border-amber-200/70',
-  'Waiting for Client': 'bg-violet-50 text-violet-700 border-violet-200/70',
-  Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  'On Hold': 'bg-slate-100 text-slate-600 border-slate-200/70',
-  // Legacy website statuses
-  'שלב שיחת אפיון': 'bg-sky-50 text-sky-700 border-sky-200/70',
-  'שלב איסוף חומרים': 'bg-amber-50 text-amber-700 border-amber-200/70',
-  'סקיצה 1': 'bg-violet-50 text-violet-700 border-violet-200/70',
-  'סקיצה 2': 'bg-violet-50 text-violet-700 border-violet-200/70',
-  'שלב פיתוח': 'bg-indigo-50 text-indigo-700 border-indigo-200/70',
-  'שלב השקה': 'bg-blue-50 text-blue-700 border-blue-200/70',
-  'פרויקט הושלם': 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  // New website statuses
-  'שיחת אפיון': 'bg-sky-50 text-sky-700 border-sky-200/70',
-  'איסוף חומרים': 'bg-amber-50 text-amber-700 border-amber-200/70',
-  'שלב סקיצות': 'bg-violet-50 text-violet-700 border-violet-200/70',
-  'שלב בדיקות והשקה': 'bg-blue-50 text-blue-700 border-blue-200/70',
-  // New hourly freelancer statuses
-  'בביצוע': 'bg-amber-50 text-amber-700 border-amber-200/70',
-  'הסתיים': 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
-  // Monthly retainer (no real status)
-  'ללא סטטוס': 'bg-muted text-muted-foreground border-border',
+  'התחיל': 'bg-sky-50 text-sky-700 border-sky-200/70',
+  'בתהליך עבודה': 'bg-amber-50 text-amber-700 border-amber-200/70',
+  'הושלם': 'bg-emerald-50 text-emerald-700 border-emerald-200/70',
+}
+
+const STATUS_DOT_CLASSES: Record<ProjectStatus, string> = {
+  'התחיל': 'bg-sky-500',
+  'בתהליך עבודה': 'bg-amber-500',
+  'הושלם': 'bg-emerald-500',
 }
 
 function getStatusStyle(status: ProjectStatus): string {
   return STATUS_STYLES[status] ?? 'bg-muted text-muted-foreground border-border'
 }
 
-/** Dot color for each status in the dropdown (soft, professional). */
-const STATUS_DOT_CLASSES: Record<ProjectStatus, string> = {
-  New: 'bg-sky-500',
-  'In Progress': 'bg-amber-500',
-  'Waiting for Client': 'bg-violet-500',
-  Completed: 'bg-emerald-500',
-  'On Hold': 'bg-slate-400',
-  'שלב שיחת אפיון': 'bg-sky-500',
-  'שלב איסוף חומרים': 'bg-amber-500',
-  'סקיצה 1': 'bg-violet-500',
-  'סקיצה 2': 'bg-violet-500',
-  'שלב פיתוח': 'bg-indigo-500',
-  'שלב השקה': 'bg-blue-500',
-  'פרויקט הושלם': 'bg-emerald-500',
-  'שיחת אפיון': 'bg-sky-500',
-  'איסוף חומרים': 'bg-amber-500',
-  'שלב סקיצות': 'bg-violet-500',
-  'שלב בדיקות והשקה': 'bg-blue-500',
-  'בביצוע': 'bg-amber-500',
-  'הסתיים': 'bg-emerald-500',
-  'ללא סטטוס': 'bg-muted-foreground/50',
-}
-
 function getStatusDotClass(status: ProjectStatus): string {
   return STATUS_DOT_CLASSES[status] ?? 'bg-muted-foreground/50'
-}
-
-function displayClientName(value: string): string {
-  const s = (value ?? '').trim()
-  if (!s) return '—'
-  // Backward compatibility: some older rows stored "business · client".
-  const parts = s.split(' · ').map((p) => p.trim()).filter(Boolean)
-  return parts.length > 0 ? parts[parts.length - 1] : s
-}
-
-const RETAINER_STATUS_OPTIONS: ProjectStatus[] = ['ללא סטטוס']
-
-function getStatusOptionsForProject(project: Project): ProjectStatus[] {
-  let base: ProjectStatus[]
-  switch (project.projectType) {
-    case 'פרילנסר שעתי':
-      base = FREELANCE_STATUS_OPTIONS
-      break
-    case 'ריטיינר חודשי':
-      base = RETAINER_STATUS_OPTIONS
-      break
-    case 'בניית אתר':
-    default:
-      base = WEBSITE_STATUS_OPTIONS
-      break
-  }
-  return base.includes(project.status) ? base : [...base, project.status]
 }
 
 type ProjectsTableProps = {
@@ -123,11 +47,11 @@ export function ProjectsTable({
   onDelete,
   onStatusChange,
 }: ProjectsTableProps) {
-  const totalProjectValue = projects.reduce((sum, p) => {
-    const isHourly = p.projectType === 'פרילנסר שעתי'
-    return sum + (isHourly ? p.billableTotal : p.totalAmount)
-  }, 0)
-  const totalRemaining = projects.reduce((sum, p) => sum + p.remainingAmount, 0)
+  const totalProjectValue = projects.reduce((sum, p) => sum + p.totalAmount, 0)
+  const totalRemaining = projects.reduce(
+    (sum, p) => sum + Math.max(0, p.totalAmount - p.paidAmount),
+    0,
+  )
 
   return (
     <section className="space-y-4">
@@ -153,11 +77,9 @@ export function ProjectsTable({
             <tr className="text-right">
               <th className="px-3 py-2 font-medium">שם הפרויקט</th>
               <th className="px-3 py-2 font-medium">לקוח</th>
-              <th className="px-3 py-2 font-medium">סוג עבודה</th>
               <th className="px-3 py-2 font-medium">סטטוס</th>
               <th className="px-3 py-2 font-medium">סה״כ</th>
               <th className="px-3 py-2 font-medium">שולם</th>
-              <th className="px-3 py-2 font-medium">נותר</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
           </thead>
@@ -165,99 +87,81 @@ export function ProjectsTable({
             {projects.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={6}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
                   אין פרויקטים. הוסף פרויקט חדש.
                 </td>
               </tr>
             ) : (
-              projects.map((project) => {
-                const isHourly = project.projectType === 'פרילנסר שעתי'
-                const totalDisplay = isHourly ? project.billableTotal : project.totalAmount
-                return (
-                  <tr
-                    key={project.id}
-                    className="border-t border-border/60 even:bg-muted/30"
-                  >
-                    <td className="px-3 py-2 align-middle">
-                      {project.projectName}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      {displayClientName(project.clientName)}
-                    </td>
-                    <td className="px-3 py-2 align-middle text-xs">
-                      {project.projectType}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      <Select
-                        value={project.status}
-                        onValueChange={(value) =>
-                          onStatusChange(project, value as ProjectStatus)
-                        }
+              projects.map((project) => (
+                <tr
+                  key={project.id}
+                  className="border-t border-border/60 even:bg-muted/30"
+                >
+                  <td className="px-3 py-2 align-middle">{project.projectName}</td>
+                  <td className="px-3 py-2 align-middle">{project.clientName}</td>
+                  <td className="px-3 py-2 align-middle">
+                    <Select
+                      value={project.status}
+                      onValueChange={(value) =>
+                        onStatusChange(project, value as ProjectStatus)
+                      }
+                    >
+                      <SelectTrigger
+                        size="sm"
+                        className={cn(
+                          'h-7 min-w-[7rem] border text-xs font-medium transition-colors hover:opacity-90',
+                          getStatusStyle(project.status),
+                        )}
                       >
-                        <SelectTrigger
-                          size="sm"
-                          className={cn(
-                            'h-7 min-w-[7rem] border text-xs font-medium transition-colors hover:opacity-90',
-                            getStatusStyle(project.status),
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getStatusOptionsForProject(project).map((status) => (
-                            <SelectItem
-                              key={status}
-                              value={status}
-                              className="text-xs"
-                            >
-                              <span
-                                className={cn(
-                                  'me-2 inline-block h-2 w-2 shrink-0 rounded-full',
-                                  getStatusDotClass(status),
-                                )}
-                              />
-                              {status}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      ₪{totalDisplay.toLocaleString('he-IL')}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      ₪{project.paidAmount.toLocaleString('he-IL')}
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      ₪{project.remainingAmount.toLocaleString('he-IL')}
-                    </td>
-                    <td className="px-3 py-2 align-middle text-center">
-                      <div className="flex flex-wrap items-center justify-center gap-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="icon-sm"
-                          onClick={() => onEdit(project)}
-                          aria-label="עריכת פרויקט"
-                        >
-                          <Pencil className="h-4 w-4 text-[#FBBF24]" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon-sm"
-                          onClick={() => onDelete(project)}
-                          aria-label="מחיקת פרויקט"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status} value={status} className="text-xs">
+                            <span
+                              className={cn(
+                                'me-2 inline-block h-2 w-2 shrink-0 rounded-full',
+                                getStatusDotClass(status),
+                              )}
+                            />
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-3 py-2 align-middle">
+                    ₪{project.totalAmount.toLocaleString('he-IL')}
+                  </td>
+                  <td className="px-3 py-2 align-middle">
+                    ₪{project.paidAmount.toLocaleString('he-IL')}
+                  </td>
+                  <td className="px-3 py-2 align-middle text-center">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon-sm"
+                        onClick={() => onEdit(project)}
+                        aria-label="עריכת פרויקט"
+                      >
+                        <Pencil className="h-4 w-4 text-[#FBBF24]" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon-sm"
+                        onClick={() => onDelete(project)}
+                        aria-label="מחיקת פרויקט"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>

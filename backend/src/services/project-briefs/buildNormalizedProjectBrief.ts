@@ -20,7 +20,7 @@ export type NormalizedProjectBrief = {
   };
   structure: {
     websiteType: string;
-    sitePagesAndStructure: string;
+    requestedPages: string;
     siteEmphasis: string;
   };
   toneAndLanguage: {
@@ -79,7 +79,7 @@ export function buildNormalizedProjectBrief(args: {
     },
     structure: {
       websiteType: readString(brief.websiteType),
-      sitePagesAndStructure: readString(brief.sitePagesAndStructure),
+      requestedPages: readString(brief.requestedPages),
       siteEmphasis: readString(brief.siteEmphasis),
     },
     toneAndLanguage: {

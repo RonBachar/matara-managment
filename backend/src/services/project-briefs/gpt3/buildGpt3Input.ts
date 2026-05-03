@@ -172,9 +172,12 @@ function validateLightweightStructure(
   }
 }
 
-export async function buildGpt3Input(briefId: string): Promise<Gpt3Input> {
-  const brief = await prisma.projectBrief.findUnique({
-    where: { id: briefId },
+export async function buildGpt3Input(
+  briefId: string,
+  userId: string,
+): Promise<Gpt3Input> {
+  const brief = await prisma.projectBrief.findFirst({
+    where: { id: briefId, userId },
   });
 
   if (!brief) {
@@ -189,6 +192,7 @@ export async function buildGpt3Input(briefId: string): Promise<Gpt3Input> {
   const latestSuccessfulGpt1Run = await prisma.pipelineRun.findFirst({
     where: {
       briefId: brief.id,
+      brief: { userId },
       status: "COMPLETED",
       steps: {
         some: {
@@ -216,6 +220,7 @@ export async function buildGpt3Input(briefId: string): Promise<Gpt3Input> {
   const latestSuccessfulGpt2Run = await prisma.pipelineRun.findFirst({
     where: {
       briefId: brief.id,
+      brief: { userId },
       status: "COMPLETED",
       steps: {
         some: {

@@ -1,18 +1,22 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
+import type { AuthRequest } from "../middleware/auth";
 import { runProjectBriefGpt1Flow } from "../services/project-briefs/gpt1/runProjectBriefGpt1Flow";
 
 export const projectBriefGpt1Router = Router();
 
-projectBriefGpt1Router.get("/:id/gpt1/sitemap-wireframe/runs", async (req, res) => {
+projectBriefGpt1Router.get(
+  "/:id/gpt1/sitemap-wireframe/runs",
+  async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const briefId = String(req.params.id ?? "").trim();
     if (!briefId) {
       return res.status(400).json({ error: "Missing brief id" });
     }
 
-    const brief = await prisma.projectBrief.findUnique({
-      where: { id: briefId },
+    const brief = await prisma.projectBrief.findFirst({
+      where: { id: briefId, userId },
       select: { id: true },
     });
 
@@ -23,6 +27,7 @@ projectBriefGpt1Router.get("/:id/gpt1/sitemap-wireframe/runs", async (req, res) 
     const runs = await prisma.pipelineRun.findMany({
       where: {
         briefId,
+        brief: { userId },
         steps: {
           some: { stepKey: "gpt1-sitemap-wireframe" },
         },
@@ -74,14 +79,15 @@ projectBriefGpt1Router.get("/:id/gpt1/sitemap-wireframe/runs", async (req, res) 
   }
 });
 
-projectBriefGpt1Router.post("/:id/gpt1/sitemap-wireframe", async (req, res) => {
+projectBriefGpt1Router.post("/:id/gpt1/sitemap-wireframe", async (req: AuthRequest, res) => {
   try {
+    const userId = req.userId!;
     const briefId = String(req.params.id ?? "").trim();
     if (!briefId) {
       return res.status(400).json({ error: "Missing brief id" });
     }
 
-    const result = await runProjectBriefGpt1Flow(briefId);
+    const result = await runProjectBriefGpt1Flow(briefId, userId);
     return res.status(201).json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

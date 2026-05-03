@@ -32,7 +32,7 @@ export type NormalizedBriefJSON = {
      * still respecting pageCount, structureFieldAsProvided, and notes.
      */
     allowAiStructure: boolean;
-    /** Verbatim trimmed text from "עמודים ומבנה" (user wording preserved). */
+    /** Verbatim trimmed text from "עמודים נדרשים באתר" (user wording preserved). */
     structureFieldAsProvided: string;
     whatToEmphasizeOnTheSite: string;
   };
@@ -101,13 +101,13 @@ function pageSegmentsForDedup(raw: string | undefined): string[] {
  * Root `notes` ← `additionalNotes`, unless it duplicates the page list text.
  */
 function normalizedFreeNotes(input: ProjectBriefInput): string {
-  const pagesText = trimStr(input.sitePagesAndStructure);
+  const pagesText = trimStr(input.requestedPages);
   const freeText = trimStr(input.additionalNotes);
   if (freeText.length === 0) return "";
 
   if (freeText === pagesText) return "";
 
-  const fromPages = pageSegmentsForDedup(input.sitePagesAndStructure);
+  const fromPages = pageSegmentsForDedup(input.requestedPages);
   const fromNotes = pageSegmentsForDedup(input.additionalNotes);
   if (
     fromPages.length > 0 &&
@@ -122,8 +122,8 @@ function normalizedFreeNotes(input: ProjectBriefInput): string {
 }
 
 export function generateBriefJSON(input: ProjectBriefInput): NormalizedBriefJSON {
-  const structureFieldAsProvided = trimStr(input.sitePagesAndStructure);
-  const pages = parsePageListString(input.sitePagesAndStructure);
+  const structureFieldAsProvided = trimStr(input.requestedPages);
+  const pages = parsePageListString(input.requestedPages);
   const allowAiStructure = pages.length === 0;
   const notes = normalizedFreeNotes(input);
 
@@ -145,7 +145,7 @@ export function generateBriefJSON(input: ProjectBriefInput): NormalizedBriefJSON
     },
     structure: {
       websiteType: trimStr(input.websiteType),
-      pageCount: parsePagesCountFromStructure(input.sitePagesAndStructure),
+      pageCount: parsePagesCountFromStructure(input.requestedPages),
       pages,
       allowAiStructure,
       structureFieldAsProvided,

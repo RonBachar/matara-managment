@@ -11,6 +11,8 @@ backup/
 backend/.env
 frontend/.env.local
 frontend/.env.production
+firebase-service-account.json
+backend/firebase-service-account.json
 
 # Build outputs
 backend/dist/

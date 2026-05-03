@@ -21,49 +21,30 @@ export const WEBSITE_TYPE_OPTIONS = [
 
 export const TONE_SELECTION_OPTIONS = [
   "מקצועי",
-  "ישיר",
-  "נגיש",
-  "יוקרתי",
-  "חם",
   "סמכותי",
-  "אנושי",
-  "צעיר",
-  "נקי",
-  "אלגנטי",
-  "בטוח בעצמו",
-  "מרגיע",
-  "אנרגטי",
-  "מדויק",
-  "ענייני",
+  "אנושי וחם",
+  "יוקרתי",
+  "ישיר",
   "ידידותי",
-  "יוניסקסי",
-  "יצירתי",
+  "צעיר ואנרגטי",
+  "מרגיע ובטוח",
+  "נקי ומינימלי",
 ] as const;
 
 export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
   "קצר ותכליתי",
+  "מפורט ומסביר",
   "שיווקי",
+  "רשמי",
   "בגובה העיניים",
-  "פשוטה וברורה",
-  "שיווקית",
-  "עניינית",
-  "קצרה ותכליתית",
-  "מפורטת ומסבירה",
-  "רשמית",
-  "קלילה",
-  "אלגנטית",
-  "חכמה",
-  "ממוקדת המרה",
-  "מבוססת אמון",
-  "מבוססת מומחיות",
-  "רגשית",
-  "תוצאתית",
+  "ממוקד המרה",
+  "מבוסס אמון",
+  "רגשי",
 ] as const;
 
 /** Standalone project brief document. */
 export type ProjectBrief = {
   id: string;
-  title: string;
   /** שם העסק (למסמך / ייצוא) */
   businessNameSnapshot: string;
   createdAt: string;
@@ -83,7 +64,7 @@ export type ProjectBrief = {
 
   /** 3 — מבנה האתר */
   websiteType: string;
-  sitePagesAndStructure: string;
+  requestedPages: string;
   siteEmphasis: string;
 
   /** 4 — שפה וניסוח */
@@ -102,7 +83,7 @@ export type ProjectBrief = {
 
 export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
 
-export function getBriefDisplayTitle(brief: Pick<ProjectBrief, "title">): string {
-  const t = brief.title?.trim();
-  return t || "ללא כותרת";
+export function getBriefDisplayTitle(brief: Pick<ProjectBrief, "businessNameSnapshot">): string {
+  const t = brief.businessNameSnapshot?.trim();
+  return t || "ללא שם";
 }
