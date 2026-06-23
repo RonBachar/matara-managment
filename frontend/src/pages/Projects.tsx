@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Project, ProjectStatus } from '@/types/project'
 import { ProjectsTable } from '@/components/projects/ProjectsTable'
 import { ProjectFormModal } from '@/components/projects/ProjectFormModal'
@@ -11,6 +12,7 @@ import {
 } from '@/lib/projectsApi'
 
 export function Projects() {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create')
@@ -25,7 +27,6 @@ export function Projects() {
         setProjects(rows)
       })
       .catch(() => {
-        // Keep UI intact; on failure we simply show an empty list for now.
         if (cancelled) return
         setProjects([])
       })
@@ -50,7 +51,7 @@ export function Projects() {
     if (formMode === 'edit') {
       const updated = await apiUpdateProject(project.id, {
         projectName: project.projectName,
-        clientName: project.clientName,
+        clientId: project.clientId,
         status: project.status,
         totalAmount: project.totalAmount,
         paidAmount: project.paidAmount,
@@ -66,7 +67,7 @@ export function Projects() {
 
     const created = await apiCreateProject({
       projectName: project.projectName,
-      clientName: project.clientName,
+      clientId: project.clientId,
       status: project.status,
       totalAmount: project.totalAmount,
       paidAmount: project.paidAmount,
@@ -105,6 +106,7 @@ export function Projects() {
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
         onStatusChange={handleStatusChange}
+        onRowClick={(project) => navigate(`/projects/${project.id}`)}
       />
 
       <ProjectFormModal

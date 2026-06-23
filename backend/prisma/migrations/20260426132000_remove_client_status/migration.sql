@@ -1,2 +1,0 @@
-ALTER TABLE "Client"
-DROP COLUMN IF EXISTS "status";

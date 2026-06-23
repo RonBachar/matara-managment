@@ -150,11 +150,13 @@ function ProjectBriefFormContent({
   const summaryBrief = useMemo<ProjectBrief>(
     () => ({
       id: initialBrief?.id ?? "preview",
+      projectId: initialBrief?.projectId ?? "",
+      title: initialBrief?.title ?? (input.businessNameSnapshot?.trim() || "תצוגה מקדימה"),
       createdAt: initialBrief?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       ...input,
     }),
-    [initialBrief?.createdAt, initialBrief?.id, input],
+    [initialBrief?.createdAt, initialBrief?.id, initialBrief?.projectId, initialBrief?.title, input],
   );
 
   const summarySections = useMemo(

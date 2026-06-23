@@ -38,6 +38,7 @@ type ProjectsTableProps = {
   onEdit: (project: Project) => void
   onDelete: (project: Project) => void
   onStatusChange: (project: Project, status: ProjectStatus) => void
+  onRowClick?: (project: Project) => void
 }
 
 export function ProjectsTable({
@@ -46,6 +47,7 @@ export function ProjectsTable({
   onEdit,
   onDelete,
   onStatusChange,
+  onRowClick,
 }: ProjectsTableProps) {
   const totalProjectValue = projects.reduce((sum, p) => sum + p.totalAmount, 0)
   const totalRemaining = projects.reduce(
@@ -97,11 +99,17 @@ export function ProjectsTable({
               projects.map((project) => (
                 <tr
                   key={project.id}
-                  className="border-t border-border/60 even:bg-muted/30"
+                  className={cn(
+                    'border-t border-border/60 even:bg-muted/30',
+                    onRowClick && 'cursor-pointer hover:bg-muted/50',
+                  )}
+                  onClick={() => onRowClick?.(project)}
                 >
                   <td className="px-3 py-2 align-middle">{project.projectName}</td>
-                  <td className="px-3 py-2 align-middle">{project.clientName}</td>
                   <td className="px-3 py-2 align-middle">
+                    {project.client?.clientName ?? '—'}
+                  </td>
+                  <td className="px-3 py-2 align-middle" onClick={(e) => e.stopPropagation()}>
                     <Select
                       value={project.status}
                       onValueChange={(value) =>
@@ -138,7 +146,10 @@ export function ProjectsTable({
                   <td className="px-3 py-2 align-middle">
                     ₪{project.paidAmount.toLocaleString('he-IL')}
                   </td>
-                  <td className="px-3 py-2 align-middle text-center">
+                  <td
+                    className="px-3 py-2 align-middle text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <Button
                         type="button"

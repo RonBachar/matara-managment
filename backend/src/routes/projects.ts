@@ -5,19 +5,29 @@ import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../u
 
 export const projectsRouter = Router();
 
+async function findOwnedClient(clientId: string, userId: string) {
+  return prisma.client.findFirst({
+    where: { id: clientId, userId },
+    select: { id: true },
+  });
+}
+
 projectsRouter.post("/", async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
     const body = (req.body ?? {}) as Record<string, unknown>;
 
     const projectName = readNonEmptyString(body.projectName);
-    const clientName = readNonEmptyString(body.clientName);
+    const clientId = readNonEmptyString(body.clientId);
 
-    if (!projectName || !clientName) {
+    if (!projectName || !clientId) {
       return res.status(400).json({
-        error: "Invalid body. Required string fields: projectName, clientName",
+        error: "Invalid body. Required string fields: projectName, clientId",
       });
     }
+
+    const client = await findOwnedClient(clientId, userId);
+    if (!client) return res.status(404).json({ error: "Client not found" });
 
     const status = readOptionalString(body.status) ?? "התחיל";
     const notes = readOptionalString(body.notes);
@@ -27,8 +37,8 @@ projectsRouter.post("/", async (req: AuthRequest, res) => {
     const created = await prisma.project.create({
       data: {
         userId,
+        clientId,
         projectName,
-        clientName,
         status,
         totalAmount,
         paidAmount,
@@ -70,8 +80,12 @@ projectsRouter.patch("/:id", async (req: AuthRequest, res) => {
     const projectName = readOptionalString(body.projectName);
     if (projectName !== undefined && projectName.length > 0) data.projectName = projectName;
 
-    const clientName = readOptionalString(body.clientName);
-    if (clientName !== undefined && clientName.length > 0) data.clientName = clientName;
+    const clientId = readOptionalString(body.clientId);
+    if (clientId !== undefined && clientId.length > 0) {
+      const client = await findOwnedClient(clientId, userId);
+      if (!client) return res.status(404).json({ error: "Client not found" });
+      data.clientId = clientId;
+    }
 
     const status = readOptionalString(body.status);
     if (status !== undefined && status.length > 0) data.status = status;

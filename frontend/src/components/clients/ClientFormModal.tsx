@@ -3,15 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { deleteAgreementFile, saveAgreementFile } from "@/lib/agreementFiles";
-import { PACKAGE_TYPE_LABELS, REMINDER_OPTIONS, type Client, type PackageType } from "@/types/client";
+import type { Client } from "@/types/client";
 import type { ClientPayload } from "@/lib/clientsApi";
 
 const AGREEMENT_ACCEPT =
@@ -34,10 +27,6 @@ type ClientFormState = {
   email: string;
   website: string;
   notes: string;
-  packageType: PackageType;
-  packagePrice: string;
-  renewalDate: string;
-  reminderDaysBefore: string;
   agreementFileId: string | null;
   agreementFileName: string | null;
   agreementFileType: string | null;
@@ -51,10 +40,6 @@ function createEmptyForm(): ClientFormState {
     email: "",
     website: "",
     notes: "",
-    packageType: "none",
-    packagePrice: "",
-    renewalDate: "",
-    reminderDaysBefore: "",
     agreementFileId: null,
     agreementFileName: null,
     agreementFileType: null,
@@ -77,12 +62,6 @@ export function ClientFormModal({
           email: initialClient.email,
           website: initialClient.website ?? "",
           notes: initialClient.notes ?? "",
-          packageType: initialClient.packageType ?? "none",
-          packagePrice:
-            initialClient.packagePrice == null ? "" : String(initialClient.packagePrice),
-          renewalDate: initialClient.renewalDate ?? "",
-          reminderDaysBefore:
-            initialClient.reminderDaysBefore == null ? "" : String(initialClient.reminderDaysBefore),
           agreementFileId: initialClient.agreementFileId ?? null,
           agreementFileName: initialClient.agreementFileName ?? null,
           agreementFileType: initialClient.agreementFileType ?? null,
@@ -107,11 +86,6 @@ export function ClientFormModal({
         email: initialClient.email,
         website: initialClient.website ?? "",
         notes: initialClient.notes ?? "",
-        packageType: initialClient.packageType ?? "none",
-        packagePrice: initialClient.packagePrice == null ? "" : String(initialClient.packagePrice),
-        renewalDate: initialClient.renewalDate ?? "",
-        reminderDaysBefore:
-          initialClient.reminderDaysBefore == null ? "" : String(initialClient.reminderDaysBefore),
         agreementFileId: initialClient.agreementFileId ?? null,
         agreementFileName: initialClient.agreementFileName ?? null,
         agreementFileType: initialClient.agreementFileType ?? null,
@@ -152,11 +126,6 @@ export function ClientFormModal({
         agreementFileType = ref.agreementFileType;
       }
 
-      const packagePriceNumber =
-        form.packagePrice.trim() === "" ? null : Number(form.packagePrice.trim());
-      const reminderDays =
-        form.reminderDaysBefore.trim() === "" ? null : Number(form.reminderDaysBefore.trim());
-
       await Promise.resolve(
         onSubmit({
           businessName: form.businessName.trim(),
@@ -165,16 +134,6 @@ export function ClientFormModal({
           email: form.email.trim(),
           website: form.website?.trim() || null,
           notes: form.notes?.trim() || null,
-          packageType: form.packageType,
-          packagePrice:
-            form.packageType !== "none" && Number.isFinite(packagePriceNumber)
-              ? packagePriceNumber
-              : null,
-          renewalDate: form.packageType !== "none" ? form.renewalDate || null : null,
-          reminderDaysBefore:
-            form.packageType !== "none" && form.renewalDate && Number.isFinite(reminderDays)
-              ? reminderDays
-              : null,
           agreementFileId: agreementFileId ?? null,
           agreementFileName: agreementFileName ?? null,
           agreementFileType: agreementFileType ?? null,
@@ -191,8 +150,6 @@ export function ClientFormModal({
   const title = mode === "create" ? "לקוח חדש" : "עריכת לקוח";
   const agreementDisplayName =
     pendingContractFile?.name ?? (!contractClearRequested ? form.agreementFileName : undefined);
-  const showPackageFields = form.packageType !== "none";
-  const showReminderField = form.renewalDate.trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -254,97 +211,6 @@ export function ClientFormModal({
               onChange={(e) => handleChange("notes", e.target.value)}
             />
           </Field>
-
-          <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3">
-            <div>
-              <div className="text-sm font-medium">חבילה</div>
-              <p className="text-xs text-muted-foreground">החבילה הפעילה של הלקוח ונתוני החידוש.</p>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="סוג חבילה">
-                <Select
-                  value={form.packageType}
-                  onValueChange={(value) => {
-                    const packageType = value as PackageType;
-                    setForm((prev) => ({
-                      ...prev,
-                      packageType,
-                      packagePrice: packageType === "none" ? "" : prev.packagePrice,
-                      renewalDate: packageType === "none" ? "" : prev.renewalDate,
-                      reminderDaysBefore: packageType === "none" ? "" : prev.reminderDaysBefore,
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="בחר חבילה" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PACKAGE_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              {showPackageFields ? (
-                <Field label="מחיר">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="0.01"
-                    value={form.packagePrice}
-                    onChange={(e) => handleChange("packagePrice", e.target.value)}
-                  />
-                </Field>
-              ) : (
-                <div />
-              )}
-
-              {showPackageFields && (
-                <Field label="תאריך חידוש">
-                  <Input
-                    type="date"
-                    value={form.renewalDate}
-                    onChange={(e) => {
-                      const renewalDate = e.target.value;
-                      setForm((prev) => ({
-                        ...prev,
-                        renewalDate,
-                        reminderDaysBefore: renewalDate ? prev.reminderDaysBefore : "",
-                      }));
-                    }}
-                  />
-                </Field>
-              )}
-
-              {showPackageFields && showReminderField && (
-                <Field label="תזכורת">
-                  <Select
-                    value={form.reminderDaysBefore || "__empty__"}
-                    onValueChange={(value) =>
-                      handleChange("reminderDaysBefore", value === "__empty__" ? "" : value)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="בחר מועד תזכורת" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__empty__">ללא תזכורת</SelectItem>
-                      {REMINDER_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={String(option.value)}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-            </div>
-          </div>
 
           <Field label="הסכם חתום (אופציונלי)">
             <div className="flex flex-col gap-2">

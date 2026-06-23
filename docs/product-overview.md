@@ -8,15 +8,9 @@ Matara Managment is an internal business system for managing clients, projects, 
 
 ## Core product direction
 The main long-term product goal is not just management.
-The real core product is:
+The real core product path is:
 
-Project → Brief → GPT 1 → Sitemap/Wireframe
-
-In later stages, the system may continue into:
-Brief → GPT 1 → GPT 2 → HTML/CSS/JS → Deploy
-
-But right now, the main focus is only the first meaningful AI flow:
-Project → Brief → GPT 1 → Sitemap/Wireframe
+Project → Brief
 
 ## Business idea
 This system is being built as a serious internal platform that may later become a sellable product for agencies, freelancers, or web professionals.
@@ -44,4 +38,4 @@ But not all modules are equally important right now.
 
 ## What matters most right now
 The most important path in the whole system is:
-Project → Brief → GPT 1 → Sitemap/Wireframe
+Project → Brief

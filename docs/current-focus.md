@@ -1,9 +1,9 @@
 # Current Focus
 
 ## Current priority
-We are currently focused only on the core product path:
+We are currently focused on the core product path:
 
-Project → Brief → GPT 1 → Sitemap/Wireframe
+Project → Brief
 
 ## What is already in a good enough state
 - Backend exists and runs
@@ -26,8 +26,6 @@ Do not work on these unless explicitly requested:
 - Leads module
 - Tasks module
 - Dashboard cleanup
-- GPT 2
-- HTML generation
 - Netlify deployment
 - Broad cleanup/refactor
 - Large legacy deletion work

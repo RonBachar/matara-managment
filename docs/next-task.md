@@ -1,28 +1,21 @@
 # Next Task
 
 ## Current task
-Prepare and implement the first real GPT 1 flow through the backend.
+Stabilize the Project Brief CRUD flow and align it with the one-brief-per-project model.
 
 ## Product goal
-Allow the user to open a Project Brief and trigger:
-
-Create Sitemap & Wireframe
-
-through a real backend flow.
+Allow the user to open a Project Brief, fill in the questionnaire, save it, and return to it later from the Projects table.
 
 ## What this next step should cover
-The next implementation should focus only on the GPT 1 path:
+The next implementation should focus on the brief path:
 
 1. Load the correct ProjectBrief
-2. Build a normalized brief payload from the saved brief data
-3. Send that payload through the backend GPT 1 flow
-4. Save the GPT 1 result
-5. Return the result to the frontend
+2. Enforce one-brief-per-project from the Projects table
+3. Save and update brief data reliably
+4. Return saved briefs to the frontend list and edit views
 
 ## What should NOT be included in this step
 Do not work on:
-- GPT 2
-- HTML generation
 - Netlify deployment
 - Leads
 - Tasks
@@ -35,10 +28,8 @@ Before coding, inspect and confirm:
 
 - how ProjectBrief is currently loaded and saved
 - whether the one-brief-per-project rule is already enforced correctly
-- what backend route should be used for Create Sitemap & Wireframe
-- where normalized brief generation should live
-- where GPT 1 output should be stored
+- where brief data is normalized for export or future features
 
 ## Output expectation
-The next implementation should produce a clean backend-first GPT 1 flow for:
-Project → Brief → GPT 1 → Sitemap/Wireframe
+The next implementation should produce a clean backend-first brief flow for:
+Project → Brief

@@ -5,7 +5,8 @@ export type Project = {
   createdAt?: string;
   updatedAt?: string;
   projectName: string;
-  clientName: string;
+  clientId: string;
+  client?: { id: string; clientName: string };
   status: ProjectStatus;
   totalAmount: number;
   paidAmount: number;

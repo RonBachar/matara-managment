@@ -1,16 +1,15 @@
 import { useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
   BriefcaseBusiness,
   KanbanSquare,
   Users,
   UserPlus,
-  ClipboardList,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { navItems, PROJECT_BRIEFS_SHOW_LIST_EVENT } from "@/lib/nav";
+import { navItems } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const pathToIcon: Record<
@@ -22,13 +21,11 @@ const pathToIcon: Record<
   "/tasks": KanbanSquare,
   "/clients": Users,
   "/leads": UserPlus,
-  "/project-briefs": ClipboardList,
 };
 
 const SIDEBAR_WIDTH_CLASS = "w-64";
 
 export function Sidebar() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
@@ -65,14 +62,6 @@ export function Sidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                onClick={() => {
-                  if (
-                    item.path === "/project-briefs" &&
-                    location.pathname === "/project-briefs"
-                  ) {
-                    window.dispatchEvent(new Event(PROJECT_BRIEFS_SHOW_LIST_EVENT));
-                  }
-                }}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-[0.95rem] font-medium transition-colors",
@@ -81,7 +70,7 @@ export function Sidebar() {
                       : "text-slate-300 hover:bg-[#1F2937] hover:text-slate-50",
                   )
                 }
-                end
+                end={item.path !== "/projects" && item.path !== "/clients"}
               >
                 {Icon && <Icon className="size-4 shrink-0" />}
                 <span>{item.label}</span>

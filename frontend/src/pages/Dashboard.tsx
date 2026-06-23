@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { Client } from "@/types/client";
+import type { ClientServiceWithClient } from "@/types/clientService";
 import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
@@ -11,9 +12,11 @@ import {
   getTodayTasks,
   getTotalRemainingAmount,
   getUpcomingRenewals,
+  getUpcomingRenewalsTotal,
   readStoredArray,
 } from "@/lib/dashboard";
 import { apiGetClients } from "@/lib/clientsApi";
+import { listAllServices } from "@/lib/clientServicesApi";
 import { fetchLeads } from "@/lib/leadsApi";
 import { apiGetProjects } from "@/lib/projectsApi";
 
@@ -22,6 +25,7 @@ type DashboardData = {
   clients: Client[];
   projects: Project[];
   tasks: Task[];
+  services: ClientServiceWithClient[];
 };
 
 function readDashboardData(): DashboardData {
@@ -30,6 +34,7 @@ function readDashboardData(): DashboardData {
     clients: [],
     projects: [],
     tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
+    services: [],
   };
 }
 
@@ -52,10 +57,11 @@ export function Dashboard() {
 
     const refreshApi = async () => {
       try {
-        const [leads, clients, projects] = await Promise.all([
+        const [leads, clients, projects, services] = await Promise.all([
           fetchLeads(),
           apiGetClients(),
           apiGetProjects(),
+          listAllServices(),
         ]);
         if (cancelled) return;
         setData((prev) => ({
@@ -63,6 +69,7 @@ export function Dashboard() {
           leads,
           clients,
           projects,
+          services,
         }));
       } catch {
         if (cancelled) return;
@@ -70,10 +77,7 @@ export function Dashboard() {
     };
 
     const onStorage = (event: StorageEvent) => {
-      if (
-        event.key == null ||
-        event.key === TASKS_STORAGE_KEY
-      ) {
+      if (event.key == null || event.key === TASKS_STORAGE_KEY) {
         refreshStatic();
         void refreshApi();
       }
@@ -102,7 +106,8 @@ export function Dashboard() {
     const remainingToPay = getTotalRemainingAmount(data.projects);
     const newLeads = getNewLeadsCount(data.leads);
     const todayTasks = getTodayTasks(data.tasks);
-    const upcomingRenewals = getUpcomingRenewals(data.clients, 30);
+    const upcomingRenewals = getUpcomingRenewals(data.services, 30);
+    const renewalsTotal = getUpcomingRenewalsTotal(data.services, 30);
 
     return {
       totalLeads,
@@ -113,6 +118,7 @@ export function Dashboard() {
       newLeads,
       todayTasks,
       upcomingRenewals,
+      renewalsTotal,
     };
   }, [data]);
 
@@ -159,24 +165,36 @@ export function Dashboard() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="text-sm font-semibold">Upcoming Renewals</div>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="text-sm font-semibold">חידושי שירותים קרובים</div>
+          {summary.upcomingRenewals.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              סה״כ: {formatCurrency(summary.renewalsTotal)}
+            </div>
+          )}
+        </div>
 
         {summary.upcomingRenewals.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No client service renewals are coming up in the next 30 days.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            אין חידושי שירות ב-30 הימים הקרובים.
+          </p>
         ) : (
           <div className="mt-3 space-y-2">
-            {summary.upcomingRenewals.map(({ client, packageLabel, renewalDate, daysLeft }) => (
+            {summary.upcomingRenewals.map(({ clientName, serviceName, renewalPrice, renewalDate, daysLeft }) => (
               <div
-                key={`${client.id}-${renewalDate}`}
-                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto] md:items-center md:gap-3"
+                key={`${clientName}-${serviceName}-${renewalDate}`}
+                className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center md:gap-3"
               >
-                <div className="font-medium text-foreground">{client.businessName || client.clientName}</div>
-                <div className="text-muted-foreground">{packageLabel}</div>
+                <div className="font-medium text-foreground">{clientName}</div>
+                <div className="text-muted-foreground">{serviceName}</div>
+                <div className="text-muted-foreground">
+                  {renewalPrice == null ? "—" : formatCurrency(renewalPrice)}
+                </div>
                 <div className="text-muted-foreground">
                   {renewalDate ? new Date(renewalDate).toLocaleDateString("he-IL") : "—"}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {daysLeft === 0 ? "Today" : `${daysLeft} days left`}
+                  {daysLeft === 0 ? "היום" : `${daysLeft} ימים`}
                 </div>
               </div>
             ))}

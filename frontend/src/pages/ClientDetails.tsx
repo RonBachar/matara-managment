@@ -1,6 +1,13 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
-import { PACKAGE_TYPE_LABELS, REMINDER_OPTIONS, type Client } from "@/types/client";
+import { Pencil, Trash2 } from "lucide-react";
+import type { Client } from "@/types/client";
+import {
+  BILLING_CYCLE_LABELS,
+  REMINDER_OPTIONS,
+  type BillingCycle,
+  type ClientService,
+} from "@/types/clientService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +16,15 @@ import {
   saveAgreementFile,
 } from "@/lib/agreementFiles";
 import { apiGetClients, apiUpdateClient } from "@/lib/clientsApi";
+import {
+  createService,
+  deleteService,
+  listServicesForClient,
+  updateService,
+} from "@/lib/clientServicesApi";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
+import { ClientServiceFormModal } from "@/components/clients/ClientServiceFormModal";
+import { DeleteClientServiceDialog } from "@/components/clients/DeleteClientServiceDialog";
 
 const AGREEMENT_ACCEPT =
   ".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -23,7 +38,12 @@ export function ClientDetails() {
   const location = useLocation();
   const state = location.state as LocationState | null;
   const [client, setClient] = useState<Client | null>(state?.client ?? null);
+  const [services, setServices] = useState<ClientService[]>([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [serviceFormOpen, setServiceFormOpen] = useState(false);
+  const [serviceFormMode, setServiceFormMode] = useState<"create" | "edit">("create");
+  const [activeService, setActiveService] = useState<ClientService | undefined>();
+  const [deleteServiceOpen, setDeleteServiceOpen] = useState(false);
   const [agreementActionLoading, setAgreementActionLoading] = useState(false);
   const [agreementActionError, setAgreementActionError] = useState<string | null>(null);
 
@@ -46,6 +66,25 @@ export function ClientDetails() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!params.id) return;
+    let cancelled = false;
+
+    listServicesForClient(params.id)
+      .then((rows) => {
+        if (cancelled) return;
+        setServices(rows);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setServices([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id]);
+
   const [agreementBlobUrl, setAgreementBlobUrl] = useState<string | null>(null);
   const [agreementLoading, setAgreementLoading] = useState(false);
   const [agreementMissing, setAgreementMissing] = useState(false);
@@ -54,14 +93,6 @@ export function ClientDetails() {
     () => Boolean(client?.agreementFileId && client?.agreementFileName),
     [client?.agreementFileId, client?.agreementFileName],
   );
-
-  const reminderLabel = useMemo(() => {
-    if (client?.reminderDaysBefore == null) return "—";
-    return (
-      REMINDER_OPTIONS.find((option) => option.value === client.reminderDaysBefore)?.label ??
-      `${client.reminderDaysBefore} ימים לפני`
-    );
-  }, [client?.reminderDaysBefore]);
 
   useEffect(() => {
     let revokedUrl: string | null = null;
@@ -94,11 +125,18 @@ export function ClientDetails() {
     };
   }, [client?.agreementFileId]);
 
-  function formatDate(value?: string) {
+  function formatDate(value?: string | null) {
     if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleDateString("en-GB");
+  }
+
+  function reminderLabel(days: number | null) {
+    if (days == null) return "—";
+    return (
+      REMINDER_OPTIONS.find((option) => option.value === days)?.label ?? `${days} ימים לפני`
+    );
   }
 
   async function handleAgreementFileChange(file: File | null) {
@@ -161,7 +199,7 @@ export function ClientDetails() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{client.businessName || client.clientName}</h2>
-          <p className="text-sm text-muted-foreground">פרטי לקוח, חבילה והסכם במקום אחד.</p>
+          <p className="text-sm text-muted-foreground">פרטי לקוח, שירותים והסכם במקום אחד.</p>
         </div>
         <div className="flex gap-2">
           <Button type="button" size="sm" onClick={() => setEditOpen(true)}>
@@ -209,26 +247,88 @@ export function ClientDetails() {
         </div>
 
         <div className="space-y-3 border-t border-border/70 pt-4">
-          <div className="text-sm font-semibold">חבילה</div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <DetailsField
-              label="סוג חבילה"
-              value={PACKAGE_TYPE_LABELS[client.packageType] ?? PACKAGE_TYPE_LABELS.none}
-            />
-            <DetailsField
-              label="מחיר"
-              value={
-                client.packagePrice == null
-                  ? "—"
-                  : `₪${client.packagePrice.toLocaleString("he-IL", {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}`
-              }
-            />
-            <DetailsField label="תאריך חידוש" value={formatDate(client.renewalDate)} />
-            <DetailsField label="תזכורת" value={reminderLabel} />
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-semibold">שירותים</div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setServiceFormMode("create");
+                setActiveService(undefined);
+                setServiceFormOpen(true);
+              }}
+            >
+              + שירות חדש
+            </Button>
           </div>
+
+          {services.length === 0 ? (
+            <p className="text-sm text-muted-foreground">אין שירותים רשומים ללקוח זה.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border/70">
+              <table className="w-full border-collapse text-sm">
+                <thead className="bg-muted/40">
+                  <tr className="text-right">
+                    <th className="px-2.5 py-1.5 font-medium">שם שירות</th>
+                    <th className="px-2.5 py-1.5 font-medium">מחזור</th>
+                    <th className="px-2.5 py-1.5 font-medium">מחיר</th>
+                    <th className="px-2.5 py-1.5 font-medium">חידוש</th>
+                    <th className="px-2.5 py-1.5 font-medium">תזכורת</th>
+                    <th className="px-2.5 py-1.5 text-center font-medium">פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {services.map((service) => (
+                    <tr key={service.id} className="border-t border-border/60">
+                      <td className="px-2.5 py-1.5">{service.serviceName}</td>
+                      <td className="px-2.5 py-1.5">
+                        {BILLING_CYCLE_LABELS[service.billingCycle as BillingCycle] ??
+                          service.billingCycle}
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        {service.renewalPrice == null
+                          ? "—"
+                          : `₪${service.renewalPrice.toLocaleString("he-IL")}`}
+                      </td>
+                      <td className="px-2.5 py-1.5">{formatDate(service.renewalDate)}</td>
+                      <td className="px-2.5 py-1.5">
+                        {reminderLabel(service.reminderDaysBefore)}
+                      </td>
+                      <td className="px-2.5 py-1.5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon-sm"
+                            onClick={() => {
+                              setServiceFormMode("edit");
+                              setActiveService(service);
+                              setServiceFormOpen(true);
+                            }}
+                            aria-label="עריכת שירות"
+                          >
+                            <Pencil className="h-4 w-4 text-[#FBBF24]" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon-sm"
+                            onClick={() => {
+                              setActiveService(service);
+                              setDeleteServiceOpen(true);
+                            }}
+                            aria-label="מחיקת שירות"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3 border-t border-border/70 pt-4">
@@ -319,6 +419,35 @@ export function ClientDetails() {
           const updated = await apiUpdateClient(client.id, input);
           setClient(updated);
           setEditOpen(false);
+        }}
+      />
+
+      <ClientServiceFormModal
+        open={serviceFormOpen}
+        mode={serviceFormMode}
+        initialService={serviceFormMode === "edit" ? activeService : undefined}
+        onClose={() => setServiceFormOpen(false)}
+        onSubmit={async (input) => {
+          if (serviceFormMode === "edit" && activeService) {
+            const updated = await updateService(activeService.id, input);
+            setServices((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+          } else {
+            const created = await createService(client.id, input);
+            setServices((prev) => [...prev, created]);
+          }
+          setServiceFormOpen(false);
+        }}
+      />
+
+      <DeleteClientServiceDialog
+        open={deleteServiceOpen}
+        service={activeService}
+        onCancel={() => setDeleteServiceOpen(false)}
+        onConfirm={async () => {
+          if (!activeService) return;
+          await deleteService(activeService.id);
+          setServices((prev) => prev.filter((s) => s.id !== activeService.id));
+          setDeleteServiceOpen(false);
         }}
       />
     </section>

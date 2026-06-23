@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import type { AuthRequest } from "../middleware/auth";
-import { readNonEmptyString, readOptionalString, readOptionalNumber } from "../utils/validation";
+import { readNonEmptyString, readOptionalString } from "../utils/validation";
 
 export const clientsRouter = Router();
 
@@ -33,11 +33,6 @@ clientsRouter.post("/", async (req: AuthRequest, res) => {
     const website = readOptionalString(body.website);
     const notes = readOptionalString(body.notes);
 
-    const packageType = readOptionalString(body.packageType) ?? "none";
-    const packagePrice = readOptionalNumber(body.packagePrice);
-    const renewalDate = readOptionalString(body.renewalDate);
-    const reminderDaysBefore = readOptionalNumber(body.reminderDaysBefore);
-
     const created = await prisma.client.create({
       data: {
         userId,
@@ -47,10 +42,6 @@ clientsRouter.post("/", async (req: AuthRequest, res) => {
         email,
         website: website && website.length > 0 ? website : null,
         notes: notes && notes.length > 0 ? notes : null,
-        packageType: packageType.length > 0 ? packageType : "none",
-        packagePrice: packagePrice ?? null,
-        renewalDate: renewalDate && renewalDate.length > 0 ? renewalDate : null,
-        reminderDaysBefore: reminderDaysBefore ?? null,
         agreementFileId: readOptionalString(body.agreementFileId) ?? null,
         agreementFileName: readOptionalString(body.agreementFileName) ?? null,
         agreementFileType: readOptionalString(body.agreementFileType) ?? null,
@@ -92,21 +83,6 @@ clientsRouter.patch("/:id", async (req: AuthRequest, res) => {
     const notes = readOptionalString(body.notes);
     if (notes !== undefined) data.notes = notes.length > 0 ? notes : null;
     if (body.notes === null) data.notes = null;
-
-    const packageType = readOptionalString(body.packageType);
-    if (packageType !== undefined) data.packageType = packageType.length > 0 ? packageType : "none";
-
-    const packagePrice = readOptionalNumber(body.packagePrice);
-    if (packagePrice !== undefined) data.packagePrice = packagePrice;
-    if (body.packagePrice === null) data.packagePrice = null;
-
-    const renewalDate = readOptionalString(body.renewalDate);
-    if (renewalDate !== undefined) data.renewalDate = renewalDate.length > 0 ? renewalDate : null;
-    if (body.renewalDate === null) data.renewalDate = null;
-
-    const reminderDaysBefore = readOptionalNumber(body.reminderDaysBefore);
-    if (reminderDaysBefore !== undefined) data.reminderDaysBefore = reminderDaysBefore;
-    if (body.reminderDaysBefore === null) data.reminderDaysBefore = null;
 
     const agreementFileId = readOptionalString(body.agreementFileId);
     if (agreementFileId !== undefined) data.agreementFileId = agreementFileId.length > 0 ? agreementFileId : null;

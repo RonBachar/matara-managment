@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import type { AuthRequest } from "../middleware/auth";
-import { readOptionalString, asRecord } from "../utils/validation";
+import { readNonEmptyString, readOptionalString, asRecord } from "../utils/validation";
 
 export const projectBriefsRouter = Router();
 
 function briefFromDb(row: {
   id: string;
+  projectId: string;
+  title: string;
   createdAt: Date;
   updatedAt: Date;
   data: unknown;
@@ -15,6 +17,8 @@ function briefFromDb(row: {
   return {
     ...data,
     id: row.id,
+    projectId: row.projectId,
+    title: row.title,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -28,6 +32,24 @@ projectBriefsRouter.get("/", async (req: AuthRequest, res) => {
       orderBy: { updatedAt: "desc" },
     });
     return res.json(rows.map(briefFromDb));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: message });
+  }
+});
+
+projectBriefsRouter.get("/by-project/:projectId", async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const projectId = String(req.params.projectId ?? "").trim();
+    if (!projectId) return res.status(400).json({ error: "Missing projectId" });
+
+    const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const row = await prisma.projectBrief.findUnique({ where: { projectId } });
+    if (!row) return res.status(404).json({ error: "Brief not found" });
+    return res.json(briefFromDb(row));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return res.status(500).json({ error: message });
@@ -53,9 +75,22 @@ projectBriefsRouter.post("/", async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
     const body = (req.body ?? {}) as Record<string, unknown>;
+    const projectId = readNonEmptyString(body.projectId);
     const data = asRecord(body.data) ?? asRecord(body.brief) ?? asRecord(body);
+
+    if (!projectId) {
+      return res.status(400).json({ error: "Invalid body. Required: projectId" });
+    }
     if (!data) {
       return res.status(400).json({ error: "Invalid body. Expected brief object payload" });
+    }
+
+    const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const existing = await prisma.projectBrief.findUnique({ where: { projectId } });
+    if (existing) {
+      return res.status(200).json(briefFromDb(existing));
     }
 
     const title = readOptionalString(data.businessNameSnapshot) ?? "";
@@ -63,8 +98,12 @@ projectBriefsRouter.post("/", async (req: AuthRequest, res) => {
     const created = await prisma.projectBrief.create({
       data: {
         userId,
+        projectId,
         title,
-        data: data as object,
+        data: {
+          ...data,
+          projectId,
+        } as object,
       },
     });
 
@@ -97,6 +136,7 @@ projectBriefsRouter.patch("/:id", async (req: AuthRequest, res) => {
         data: {
           ...(asRecord(existing.data) ?? {}),
           ...data,
+          projectId: existing.projectId,
         } as object,
       },
     });
@@ -130,4 +170,3 @@ projectBriefsRouter.delete("/:id", async (req: AuthRequest, res) => {
     return res.status(500).json({ error: message });
   }
 });
-

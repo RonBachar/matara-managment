@@ -1,34 +1,13 @@
-// Matara — initial schema for projects, briefs, and AI pipeline runs (PostgreSQL).
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-/// Work project; `clientName` is plain text only.
-model Project {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String
-
-  projectName String
-  clientName  String
-  status      String  @default("התחיל")
-
-  totalAmount Decimal @default(0) @db.Decimal(14, 2)
-  paidAmount  Decimal @default(0) @db.Decimal(14, 2)
-
-  notes String? @db.Text
-
-  @@index([userId])
-}
-
-/// A client/customer record with flat package metadata.
 model Client {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -40,95 +19,71 @@ model Client {
   phone        String @default("")
   email        String @default("")
   website      String?
-  notes String? @db.Text
-
-  packageType        String   @default("none")
-  packagePrice       Decimal? @db.Decimal(14, 2)
-  renewalDate        String?
-  reminderDaysBefore Int?
+  notes        String? @db.Text
 
   agreementFileId   String?
   agreementFileName String?
   agreementFileType String?
 
-  @@index([clientName])
+  services ClientService[]
+  projects Project[]
+
   @@index([userId])
+  @@index([clientName])
 }
 
-/// Standalone questionnaire / brief content; flexible JSON until fields are normalized.
+model ClientService {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  serviceName        String
+  billingCycle       String
+  renewalPrice       Decimal?  @db.Decimal(14, 2)
+  renewalDate        DateTime?
+  reminderDaysBefore Int?
+  notes              String?   @db.Text
+
+  @@index([clientId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  projectName String
+  status      String  @default("התחיל")
+  totalAmount Decimal @default(0) @db.Decimal(14, 2)
+  paidAmount  Decimal @default(0) @db.Decimal(14, 2)
+  notes       String? @db.Text
+
+  brief ProjectBrief?
+
+  @@index([userId])
+  @@index([clientId])
+}
+
 model ProjectBrief {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId    String
 
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   title String @default("")
-
-  /// Full brief payload (questionnaire answers, etc.).
-  data Json @default("{}")
-
-  pipelineRuns PipelineRun[]
+  data  Json   @default("{}")
 
   @@index([userId])
-}
-
-/// One execution of the AI pipeline for a given brief.
-model PipelineRun {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  briefId String
-  brief   ProjectBrief @relation(fields: [briefId], references: [id], onDelete: Cascade)
-
-  status PipelineRunStatus @default(PENDING)
-
-  startedAt  DateTime?
-  finishedAt DateTime?
-  error      String? @db.Text
-
-  steps PipelineStep[]
-
-  @@index([briefId])
-}
-
-enum PipelineRunStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
-
-/// A single step inside a pipeline run (ordering, I/O, status).
-model PipelineStep {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  runId String
-  run   PipelineRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-
-  /// Sequence order (0, 1, 2, …).
-  stepOrder Int
-  /// Stable key for the step type, e.g. "sitemap", "copy".
-  stepKey   String
-
-  status PipelineStepStatus @default(PENDING)
-
-  inputJson  Json?
-  outputJson Json?
-  error      String? @db.Text
-
-  @@index([runId])
-}
-
-enum PipelineStepStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  SKIPPED
 }
 
 model Lead {
@@ -148,10 +103,10 @@ model Lead {
 }
 
 model Task {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
 
   title       String
   description String? @db.Text

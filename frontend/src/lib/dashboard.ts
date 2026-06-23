@@ -1,4 +1,4 @@
-﻿import { PACKAGE_TYPE_LABELS, type Client } from "@/types/client";
+﻿import type { ClientServiceWithClient } from "@/types/clientService";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
@@ -6,15 +6,12 @@ import type { Task } from "@/types/task";
 export const PROJECTS_STORAGE_KEY = "matara_projects";
 export const TASKS_STORAGE_KEY = "matara_tasks";
 
-const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>([
-  "Completed",
-  "פרויקט הושלם",
-  "הסתיים",
-]);
+const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>(["הושלם"]);
 
 export type UpcomingRenewal = {
-  client: Client;
-  packageLabel: string;
+  clientName: string;
+  serviceName: string;
+  renewalPrice: number | null;
   renewalDate: string;
   daysLeft: number;
 };
@@ -45,7 +42,7 @@ export function getOpenTasksCount(tasks: Task[]): number {
 
 export function getTotalRemainingAmount(projects: Project[]): number {
   return projects.reduce((sum, project) => {
-    const remaining = Number(project.remainingAmount ?? 0);
+    const remaining = Number(project.totalAmount ?? 0) - Number(project.paidAmount ?? 0);
     return sum + (Number.isFinite(remaining) ? remaining : 0);
   }, 0);
 }
@@ -58,16 +55,19 @@ export function getTodayTasks(tasks: Task[]): Task[] {
   return tasks.filter((task) => task.status === "לביצוע" || task.status === "בתהליך");
 }
 
-export function getUpcomingRenewals(clients: Client[], windowDays = 30): UpcomingRenewal[] {
+export function getUpcomingRenewals(
+  services: ClientServiceWithClient[],
+  windowDays = 30,
+): UpcomingRenewal[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayInMs = 24 * 60 * 60 * 1000;
 
-  return clients
-    .map((client) => {
-      if (!client.renewalDate) return null;
+  return services
+    .map((service) => {
+      if (!service.renewalDate) return null;
 
-      const renewalDate = new Date(client.renewalDate);
+      const renewalDate = new Date(service.renewalDate);
       if (Number.isNaN(renewalDate.getTime())) return null;
 
       const renewalDay = new Date(
@@ -77,10 +77,16 @@ export function getUpcomingRenewals(clients: Client[], windowDays = 30): Upcomin
       );
       const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
 
+      const clientName =
+        service.client?.businessName ||
+        service.client?.clientName ||
+        "—";
+
       return {
-        client,
-        packageLabel: PACKAGE_TYPE_LABELS[client.packageType] ?? PACKAGE_TYPE_LABELS.none,
-        renewalDate: client.renewalDate,
+        clientName,
+        serviceName: service.serviceName,
+        renewalPrice: service.renewalPrice,
+        renewalDate: service.renewalDate,
         daysLeft,
       };
     })
@@ -89,4 +95,11 @@ export function getUpcomingRenewals(clients: Client[], windowDays = 30): Upcomin
       return entry.daysLeft >= 0 && entry.daysLeft <= windowDays;
     })
     .sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+export function getUpcomingRenewalsTotal(services: ClientServiceWithClient[], windowDays = 30): number {
+  return getUpcomingRenewals(services, windowDays).reduce(
+    (sum, entry) => sum + (entry.renewalPrice ?? 0),
+    0,
+  );
 }

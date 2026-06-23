@@ -45,11 +45,14 @@ export const LANGUAGE_STYLE_SELECTION_OPTIONS = [
 /** Standalone project brief document. */
 export type ProjectBrief = {
   id: string;
+  projectId: string;
+  title: string;
+  project?: { id: string; projectName: string };
   /** שם העסק (למסמך / ייצוא) */
   businessNameSnapshot: string;
   createdAt: string;
   updatedAt: string;
-
+  
   /** 1 — פרטי העסק */
   businessWhatTheyDo: string;
   servicesProductsOnSite: string;
@@ -75,13 +78,12 @@ export type ProjectBrief = {
   /** 5 — הנחיות נוספות */
   contentAvoid: string;
   additionalNotes: string;
-
-  gpt1Output?: string;
-  gpt2Output?: string;
-  gpt3Output?: string;
 };
 
-export type ProjectBriefInput = Omit<ProjectBrief, "id" | "createdAt" | "updatedAt">;
+export type ProjectBriefInput = Omit<
+  ProjectBrief,
+  "id" | "projectId" | "title" | "createdAt" | "updatedAt" | "project"
+>;
 
 export function getBriefDisplayTitle(brief: Pick<ProjectBrief, "businessNameSnapshot">): string {
   const t = brief.businessNameSnapshot?.trim();

@@ -1,4 +1,4 @@
-import type { Client, PackageType } from "@/types/client";
+import type { Client } from "@/types/client";
 import { apiUrl, getAuthHeaders } from "@/lib/api";
 
 export type ClientPayload = {
@@ -8,10 +8,6 @@ export type ClientPayload = {
   email: string;
   website?: string | null;
   notes?: string | null;
-  packageType: PackageType;
-  packagePrice?: number | null;
-  renewalDate?: string | null;
-  reminderDaysBefore?: number | null;
   agreementFileId?: string | null;
   agreementFileName?: string | null;
   agreementFileType?: string | null;
@@ -19,6 +15,7 @@ export type ClientPayload = {
 
 type ApiClient = {
   id: string;
+  userId?: string;
   createdAt?: string;
   updatedAt?: string;
   clientName: string;
@@ -27,32 +24,15 @@ type ApiClient = {
   email?: string | null;
   website?: string | null;
   notes?: string | null;
-  packageType?: string | null;
-  packagePrice?: unknown;
-  renewalDate?: string | null;
-  reminderDaysBefore?: unknown;
   agreementFileId?: string | null;
   agreementFileName?: string | null;
   agreementFileType?: string | null;
 };
 
-function toNumberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  return Number.isFinite(n) ? n : null;
-}
-
-function normalizePackageType(value: string | null | undefined): PackageType {
-  return value === "Hosting + Elementor Pro" ||
-    value === "Hosting Only" ||
-    value === "Elementor Pro Only"
-    ? value
-    : "none";
-}
-
 function clientFromApi(row: ApiClient): Client {
   return {
     id: row.id,
+    userId: row.userId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     clientName: row.clientName ?? "",
@@ -61,10 +41,6 @@ function clientFromApi(row: ApiClient): Client {
     email: row.email ?? "",
     website: row.website ?? undefined,
     notes: row.notes ?? undefined,
-    packageType: normalizePackageType(row.packageType),
-    packagePrice: toNumberOrNull(row.packagePrice) ?? undefined,
-    renewalDate: row.renewalDate ?? undefined,
-    reminderDaysBefore: toNumberOrNull(row.reminderDaysBefore) ?? undefined,
     agreementFileId: row.agreementFileId ?? undefined,
     agreementFileName: row.agreementFileName ?? undefined,
     agreementFileType: row.agreementFileType ?? undefined,
@@ -88,9 +64,7 @@ export async function apiGetClients(): Promise<Client[]> {
   return (data as ApiClient[]).map(clientFromApi);
 }
 
-export async function apiCreateClient(
-  input: ClientPayload,
-) {
+export async function apiCreateClient(input: ClientPayload) {
   const headers = await getAuthHeaders();
   const res = await fetch(apiUrl("/api/clients"), {
     method: "POST",
@@ -105,10 +79,7 @@ export async function apiCreateClient(
   return clientFromApi(created);
 }
 
-export async function apiUpdateClient(
-  id: string,
-  patch: Partial<ClientPayload>,
-) {
+export async function apiUpdateClient(id: string, patch: Partial<ClientPayload>) {
   const headers = await getAuthHeaders();
   const res = await fetch(apiUrl(`/api/clients/${encodeURIComponent(id)}`), {
     method: "PATCH",

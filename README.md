@@ -1,6 +1,6 @@
 # Matara Management
 
-Matara Management is a full-stack internal management system for a web or design studio. It brings together leads, clients, projects, tasks, and AI-assisted project briefs in one place.
+Matara Management is a full-stack internal management system for a web or design studio. It brings together leads, clients, projects, tasks, and project briefs in one place.
 
 ## Main Idea
 
@@ -8,7 +8,7 @@ The product is built around the workflow:
 
 `Lead -> Client -> Project -> Project Brief -> Tasks`
 
-Instead of managing this flow across spreadsheets, notes, and separate AI tools, the app centralizes it in a single system and adds an AI-powered project brief pipeline for website work.
+Instead of managing this flow across spreadsheets and notes, the app centralizes it in a single system.
 
 ## What The App Does
 
@@ -17,7 +17,6 @@ Instead of managing this flow across spreadsheets, notes, and separate AI tools,
 - Track projects, statuses, notes, and financial fields
 - Manage tasks in a kanban-style workflow
 - Generate and store project briefs tied to projects
-- Support AI-assisted project brief generation through staged GPT flows
 
 ## Tech Stack
 
