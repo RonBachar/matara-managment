@@ -42,12 +42,12 @@ export function LeadsTable({
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted/60">
             <tr className="text-right">
+              <th className="px-3 py-2 font-medium">תאריך יצירה</th>
               <th className="px-3 py-2 font-medium">שם הלקוח</th>
               <th className="px-3 py-2 font-medium">טלפון</th>
               <th className="px-3 py-2 font-medium">אימייל</th>
-              <th className="px-3 py-2 font-medium">מקור ליד</th>
+              <th className="px-3 py-2 font-medium">מקור הליד</th>
               <th className="px-3 py-2 font-medium">סטטוס</th>
-              <th className="px-3 py-2 font-medium">תאריך יצירה</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
           </thead>
@@ -68,6 +68,11 @@ export function LeadsTable({
                     key={lead.id}
                     className="border-t border-border/60 even:bg-muted/30"
                   >
+                    <td className="px-3 py-2 align-middle">
+                      <span className="text-xs text-muted-foreground">
+                        {formatLeadCreatedAt(lead.createdAt)}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 align-middle">{lead.clientName}</td>
                     <td className="px-3 py-2 align-middle">{lead.phone}</td>
                     <td className="px-3 py-2 align-middle">
@@ -99,11 +104,6 @@ export function LeadsTable({
                           </option>
                         ))}
                       </select>
-                    </td>
-                    <td className="px-3 py-2 align-middle">
-                      <span className="text-xs text-muted-foreground">
-                        {formatLeadCreatedAt(lead.createdAt)}
-                      </span>
                     </td>
                     <td className="px-3 py-2 align-middle text-center">
                       <div className="flex flex-wrap items-center justify-center gap-2">

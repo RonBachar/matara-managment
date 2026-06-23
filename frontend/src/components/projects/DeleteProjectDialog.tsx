@@ -26,7 +26,7 @@ export function DeleteProjectDialog({
           <p>האם למחוק את הפרויקט הבא?</p>
           <p className="font-medium">{project.projectName}</p>
           <p className="text-xs text-muted-foreground">
-            פעולה זו תשפיע רק על הנתונים המקומיים במערכת (ללא שרת).
+            פעולה זו תמחק את הרשומה מהשרת/מסד הנתונים (פעולה בלתי הפיכה).
           </p>
         </div>
         <div className="flex justify-between gap-3 px-4 pb-4">
