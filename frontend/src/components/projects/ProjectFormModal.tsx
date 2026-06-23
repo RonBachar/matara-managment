@@ -103,6 +103,12 @@ export function ProjectFormModal({
   if (!open) return null;
 
   const noClients = !clientsLoading && clients.length === 0;
+  const selectedClient = clients.find((c) => c.id === form.clientId);
+  const clientSelectLabel = clientsLoading
+    ? "טוען..."
+    : selectedClient
+      ? selectedClient.businessName || selectedClient.clientName
+      : "בחר לקוח";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -144,7 +150,9 @@ export function ProjectFormModal({
                   disabled={clientsLoading}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={clientsLoading ? "טוען..." : "בחר לקוח"} />
+                    <SelectValue placeholder={clientsLoading ? "טוען..." : "בחר לקוח"}>
+                      {clientSelectLabel}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {clients.map((client) => (
