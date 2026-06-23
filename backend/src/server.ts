@@ -6,6 +6,7 @@ import { clientServicesRouter } from "./routes/clientServices";
 import { leadsRouter } from "./routes/leads";
 import { projectBriefsRouter } from "./routes/projectBriefs";
 import { tasksRouter } from "./routes/tasks";
+import { webhooksRouter } from "./routes/webhooks";
 import { requireAuth } from "./middleware/auth";
 
 const app = express();
@@ -32,6 +33,8 @@ app.use(
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use("/api/webhooks", webhooksRouter);
 
 app.use("/api/projects", requireAuth, projectsRouter);
 app.use("/api/clients", requireAuth, clientsRouter);
