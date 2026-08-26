@@ -5,7 +5,6 @@ import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
 import {
-  TASKS_STORAGE_KEY,
   getActiveProjectsCount,
   getNewLeadsCount,
   getOpenTasksCount,
@@ -13,12 +12,12 @@ import {
   getTotalRemainingAmount,
   getUpcomingRenewals,
   getUpcomingRenewalsTotal,
-  readStoredArray,
 } from "@/lib/dashboard";
 import { apiGetClients } from "@/lib/clientsApi";
 import { listAllServices } from "@/lib/clientServicesApi";
 import { fetchLeads } from "@/lib/leadsApi";
 import { apiGetProjects } from "@/lib/projectsApi";
+import { fetchTasks } from "@/lib/tasksApi";
 
 type DashboardData = {
   leads: Lead[];
@@ -28,73 +27,49 @@ type DashboardData = {
   services: ClientServiceWithClient[];
 };
 
-function readDashboardData(): DashboardData {
-  return {
-    leads: [],
-    clients: [],
-    projects: [],
-    tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
-    services: [],
-  };
-}
+const EMPTY_DATA: DashboardData = {
+  leads: [],
+  clients: [],
+  projects: [],
+  tasks: [],
+  services: [],
+};
 
 function formatCurrency(value: number): string {
   return `₪${value.toLocaleString("he-IL")}`;
 }
 
 export function Dashboard() {
-  const [data, setData] = useState<DashboardData>(() => readDashboardData());
+  const [data, setData] = useState<DashboardData>(EMPTY_DATA);
 
   useEffect(() => {
     let cancelled = false;
 
-    const refreshStatic = () => {
-      setData((prev) => ({
-        ...prev,
-        tasks: readStoredArray<Task>(TASKS_STORAGE_KEY),
-      }));
-    };
-
-    const refreshApi = async () => {
+    const refresh = async () => {
       try {
-        const [leads, clients, projects, services] = await Promise.all([
+        const [leads, clients, projects, tasks, services] = await Promise.all([
           fetchLeads(),
           apiGetClients(),
           apiGetProjects(),
+          fetchTasks(),
           listAllServices(),
         ]);
         if (cancelled) return;
-        setData((prev) => ({
-          ...prev,
-          leads,
-          clients,
-          projects,
-          services,
-        }));
-      } catch {
-        if (cancelled) return;
+        setData({ leads, clients, projects, tasks, services });
+      } catch (error) {
+        console.error("Failed to load dashboard data", error);
       }
     };
 
-    const onStorage = (event: StorageEvent) => {
-      if (event.key == null || event.key === TASKS_STORAGE_KEY) {
-        refreshStatic();
-        void refreshApi();
-      }
-    };
+    void refresh();
 
-    refreshStatic();
-    void refreshApi();
-
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", refreshApi);
-    document.addEventListener("visibilitychange", refreshApi);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
 
     return () => {
       cancelled = true;
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", refreshApi);
-      document.removeEventListener("visibilitychange", refreshApi);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
     };
   }, []);
 

@@ -99,5 +99,3 @@ export function Sidebar() {
     </aside>
   );
 }
-
-export const sidebarWidthClass = SIDEBAR_WIDTH_CLASS;

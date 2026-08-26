@@ -3,9 +3,6 @@ import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
 
-export const PROJECTS_STORAGE_KEY = "matara_projects";
-export const TASKS_STORAGE_KEY = "matara_tasks";
-
 const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>(["הושלם"]);
 
 export type UpcomingRenewal = {
@@ -15,18 +12,6 @@ export type UpcomingRenewal = {
   renewalDate: string;
   daysLeft: number;
 };
-
-export function readStoredArray<T>(storageKey: string): T[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as T[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 export function isProjectFinalStatus(status: Project["status"]): boolean {
   return FINAL_PROJECT_STATUSES.has(status);

@@ -52,28 +52,6 @@ async function parseErrorMessage(res: Response): Promise<string> {
   return "";
 }
 
-export async function listBriefs(): Promise<ProjectBrief[]> {
-  const headers = await getAuthHeaders();
-  const res = await fetch(apiUrl("/api/project-briefs"), { headers });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = (await res.json()) as unknown;
-  if (!Array.isArray(data)) throw new Error("Unexpected response");
-  return (data as ApiBrief[]).map(briefFromApi);
-}
-
-export async function getBrief(id: string): Promise<ProjectBrief> {
-  const headers = await getAuthHeaders();
-  const res = await fetch(apiUrl(`/api/project-briefs/${encodeURIComponent(id)}`), {
-    headers,
-  });
-  if (!res.ok) {
-    const msg = await parseErrorMessage(res);
-    throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as ApiBrief;
-  return briefFromApi(data);
-}
-
 export async function getBriefByProject(projectId: string): Promise<ProjectBrief | null> {
   const headers = await getAuthHeaders();
   const res = await fetch(

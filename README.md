@@ -1,109 +1,78 @@
 # Matara Management
 
-Matara Management is a full-stack internal management system for a web or design studio. It brings together leads, clients, projects, tasks, and project briefs in one place.
+מערכת ניהול פנימית לסטודיו — לידים, לקוחות, פרויקטים, אפיוני פרויקט ומשימות במקום אחד.
+עברית, RTL, משתמש יחיד.
 
-## Main Idea
-
-The product is built around the workflow:
-
-`Lead -> Client -> Project -> Project Brief -> Tasks`
-
-Instead of managing this flow across spreadsheets and notes, the app centralizes it in a single system.
-
-## What The App Does
-
-- Manage leads and convert them into clients
-- Manage clients and recurring client services
-- Track projects, statuses, notes, and financial fields
-- Manage tasks in a kanban-style workflow
-- Generate and store project briefs tied to projects
-
-## Tech Stack
-
-### Frontend
-
-- React
-- TypeScript
-- Vite
-- React Router
-- Tailwind CSS
-
-### Backend
-
-- Node.js
-- Express
-- TypeScript
-- Prisma
-
-### Database
-
-- PostgreSQL
-- Docker Compose for local development
-
-## Repository Structure
-
-- `frontend/` - React application
-- `backend/` - Express API and Prisma setup
-- `docs/` - architecture and project notes
-
-## Current Architecture Notes
-
-- The backend is the source of truth for migrated modules
-- Projects are database-backed
-- Clients are database-backed
-- Project briefs are in transition and are being aligned around a one-brief-per-project model
-- Local development depends on PostgreSQL running locally through Docker
-
-## Local Development
-
-### 1. Start Docker / PostgreSQL
-
-From the project root:
-
-```powershell
-docker compose up -d
+```
+ליד → לקוח → פרויקט → אפיון פרויקט
+                    + משימות
 ```
 
-### 2. Configure backend environment
+## סטטוס נוכחי — התשתית לא באוויר
 
-Make sure `backend/.env` contains:
+הקוד תקין ושני ה־builds עוברים נקי, אבל שתי השכבות שמתחתיו נמחקו:
+
+| שכבה | מצב |
+| --- | --- |
+| קוד פרונט + שרת | תקין |
+| Firebase Auth | פעיל |
+| שרת ה־API (היה ב־DigitalOcean) | **נמחק** — `api-matara.ondigitalocean.app` לא קיים |
+| בסיס הנתונים (היה ב־Supabase) | **נמחק** — הפרויקט לא קיים, אין גיבוי |
+
+כדי להחזיר את המערכת לאוויר צריך פרויקט Supabase חדש ואחסון חדש לשרת. עד אז המערכת תעלה,
+ההתחברות תצליח, וכל המסכים יהיו ריקים.
+
+## מבנה הריפו
+
+- `frontend/` — אפליקציית React (Vite, TypeScript, Tailwind, base-ui/shadcn)
+- `backend/` — API של Express + Prisma
+- `docs/architecture.md` — הארכיטקטורה, מודל הנתונים והפערים הידועים
+
+## הרצה מקומית
+
+### 1. משתני סביבה
+
+`backend/.env` — ראה `backend/.env.example`:
 
 ```env
-DATABASE_URL="postgresql://matara:matara@localhost:5432/matara?schema=public"
+DATABASE_URL="postgresql://...@...:6543/postgres?pgbouncer=true&sslmode=require"
+DIRECT_URL="postgresql://...@...:5432/postgres?sslmode=require"
+ALLOWED_ORIGINS=http://localhost:5173
+MATARA_WEBHOOK_SECRET=...
+MATARA_OWNER_USER_ID=<Firebase UID שלך>
 ```
 
-### 3. Run database migrations
+`frontend/.env.local` — מפתחות Firebase של הצד לקוח, ו־`VITE_API_URL` ריק בפיתוח
+(Vite מפנה `/api` ל־`localhost:3000` דרך proxy).
 
-```powershell
-cd backend
-npm run db:migrate
+בנוסף השרת צריך credentials של Firebase Admin: או `backend/firebase-service-account.json`,
+או המשתנה `FIREBASE_SERVICE_ACCOUNT_JSON` עם ה־JSON המלא בשורה אחת (מומלץ בפרודקשן).
+
+### 2. מיגרציות
+
+```bash
+cd backend && npm run db:migrate
 ```
 
-### 4. Start the backend
+### 3. הרצה
 
-```powershell
-cd backend
-npm run dev
+```bash
+cd backend && npm run dev
 ```
 
-Backend runs on `http://localhost:3000`.
-
-### 5. Start the frontend
-
-```powershell
-cd frontend
-npm run dev
+```bash
+cd frontend && npm run dev
 ```
 
-Frontend runs on `http://localhost:5173`.
+השרת עולה על `http://localhost:3000`, הפרונט על `http://localhost:5173`.
 
-### 6. Optional: open Prisma Studio
+### לצפייה בנתונים
 
-```powershell
-cd backend
-npm run db:studio
+```bash
+cd backend && npm run db:studio
 ```
 
-## Important Note
+## פריסה
 
-If Docker or PostgreSQL is not running, the backend can start, but database-backed features will fail.
+הפרונט נפרס ב־Vercel (`frontend/vercel.json` מגדיר SPA rewrites).
+לשרת אין כרגע קובץ פריסה בריפו — צריך לכתוב אחד כשמחליטים על ספק אחסון.

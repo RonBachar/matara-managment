@@ -84,27 +84,3 @@ export async function deleteAgreementFile(id: string): Promise<void> {
   await txDone(tx)
 }
 
-/** Same IndexedDB storage as agreements; use for client work contracts. */
-export type ContractFileRef = {
-  contractFileId: string
-  contractFileName: string
-  contractFileType: string
-}
-
-export async function saveContractFile(file: File): Promise<ContractFileRef> {
-  const ref = await saveAgreementFile(file)
-  return {
-    contractFileId: ref.agreementFileId,
-    contractFileName: ref.agreementFileName,
-    contractFileType: ref.agreementFileType,
-  }
-}
-
-export function getContractFile(id: string) {
-  return getAgreementFile(id)
-}
-
-export function deleteContractFile(id: string) {
-  return deleteAgreementFile(id)
-}
-

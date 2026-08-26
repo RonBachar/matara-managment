@@ -1,98 +1,66 @@
 # Architecture
 
-## Repository structure
-Project root:
-- frontend/
-- backend/
-- docs/
+## שלוש שכבות
 
-## Frontend
-Frontend stack:
-- React
-- Vite
-- TypeScript
+```
+דפדפן (Vercel SPA)
+  React 19 · Vite · TypeScript · Tailwind 4 · base-ui/shadcn · RTL
+  Firebase Auth — כניסה עם Google, מחזיר ID token
+      │  fetch עם  Authorization: Bearer <idToken>
+      ▼
+Express API
+  requireAuth → firebase-admin.verifyIdToken → req.userId
+  ניתובים: projects · clients · client-services · leads · tasks · project-briefs
+  + webhook ציבורי:  POST /api/webhooks/leads  (אימות בכותרת X-Matara-Webhook-Secret)
+      │  Prisma 5
+      ▼
+PostgreSQL (Supabase — pooler למצב runtime, DIRECT_URL למיגרציות)
+```
 
-The frontend currently contains the real application UI and is gradually being migrated away from localStorage-based persistence.
+הפרונט לא ניגש לבסיס הנתונים ישירות. השרת הוא המקור היחיד לאמת.
 
-## Backend
-Backend stack:
-- Node.js
-- Express
-- TypeScript
+## מודל הנתונים
 
-The backend provides API routes and is now the source of truth for migrated modules.
+```
+Client ──1:N──> ClientService     שירות מתחדש (מחזור חיוב, מחיר, תאריך חידוש, תזכורת)
+   │
+   └──1:N──> Project ──1:1──> ProjectBrief    שאלון אפיון, נשמר כשדה JSON יחיד
 
-## Database
-Database:
-- PostgreSQL
+Lead      עומד בפני עצמו
+Task      עומדת בפני עצמה
+```
 
-Local development DB is run through Docker.
+מחיקות: `ClientService` ו־`ProjectBrief` נמחקים בקסקייד עם ההורה שלהם.
+`Project` **לא** נמחק בקסקייד עם `Client` — לקוח עם פרויקטים לא ניתן למחיקה, וזה מכוון.
 
-## ORM
-ORM:
-- Prisma
+## בעלות על נתונים
 
-Prisma schema defines the main models and Prisma Studio is used to inspect actual stored data.
+לכל רשומה ב־`Client`, `Project`, `ProjectBrief`, `Lead` ו־`Task` יש שדה `userId`
+שהוא ה־UID של חשבון הגוגל שהתחבר. כל שאילתה בשרת מסננת לפיו.
+`ClientService` יורש בעלות דרך ה־`Client` שלו.
 
-## Current data source status
+המערכת מיועדת למשתמש אחד אבל בנויה טכנית כרב־משתמשית.
 
-### Projects
-Projects are already database-backed.
-This includes:
-- list
-- create
-- edit
-- delete
-- status updates
-- financial fields
-- notes
+## כללי מוצר שנאכפים בקוד
 
-### Clients
-Clients are already database-backed.
-This includes:
-- list
-- create
-- edit
-- delete
+- לכל פרויקט יש **אפיון אחד לכל היותר** (`ProjectBrief.projectId` מסומן `@unique`).
+- האפיון נפתח מתוך עמוד הפרויקט. אם קיים — במצב עריכה, אם לא — במצב יצירה.
+- שורת אפיון נוצרת בבסיס הנתונים **רק בשמירה הראשונה**, לא בלחיצה על "צור אפיון".
+- שדות האפיון נשמרים כ־JSON בעמודת `data`, לא כעמודות נפרדות — כדי שאפשר יהיה לשנות
+  את השאלון בלי מיגרציה.
 
-Important rule:
-Clients do not have serviceType.
-Service/work type belongs to Projects only.
+## Webhook הלידים
 
-### ProjectBriefs
-ProjectBriefs are in transition / partially implemented.
-The intended architecture is:
+`POST /api/webhooks/leads` הוא הניתוב היחיד שלא דורש התחברות. הוא מאמת סוד קבוע
+בכותרת `X-Matara-Webhook-Secret`, ומשייך את הליד שנוצר ל־`MATARA_OWNER_USER_ID`.
+משמש טפסים באתרים חיצוניים.
 
-- Project is the main entity
-- ProjectBrief belongs to Project
-- one-to-one relationship
-- one brief per project
-- brief opened from Projects table
-- create brief row only on first save
+## פערים ידועים
 
-## Local development workflow
-To work locally, all 3 parts must be running:
-
-1. Docker / PostgreSQL
-2. backend
-3. frontend
-
-Typical commands:
-
-### Start DB
-docker compose up -d
-
-### Start backend
-cd backend
-npm run dev
-
-### Start frontend
-cd frontend
-npm run dev
-
-### Open Prisma Studio
-cd backend
-npm run db:studio
-
-## Important note
-If Docker/PostgreSQL is not running, backend/database features will not work correctly even if frontend and backend are both running.
+- **אין קישור בין ליד ללקוח.** המסלול `ליד → לקוח` הוא נוהל עבודה, לא יחס בסכימה.
+- **אין קישור בין משימה לפרויקט.** משימות עומדות בפני עצמן.
+- **קבצי הסכמים נשמרים ב־IndexedDB של הדפדפן בלבד.** בבסיס הנתונים נשמרים רק
+  מזהה, שם וסוג הקובץ — הקובץ עצמו לא זמין מדפדפן אחר.
+- **אין רשימת מורשים בהתחברות.** השרת מאמת שה־token תקין אבל לא בודק של מי הוא.
+- **אין הודעות שגיאה בממשק.** כשקריאה לשרת נכשלת, המסך פשוט נשאר ריק.
+- **אין `GET /api/projects/:id`.** הפרונט מושך את כל הפרויקטים ומסנן בזיכרון.

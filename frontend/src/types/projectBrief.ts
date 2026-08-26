@@ -1,11 +1,3 @@
-/** @deprecated Legacy preset — migration only; new questionnaire uses free-text מטרה */
-export const WEBSITE_GOAL_OPTIONS = [
-  "לידים",
-  "מכירות",
-  "חשיפה",
-  "הרשמה",
-] as const;
-
 /** סוג אתר — ברירות מחדל + ערכים נפוצים (ניתן גם "אחר") */
 export const WEBSITE_TYPE_OPTIONS = [
   "דף נחיתה",
