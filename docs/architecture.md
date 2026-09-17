@@ -1,66 +1,60 @@
 # Architecture
 
-## שלוש שכבות
+## חבילה אחת, שני ספקים + Firebase
 
 ```
-דפדפן (Vercel SPA)
-  React 19 · Vite · TypeScript · Tailwind 4 · base-ui/shadcn · RTL
-  Firebase Auth — כניסה עם Google, מחזיר ID token
-      │  fetch עם  Authorization: Bearer <idToken>
-      ▼
-Express API
-  requireAuth → firebase-admin.verifyIdToken → req.userId
-  ניתובים: projects · clients · client-services · leads · tasks · project-briefs
-  + webhook ציבורי:  POST /api/webhooks/leads  (אימות בכותרת X-Matara-Webhook-Secret)
-      │  Prisma 5
-      ▼
-PostgreSQL (Supabase — pooler למצב runtime, DIRECT_URL למיגרציות)
+דפדפן  ──►  Vercel
+             ├─ dist/          אפליקציית React (Vite)
+             └─ api/index.ts   Express (server/app.ts) כפונקציית serverless
+                    │  Prisma 5 דרך ה־pooler (pgbouncer)
+                    ▼
+             PostgreSQL @ Supabase
+
+Firebase Auth — כניסה עם Google, מנפיק ID token לצד לקוח;
+firebase-admin בשרת מאמת אותו.
 ```
 
-הפרונט לא ניגש לבסיס הנתונים ישירות. השרת הוא המקור היחיד לאמת.
+`vercel.json` מפנה `/api/(.*)` לפונקציה ואת כל השאר ל־`index.html`.
+Express מקבל את ה־URL המקורי, אז הניתובים כתובים עם הקידומת `/api`.
+אין CORS — הפרונט וה־API באותו origin גם בפיתוח (Vite proxy) וגם בפרודקשן.
+
+## כניסה — משתמש יחיד
+
+`server/middleware/auth.ts`:
+
+1. `Authorization: Bearer <idToken>` חייב להיות תקין מול Firebase → אחרת 401.
+2. ה־`uid` חייב להיות שווה ל־`MATARA_OWNER_USER_ID` → אחרת 403.
+
+בצד לקוח, `src/lib/api.ts` מנתק את המשתמש על 401/403 כדי שחשבון Google זר
+יחזור למסך הכניסה במקום לראות טבלאות ריקות.
 
 ## מודל הנתונים
 
 ```
-Client ──1:N──> ClientService     שירות מתחדש (מחזור חיוב, מחיר, תאריך חידוש, תזכורת)
+Client ──1:N──► ClientService   שירות מתחדש (מחזור חיוב, מחיר, תאריך חידוש, תזכורת)
    │
-   └──1:N──> Project ──1:1──> ProjectBrief    שאלון אפיון, נשמר כשדה JSON יחיד
+   └──1:N──► Project            סטטוס · סכום כולל · שולם · הערות
 
-Lead      עומד בפני עצמו
-Task      עומדת בפני עצמה
+Lead   עומד בפני עצמו (נכנס מהטופס באתר דרך ה־webhook, או ידנית)
 ```
 
-מחיקות: `ClientService` ו־`ProjectBrief` נמחקים בקסקייד עם ההורה שלהם.
-`Project` **לא** נמחק בקסקייד עם `Client` — לקוח עם פרויקטים לא ניתן למחיקה, וזה מכוון.
+- `ClientService` נמחק בקסקייד עם הלקוח. `Project` **לא** — לקוח עם פרויקטים לא ניתן למחיקה, בכוונה.
+- `Client.contractUrl` — קישור להסכם החתום (דרייב וכו'). הקובץ עצמו לא נשמר במערכת.
+- לכל רשומה יש `userId`. עם הנעילה לבעלים זה תמיד אותו ערך; נשאר כי הוא זול ומאפשר סינון עקבי.
 
-## בעלות על נתונים
+## Webhook
 
-לכל רשומה ב־`Client`, `Project`, `ProjectBrief`, `Lead` ו־`Task` יש שדה `userId`
-שהוא ה־UID של חשבון הגוגל שהתחבר. כל שאילתה בשרת מסננת לפיו.
-`ClientService` יורש בעלות דרך ה־`Client` שלו.
+`POST /api/webhooks/leads` — הניתוב היחיד בלי התחברות. מאמת `X-Matara-Webhook-Secret`
+ומשייך את הליד ל־`MATARA_OWNER_USER_ID`. מקבל שמות שדות נפוצים
+(`name`/`fullName`/`clientName`, `phone`/`tel`, `email`, `source`, `message`/`notes`)
+כדי ששינוי בטופס או ב־Make לא יפיל נתונים בשקט.
 
-המערכת מיועדת למשתמש אחד אבל בנויה טכנית כרב־משתמשית.
-
-## כללי מוצר שנאכפים בקוד
-
-- לכל פרויקט יש **אפיון אחד לכל היותר** (`ProjectBrief.projectId` מסומן `@unique`).
-- האפיון נפתח מתוך עמוד הפרויקט. אם קיים — במצב עריכה, אם לא — במצב יצירה.
-- שורת אפיון נוצרת בבסיס הנתונים **רק בשמירה הראשונה**, לא בלחיצה על "צור אפיון".
-- שדות האפיון נשמרים כ־JSON בעמודת `data`, לא כעמודות נפרדות — כדי שאפשר יהיה לשנות
-  את השאלון בלי מיגרציה.
-
-## Webhook הלידים
-
-`POST /api/webhooks/leads` הוא הניתוב היחיד שלא דורש התחברות. הוא מאמת סוד קבוע
-בכותרת `X-Matara-Webhook-Secret`, ומשייך את הליד שנוצר ל־`MATARA_OWNER_USER_ID`.
-משמש טפסים באתרים חיצוניים.
+אירועים נכנסים עתידיים (הצעת מחיר שנחתמה, טופס אפיון) יתווספו כניתובים נוספים
+תחת `/api/webhooks/` עם אותו מנגנון סוד.
 
 ## פערים ידועים
 
-- **אין קישור בין ליד ללקוח.** המסלול `ליד → לקוח` הוא נוהל עבודה, לא יחס בסכימה.
-- **אין קישור בין משימה לפרויקט.** משימות עומדות בפני עצמן.
-- **קבצי הסכמים נשמרים ב־IndexedDB של הדפדפן בלבד.** בבסיס הנתונים נשמרים רק
-  מזהה, שם וסוג הקובץ — הקובץ עצמו לא זמין מדפדפן אחר.
-- **אין רשימת מורשים בהתחברות.** השרת מאמת שה־token תקין אבל לא בודק של מי הוא.
-- **אין הודעות שגיאה בממשק.** כשקריאה לשרת נכשלת, המסך פשוט נשאר ריק.
-- **אין `GET /api/projects/:id`.** הפרונט מושך את כל הפרויקטים ומסנן בזיכרון.
+- אין קישור בסכימה בין ליד ללקוח שנוצר ממנו.
+- אין `GET /api/clients/:id` — עמוד הלקוח מושך את כל הלקוחות ומסנן.
+- הודעות שגיאה מהשרת מוצגות כמו שהן; אין retry.
+- ESLint: מודלי הטפסים מאפסים state ב־`useEffect` (react-hooks/set-state-in-effect).

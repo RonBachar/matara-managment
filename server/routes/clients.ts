@@ -1,0 +1,125 @@
+import { Router } from "express";
+import { prisma } from "../db/prisma";
+import type { AuthRequest } from "../middleware/auth";
+import { readNonEmptyString, readOptionalString } from "../utils/validation";
+
+export const clientsRouter = Router();
+
+clientsRouter.get("/", async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const clients = await prisma.client.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json(clients);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: message });
+  }
+});
+
+clientsRouter.post("/", async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    const clientName = readNonEmptyString(body.clientName);
+    if (!clientName) return res.status(400).json({ error: "clientName is required" });
+
+    const businessName = readOptionalString(body.businessName) ?? "";
+    const phone = readOptionalString(body.phone) ?? "";
+    const email = readOptionalString(body.email) ?? "";
+    const website = readOptionalString(body.website);
+    const notes = readOptionalString(body.notes);
+
+    const created = await prisma.client.create({
+      data: {
+        userId,
+        clientName,
+        businessName,
+        phone,
+        email,
+        website: website && website.length > 0 ? website : null,
+        notes: notes && notes.length > 0 ? notes : null,
+        contractUrl: readOptionalString(body.contractUrl) || null,
+      },
+    });
+
+    return res.status(201).json(created);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return res.status(500).json({ error: message });
+  }
+});
+
+clientsRouter.patch("/:id", async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ error: "Missing client id" });
+
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    const data: Record<string, unknown> = {};
+
+    const clientName = readOptionalString(body.clientName);
+    if (clientName !== undefined && clientName.length > 0) data.clientName = clientName;
+
+    const businessName = readOptionalString(body.businessName);
+    if (businessName !== undefined) data.businessName = businessName;
+
+    const phone = readOptionalString(body.phone);
+    if (phone !== undefined) data.phone = phone;
+
+    const email = readOptionalString(body.email);
+    if (email !== undefined) data.email = email;
+
+    const website = readOptionalString(body.website);
+    if (website !== undefined) data.website = website.length > 0 ? website : null;
+
+    const notes = readOptionalString(body.notes);
+    if (notes !== undefined) data.notes = notes.length > 0 ? notes : null;
+    if (body.notes === null) data.notes = null;
+
+    const contractUrl = readOptionalString(body.contractUrl);
+    if (contractUrl !== undefined) data.contractUrl = contractUrl.length > 0 ? contractUrl : null;
+    if (body.contractUrl === null) data.contractUrl = null;
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Client not found" });
+
+    const updated = await prisma.client.update({ where: { id }, data });
+    return res.json(updated);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+    return res.status(500).json({ error: message });
+  }
+});
+
+clientsRouter.delete("/:id", async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const id = String(req.params.id ?? "").trim();
+    if (!id) return res.status(400).json({ error: "Missing client id" });
+
+    const existing = await prisma.client.findFirst({ where: { id, userId } });
+    if (!existing) return res.status(404).json({ error: "Client not found" });
+
+    await prisma.client.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+    return res.status(500).json({ error: message });
+  }
+});

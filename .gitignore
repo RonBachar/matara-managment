@@ -1,24 +1,20 @@
-# Repo-wide ignores
+# Dependencies & build output
+node_modules/
+dist/
+.vercel/
 
-# Local backups / exports (may contain real data)
+# Environment & secrets — never commit
+.env
+.env.*
+firebase-service-account.json
+
+# Local data exports
 backup/
 
-# Environment variables (never commit these)
-.env
-.env.local
-.env.production
-.env*.local
-backend/.env
-frontend/.env.local
-frontend/.env.production
-firebase-service-account.json
-backend/firebase-service-account.json
-
-# Build outputs
-backend/dist/
-frontend/dist/
-
-# Dependencies
-node_modules/
-**/node_modules/
-
+# Logs / editor
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.env.example

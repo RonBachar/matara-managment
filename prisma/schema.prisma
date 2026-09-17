@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Variable names match what the Vercel↔Neon integration injects automatically.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  clientName   String
+  businessName String  @default("")
+  phone        String  @default("")
+  email        String  @default("")
+  website      String?
+  notes        String? @db.Text
+
+  /// Link to the signed contract (Drive, Dropbox, …). The file itself lives there.
+  contractUrl String?
+
+  services ClientService[]
+  projects Project[]
+
+  @@index([userId])
+  @@index([clientName])
+}
+
+model ClientService {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  serviceName        String
+  billingCycle       String
+  renewalPrice       Decimal?  @db.Decimal(14, 2)
+  renewalDate        DateTime?
+  reminderDaysBefore Int?
+  notes              String?   @db.Text
+
+  @@index([clientId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  projectName String
+  status      String  @default("התחיל")
+  totalAmount Decimal @default(0) @db.Decimal(14, 2)
+  paidAmount  Decimal @default(0) @db.Decimal(14, 2)
+  notes       String? @db.Text
+
+  @@index([userId])
+  @@index([clientId])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  clientName String
+  phone      String  @default("")
+  email      String?
+  leadSource String  @default("")
+  status     String  @default("חדש")
+  notes      String? @db.Text
+
+  @@index([userId])
+}
