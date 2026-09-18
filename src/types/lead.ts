@@ -17,7 +17,11 @@ export type Lead = {
   /** Optional — may be empty when unknown. */
   email?: string;
   leadSource: string;
+  /** Which service they asked about, when the form captured it. */
+  serviceType?: string;
   status: LeadStatus;
   notes?: string;
   createdAt?: string;
+  /** How many times this person has submitted a form. 1 unless they came back. */
+  submissionCount?: number;
 };

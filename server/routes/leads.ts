@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../db/prisma";
 import type { AuthRequest } from "../middleware/auth";
 import { readNonEmptyString, readOptionalString } from "../utils/validation";
+import { emailKeyOf, phoneKeyOf } from "../utils/leadMatching";
 
 export const leadsRouter = Router();
 
@@ -10,7 +11,7 @@ leadsRouter.get("/", async (req: AuthRequest, res) => {
     const userId = req.userId!;
     const leads = await prisma.lead.findMany({
       where: { userId },
-      orderBy: [{ createdAt: "asc" }],
+      orderBy: [{ createdAt: "desc" }],
     });
     return res.json(leads);
   } catch (err: unknown) {
@@ -30,6 +31,7 @@ leadsRouter.post("/", async (req: AuthRequest, res) => {
     const phone = readOptionalString(body.phone) ?? "";
     const email = readOptionalString(body.email);
     const leadSource = readOptionalString(body.leadSource) ?? "";
+    const serviceType = readOptionalString(body.serviceType) ?? "";
     const status = readOptionalString(body.status) ?? "חדש";
     const notes = readOptionalString(body.notes);
 
@@ -40,8 +42,12 @@ leadsRouter.post("/", async (req: AuthRequest, res) => {
         phone,
         email: email && email.length > 0 ? email : null,
         leadSource,
+        serviceType,
         status: status.length > 0 ? status : "חדש",
         notes: notes && notes.length > 0 ? notes : null,
+        // Set here too, so a later webhook recognises a lead typed in by hand.
+        phoneKey: phoneKeyOf(phone),
+        emailKey: emailKeyOf(email),
       },
     });
 
@@ -65,14 +71,26 @@ leadsRouter.patch("/:id", async (req: AuthRequest, res) => {
     if (clientName !== undefined && clientName.length > 0) data.clientName = clientName;
 
     const phone = readOptionalString(body.phone);
-    if (phone !== undefined) data.phone = phone;
+    if (phone !== undefined) {
+      data.phone = phone;
+      data.phoneKey = phoneKeyOf(phone);
+    }
 
     const email = readOptionalString(body.email);
-    if (email !== undefined) data.email = email.length > 0 ? email : null;
-    if (body.email === null) data.email = null;
+    if (email !== undefined) {
+      data.email = email.length > 0 ? email : null;
+      data.emailKey = emailKeyOf(email);
+    }
+    if (body.email === null) {
+      data.email = null;
+      data.emailKey = null;
+    }
 
     const leadSource = readOptionalString(body.leadSource);
     if (leadSource !== undefined) data.leadSource = leadSource;
+
+    const serviceType = readOptionalString(body.serviceType);
+    if (serviceType !== undefined) data.serviceType = serviceType;
 
     const status = readOptionalString(body.status);
     if (status !== undefined) data.status = status.length > 0 ? status : "חדש";
@@ -92,9 +110,6 @@ leadsRouter.patch("/:id", async (req: AuthRequest, res) => {
     return res.json(updated);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
-      return res.status(404).json({ error: "Lead not found" });
-    }
     return res.status(500).json({ error: message });
   }
 });
@@ -112,9 +127,6 @@ leadsRouter.delete("/:id", async (req: AuthRequest, res) => {
     return res.status(204).send();
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
-      return res.status(404).json({ error: "Lead not found" });
-    }
     return res.status(500).json({ error: message });
   }
 });

@@ -46,6 +46,7 @@ export function LeadsTable({
               <th className="px-3 py-2 font-medium">שם הלקוח</th>
               <th className="px-3 py-2 font-medium">טלפון</th>
               <th className="px-3 py-2 font-medium">אימייל</th>
+              <th className="px-3 py-2 font-medium">שירות מבוקש</th>
               <th className="px-3 py-2 font-medium">מקור הליד</th>
               <th className="px-3 py-2 font-medium">סטטוס</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
@@ -55,7 +56,7 @@ export function LeadsTable({
             {leads.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-3 py-6 text-center text-muted-foreground"
                 >
                   אין לידים. הוסף ליד חדש.
@@ -73,10 +74,27 @@ export function LeadsTable({
                         {formatLeadCreatedAt(lead.createdAt)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 align-middle">{lead.clientName}</td>
+                    <td className="px-3 py-2 align-middle">
+                      <div className="flex items-center gap-2">
+                        <span>{lead.clientName}</span>
+                        {(lead.submissionCount ?? 1) > 1 && (
+                          <span
+                            className="shrink-0 rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[0.7rem] font-medium text-violet-800"
+                            title="מספר הפניות שהתקבלו מאדם זה"
+                          >
+                            פנה {lead.submissionCount} פעמים
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 align-middle">{lead.phone}</td>
                     <td className="px-3 py-2 align-middle">
                       {lead.email?.trim() ? lead.email : "—"}
+                    </td>
+                    <td className="px-3 py-2 align-middle">
+                      <span className="text-xs text-muted-foreground">
+                        {lead.serviceType || "—"}
+                      </span>
                     </td>
                     <td className="px-3 py-2 align-middle">
                       <span className="text-xs text-muted-foreground">

@@ -56,14 +56,18 @@ export function normalizeLead(raw: unknown): Lead | null {
   const statusRaw = typeof l.status === "string" ? l.status.trim() : "";
   const status = STATUS_SET.has(statusRaw) ? (statusRaw as LeadStatus) : "חדש";
 
+  const submissionCount = Number(l.submissionCount);
+
   return {
     id,
     clientName,
     phone: String(l.phone ?? ""),
     email,
     leadSource: String(l.leadSource ?? ""),
+    serviceType: typeof l.serviceType === "string" && l.serviceType ? l.serviceType : undefined,
     status,
     notes: typeof l.notes === "string" ? l.notes : undefined,
     createdAt: typeof l.createdAt === "string" ? l.createdAt : undefined,
+    submissionCount: Number.isFinite(submissionCount) ? submissionCount : undefined,
   };
 }

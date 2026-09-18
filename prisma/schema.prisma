@@ -96,5 +96,18 @@ model Lead {
   status     String  @default("חדש")
   notes      String? @db.Text
 
+  /// Which service the visitor asked about ("אתר תדמית", …). Empty when unknown.
+  serviceType String @default("")
+
+  /// Last 9 phone digits, used to recognise a repeat enquiry from the same
+  /// person regardless of how the number was written (05…, 972…, spaces).
+  phoneKey String?
+  /// Lowercased email, same purpose as phoneKey when there is no phone.
+  emailKey String?
+  /// How many times this person has submitted a form. 1 on first contact.
+  submissionCount Int @default(1)
+
   @@index([userId])
+  @@index([userId, phoneKey])
+  @@index([userId, emailKey])
 }

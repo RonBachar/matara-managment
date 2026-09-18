@@ -38,6 +38,7 @@ type FormState = {
   phone: string;
   email: string;
   leadSource: string;
+  serviceType: string;
   status: string;
   notes: string;
 };
@@ -47,6 +48,7 @@ const emptyForm: FormState = {
   phone: "",
   email: "",
   leadSource: "",
+  serviceType: "",
   status: "חדש",
   notes: "",
 };
@@ -69,6 +71,7 @@ export function LeadFormModal({
         phone: initialLead.phone,
         email: initialLead.email ?? "",
         leadSource: initialLead.leadSource,
+        serviceType: initialLead.serviceType ?? "",
         status: initialLead.status,
         notes: initialLead.notes ?? "",
       });
@@ -92,6 +95,7 @@ export function LeadFormModal({
         phone: form.phone.trim(),
         email: emailTrim.length > 0 ? emailTrim : undefined,
         leadSource: form.leadSource.trim(),
+        serviceType: form.serviceType.trim() || undefined,
         status: form.status as Lead["status"],
         notes: (form.notes ?? "").trim() || undefined,
       };
@@ -160,6 +164,13 @@ export function LeadFormModal({
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+            <Field label="שירות מבוקש">
+              <Input
+                value={form.serviceType}
+                onChange={(e) => handleChange("serviceType", e.target.value)}
+                placeholder="אתר תדמית, חנות..."
+              />
             </Field>
             <Field label="סטטוס">
               <Select
