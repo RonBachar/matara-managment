@@ -1,8 +1,18 @@
 import type { ClientServiceWithClient } from "@/types/clientService";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
+import type { Task } from "@/types/task";
 
 const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>(["הושלם"]);
+
+export function getOpenTasksCount(tasks: Task[]): number {
+  return tasks.filter((task) => task.status !== "הושלם").length;
+}
+
+/** Tasks worth surfacing on the dashboard: not done and not parked. */
+export function getActiveTasks(tasks: Task[]): Task[] {
+  return tasks.filter((task) => task.status === "לביצוע" || task.status === "בתהליך");
+}
 
 export type UpcomingRenewal = {
   clientName: string;

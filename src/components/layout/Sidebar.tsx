@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
   BriefcaseBusiness,
+  KanbanSquare,
   Users,
   UserPlus,
   LogOut,
@@ -19,6 +20,7 @@ const pathToIcon: Record<
   "/projects": BriefcaseBusiness,
   "/clients": Users,
   "/leads": UserPlus,
+  "/tasks": KanbanSquare,
 };
 
 const SIDEBAR_WIDTH_CLASS = "w-64";

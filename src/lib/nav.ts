@@ -8,6 +8,7 @@ export const navItems: NavItem[] = [
   { path: '/clients', label: 'לקוחות' },
   { path: '/projects', label: 'פרויקטים' },
   { path: '/leads', label: 'לידים' },
+  { path: '/tasks', label: 'לוח משימות' },
 ]
 
 export function getRoutePageTitle(pathname: string): string {

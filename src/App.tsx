@@ -11,6 +11,7 @@ import { Projects } from "@/pages/Projects";
 import { Clients } from "@/pages/Clients";
 import { ClientDetails } from "@/pages/ClientDetails";
 import { Leads } from "@/pages/Leads";
+import { Tasks } from "@/pages/Tasks";
 import { Login } from "@/pages/Login";
 import { NotFound } from "@/pages/NotFound";
 
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: "clients/:id", element: <ClientDetails /> },
       { path: "projects", element: <Projects /> },
       { path: "leads", element: <Leads /> },
+      { path: "tasks", element: <Tasks /> },
       { path: "*", element: <NotFound /> },
     ],
   },
