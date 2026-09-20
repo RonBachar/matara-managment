@@ -13,7 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// The first three are what the website's webhook sends, so a lead that arrived
+// on its own keeps its source when it is opened for editing.
 const LEAD_SOURCE_OPTIONS = [
+  "טופס יצירת קשר",
+  "דף נחיתה",
+  "מחשבון מחירים",
   "פנייה מהאתר",
   "גוגל Ads",
   "פייסבוק",

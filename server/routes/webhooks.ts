@@ -23,6 +23,25 @@ function pick(body: Record<string, unknown>, keys: string[]): string | undefined
   return undefined;
 }
 
+/**
+ * The website says which form the lead came from — "contact", "landing" or
+ * "calculator" — and the leads table shows that word as-is, so translate it
+ * to the Hebrew the rest of the UI uses. An unknown value is kept verbatim
+ * rather than flattened to "אתר": a new form should show up as itself, not
+ * disappear into the same label as everything else.
+ */
+const SOURCE_LABELS: Record<string, string> = {
+  contact: "טופס יצירת קשר",
+  landing: "דף נחיתה",
+  calculator: "מחשבון מחירים",
+  quote: "הצעת מחיר",
+};
+
+function sourceLabel(raw: string | undefined): string {
+  if (!raw) return "אתר";
+  return SOURCE_LABELS[raw] ?? raw;
+}
+
 function readWebhookSecret(req: { headers: Record<string, unknown> }): string | undefined {
   const header = req.headers["x-matara-webhook-secret"];
   if (typeof header === "string") return header;
@@ -90,7 +109,7 @@ webhooksRouter.post("/leads", async (req, res) => {
     ).slice(0, MAX_CLIENT_NAME_LENGTH);
     const phone = pick(body, ["phone", "tel", "telephone", "mobile"]) ?? "";
     const email = pick(body, ["email", "mail"]);
-    const leadSource = pick(body, ["leadSource", "source", "utm_source"]) ?? "אתר";
+    const leadSource = sourceLabel(pick(body, ["leadSource", "source", "utm_source"]));
     const serviceType = pick(body, ["serviceType", "service_type", "service"]) ?? "";
     const notes = pick(body, ["notes", "message", "msg", "text", "comments"]);
 
