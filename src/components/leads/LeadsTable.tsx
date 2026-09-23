@@ -1,6 +1,7 @@
 import type { Lead } from "@/types/lead";
 import { LEAD_STATUS_OPTIONS } from "@/types/lead";
-import { Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatLeadCreatedAt, leadStatusPillClass } from "@/lib/leads";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,8 @@ type LeadsTableProps = {
   onToggleSelect: (leadId: string) => void;
   onToggleSelectAll: () => void;
   onDeleteSelected: () => void;
+  onConvert: (lead: Lead) => void;
+  convertingId?: string;
 };
 
 const CHECKBOX_CLASS = "size-4 cursor-pointer accent-[#7C3AED] disabled:cursor-not-allowed";
@@ -29,6 +32,8 @@ export function LeadsTable({
   onToggleSelect,
   onToggleSelectAll,
   onDeleteSelected,
+  onConvert,
+  convertingId,
 }: LeadsTableProps) {
   const selected = new Set(selectedIds);
   const allSelected = leads.length > 0 && selectedIds.length === leads.length;
@@ -176,6 +181,27 @@ export function LeadsTable({
                     </td>
                     <td className="px-3 py-2 align-middle text-center">
                       <div className="flex flex-wrap items-center justify-center gap-2">
+                        {lead.convertedClientId ? (
+                          <Link
+                            to={`/clients/${lead.convertedClientId}`}
+                            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 text-xs font-medium text-emerald-800 transition-colors hover:bg-emerald-100"
+                          >
+                            לקוח
+                          </Link>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 border-emerald-300 text-xs text-emerald-800 hover:bg-emerald-50"
+                            onClick={() => onConvert(lead)}
+                            disabled={convertingId === lead.id}
+                            aria-label="הפוך ללקוח"
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            {convertingId === lead.id ? "ממיר..." : "הפוך ללקוח"}
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="secondary"

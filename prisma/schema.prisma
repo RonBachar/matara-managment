@@ -16,38 +16,33 @@ model Client {
   userId    String
 
   clientName   String
+  /// Shown on the client's own page, not in the list.
   businessName String  @default("")
   phone        String  @default("")
   email        String  @default("")
   website      String?
   notes        String? @db.Text
 
-  /// Link to the signed contract (Drive, Dropbox, …). The file itself lives there.
+  /// Carried over from the lead this client was converted from, so the list
+  /// can still say what they asked for and which page brought them in.
+  serviceType String @default("")
+  leadSource  String @default("")
+
+  /// The recurring package: hosting, an Elementor licence, or both. One per
+  /// client, with a single renewal date — see PACKAGE_TYPE_OPTIONS.
+  packageType        String?
+  renewalPrice       Decimal?  @db.Decimal(14, 2)
+  renewalDate        DateTime?
+  reminderDaysBefore Int?
+
+  /// Signed work agreement. A link today, uploaded or produced by the
+  /// quote system later; either way it is one address.
   contractUrl String?
 
-  services ClientService[]
   projects Project[]
 
   @@index([userId])
   @@index([clientName])
-}
-
-model ClientService {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  clientId String
-  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  serviceName        String
-  billingCycle       String
-  renewalPrice       Decimal?  @db.Decimal(14, 2)
-  renewalDate        DateTime?
-  reminderDaysBefore Int?
-  notes              String?   @db.Text
-
-  @@index([clientId])
 }
 
 model Project {
@@ -106,6 +101,11 @@ model Lead {
   emailKey String?
   /// How many times this person has submitted a form. 1 on first contact.
   submissionCount Int @default(1)
+
+  /// Set once the lead is turned into a client. The lead is kept either way,
+  /// so a client can always be traced back to where they came from.
+  convertedClientId String?
+  convertedAt       DateTime?
 
   @@index([userId])
   @@index([userId, phoneKey])

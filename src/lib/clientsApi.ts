@@ -1,41 +1,37 @@
-import type { Client } from "@/types/client";
+import type { Client, ClientPayload } from "@/types/client";
 import { api } from "@/lib/api";
 
-export type ClientPayload = {
-  clientName: string;
-  businessName: string;
-  phone: string;
-  email: string;
-  website?: string | null;
-  notes?: string | null;
-  contractUrl?: string | null;
-};
+type ApiClient = Record<string, unknown>;
 
-type ApiClient = {
-  id: string;
-  createdAt?: string;
-  updatedAt?: string;
-  clientName: string;
-  businessName?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  website?: string | null;
-  notes?: string | null;
-  contractUrl?: string | null;
-};
+function str(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Prisma Decimal arrives as a string; anything unusable becomes null. */
+function numOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 function clientFromApi(row: ApiClient): Client {
   return {
-    id: row.id,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    clientName: row.clientName ?? "",
-    businessName: row.businessName ?? "",
-    phone: row.phone ?? "",
-    email: row.email ?? "",
-    website: row.website ?? undefined,
-    notes: row.notes ?? undefined,
-    contractUrl: row.contractUrl ?? undefined,
+    id: str(row.id),
+    createdAt: str(row.createdAt) || undefined,
+    updatedAt: str(row.updatedAt) || undefined,
+    clientName: str(row.clientName),
+    businessName: str(row.businessName),
+    phone: str(row.phone),
+    email: str(row.email),
+    serviceType: str(row.serviceType),
+    leadSource: str(row.leadSource),
+    website: str(row.website) || undefined,
+    notes: str(row.notes) || undefined,
+    contractUrl: str(row.contractUrl) || undefined,
+    packageType: str(row.packageType) || undefined,
+    renewalPrice: numOrNull(row.renewalPrice),
+    renewalDate: str(row.renewalDate) || null,
+    reminderDaysBefore: numOrNull(row.reminderDaysBefore),
   };
 }
 
@@ -46,7 +42,7 @@ export async function apiGetClients(): Promise<Client[]> {
   return rows.map(clientFromApi);
 }
 
-export async function apiCreateClient(input: ClientPayload): Promise<Client> {
+export async function apiCreateClient(input: Partial<ClientPayload>): Promise<Client> {
   return clientFromApi(await api.post<ApiClient>(BASE, input));
 }
 
@@ -56,4 +52,10 @@ export async function apiUpdateClient(id: string, patch: Partial<ClientPayload>)
 
 export function apiDeleteClient(id: string): Promise<void> {
   return api.delete(`${BASE}/${encodeURIComponent(id)}`);
+}
+
+/** Turns a lead into a client and returns the new client. */
+export async function apiConvertLead(leadId: string): Promise<Client> {
+  const row = await api.post<ApiClient>(`/api/leads/${encodeURIComponent(leadId)}/convert`, {});
+  return clientFromApi(row);
 }

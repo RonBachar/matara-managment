@@ -1,4 +1,4 @@
-import type { ClientServiceWithClient } from "@/types/clientService";
+import type { Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
@@ -15,8 +15,9 @@ export function getActiveTasks(tasks: Task[]): Task[] {
 }
 
 export type UpcomingRenewal = {
+  clientId: string;
   clientName: string;
-  serviceName: string;
+  packageType: string;
   renewalPrice: number | null;
   renewalDate: string;
   daysLeft: number;
@@ -37,19 +38,16 @@ export function getOpenLeadsCount(leads: Lead[]): number {
   return leads.filter((lead) => lead.status !== "לא מעוניין").length;
 }
 
-export function getUpcomingRenewals(
-  services: ClientServiceWithClient[],
-  windowDays = 30,
-): UpcomingRenewal[] {
+export function getUpcomingRenewals(clients: Client[], windowDays = 30): UpcomingRenewal[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayInMs = 24 * 60 * 60 * 1000;
 
-  return services
-    .map((service) => {
-      if (!service.renewalDate) return null;
+  return clients
+    .map((client) => {
+      if (!client.renewalDate) return null;
 
-      const renewalDate = new Date(service.renewalDate);
+      const renewalDate = new Date(client.renewalDate);
       if (Number.isNaN(renewalDate.getTime())) return null;
 
       const renewalDay = new Date(
@@ -59,28 +57,21 @@ export function getUpcomingRenewals(
       );
       const daysLeft = Math.ceil((renewalDay.getTime() - today.getTime()) / dayInMs);
 
-      const clientName =
-        service.client?.businessName ||
-        service.client?.clientName ||
-        "—";
-
       return {
-        clientName,
-        serviceName: service.serviceName,
-        renewalPrice: service.renewalPrice,
-        renewalDate: service.renewalDate,
+        clientId: client.id,
+        clientName: client.businessName || client.clientName,
+        packageType: client.packageType ?? "—",
+        renewalPrice: client.renewalPrice ?? null,
+        renewalDate: client.renewalDate,
         daysLeft,
       };
     })
-    .filter((entry): entry is UpcomingRenewal => {
-      if (entry == null) return false;
-      return entry.daysLeft >= 0 && entry.daysLeft <= windowDays;
-    })
+    .filter((entry): entry is UpcomingRenewal => entry != null && entry.daysLeft >= 0 && entry.daysLeft <= windowDays)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
-export function getUpcomingRenewalsTotal(services: ClientServiceWithClient[], windowDays = 30): number {
-  return getUpcomingRenewals(services, windowDays).reduce(
+export function getUpcomingRenewalsTotal(clients: Client[], windowDays = 30): number {
+  return getUpcomingRenewals(clients, windowDays).reduce(
     (sum, entry) => sum + (entry.renewalPrice ?? 0),
     0,
   );

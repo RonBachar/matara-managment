@@ -69,5 +69,7 @@ export function normalizeLead(raw: unknown): Lead | null {
     notes: typeof l.notes === "string" ? l.notes : undefined,
     createdAt: typeof l.createdAt === "string" ? l.createdAt : undefined,
     submissionCount: Number.isFinite(submissionCount) ? submissionCount : undefined,
+    convertedClientId:
+      typeof l.convertedClientId === "string" && l.convertedClientId ? l.convertedClientId : undefined,
   };
 }

@@ -24,4 +24,6 @@ export type Lead = {
   createdAt?: string;
   /** How many times this person has submitted a form. 1 unless they came back. */
   submissionCount?: number;
+  /** Set once the lead was turned into a client. */
+  convertedClientId?: string;
 };

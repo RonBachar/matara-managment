@@ -5,9 +5,13 @@ import { LeadsTable } from "@/components/leads/LeadsTable";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { DeleteLeadDialog } from "@/components/leads/DeleteLeadDialog";
 import { createLead, deleteLead, fetchLeads, updateLead } from "@/lib/leadsApi";
+import { apiConvertLead } from "@/lib/clientsApi";
+import { useNavigate } from "react-router-dom";
 
 export function Leads() {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [convertingId, setConvertingId] = useState<string | undefined>();
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeLead, setActiveLead] = useState<Lead | undefined>();
@@ -104,6 +108,23 @@ export function Leads() {
     setPendingDelete([]);
   }
 
+  /** Creates the client, stamps the lead, then opens the new client's page. */
+  async function handleConvert(lead: Lead) {
+    setConvertingId(lead.id);
+    setError(null);
+    try {
+      const client = await apiConvertLead(lead.id);
+      setLeads((prev) =>
+        prev.map((l) => (l.id === lead.id ? { ...l, convertedClientId: client.id } : l)),
+      );
+      navigate(`/clients/${client.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "המרת הליד ללקוח נכשלה.");
+    } finally {
+      setConvertingId(undefined);
+    }
+  }
+
   async function handleStatusChange(leadId: string, status: Lead["status"]) {
     try {
       const updated = await updateLead(leadId, { status });
@@ -131,6 +152,8 @@ export function Leads() {
         onToggleSelect={toggleSelect}
         onToggleSelectAll={toggleSelectAll}
         onDeleteSelected={requestDeleteSelected}
+        onConvert={handleConvert}
+        convertingId={convertingId}
       />
 
       <LeadFormModal

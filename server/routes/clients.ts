@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import type { AuthRequest } from "../middleware/auth";
-import { readNonEmptyString, readOptionalString } from "../utils/validation";
+import {
+  readNonEmptyString,
+  readOptionalString,
+  readOptionalNumber,
+  readOptionalDate,
+} from "../utils/validation";
 
 export const clientsRouter = Router();
 
@@ -27,9 +32,6 @@ clientsRouter.post("/", async (req: AuthRequest, res) => {
     const clientName = readNonEmptyString(body.clientName);
     if (!clientName) return res.status(400).json({ error: "clientName is required" });
 
-    const businessName = readOptionalString(body.businessName) ?? "";
-    const phone = readOptionalString(body.phone) ?? "";
-    const email = readOptionalString(body.email) ?? "";
     const website = readOptionalString(body.website);
     const notes = readOptionalString(body.notes);
 
@@ -37,12 +39,18 @@ clientsRouter.post("/", async (req: AuthRequest, res) => {
       data: {
         userId,
         clientName,
-        businessName,
-        phone,
-        email,
-        website: website && website.length > 0 ? website : null,
-        notes: notes && notes.length > 0 ? notes : null,
+        businessName: readOptionalString(body.businessName) ?? "",
+        phone: readOptionalString(body.phone) ?? "",
+        email: readOptionalString(body.email) ?? "",
+        serviceType: readOptionalString(body.serviceType) ?? "",
+        leadSource: readOptionalString(body.leadSource) ?? "",
+        website: website || null,
+        notes: notes || null,
         contractUrl: readOptionalString(body.contractUrl) || null,
+        packageType: readOptionalString(body.packageType) || null,
+        renewalPrice: readOptionalNumber(body.renewalPrice) ?? null,
+        renewalDate: readOptionalDate(body.renewalDate) ?? null,
+        reminderDaysBefore: readOptionalNumber(body.reminderDaysBefore) ?? null,
       },
     });
 
@@ -60,31 +68,37 @@ clientsRouter.patch("/:id", async (req: AuthRequest, res) => {
     if (!id) return res.status(400).json({ error: "Missing client id" });
 
     const body = (req.body ?? {}) as Record<string, unknown>;
-
     const data: Record<string, unknown> = {};
 
     const clientName = readOptionalString(body.clientName);
     if (clientName !== undefined && clientName.length > 0) data.clientName = clientName;
 
-    const businessName = readOptionalString(body.businessName);
-    if (businessName !== undefined) data.businessName = businessName;
+    // Plain text fields: an empty string is a real value, so "" clears them.
+    for (const field of ["businessName", "phone", "email", "serviceType", "leadSource"] as const) {
+      const value = readOptionalString(body[field]);
+      if (value !== undefined) data[field] = value;
+    }
 
-    const phone = readOptionalString(body.phone);
-    if (phone !== undefined) data.phone = phone;
+    // Nullable fields: an empty string means "remove it".
+    for (const field of ["website", "notes", "contractUrl", "packageType"] as const) {
+      const value = readOptionalString(body[field]);
+      if (value !== undefined) data[field] = value.length > 0 ? value : null;
+      if (body[field] === null) data[field] = null;
+    }
 
-    const email = readOptionalString(body.email);
-    if (email !== undefined) data.email = email;
+    for (const field of ["renewalPrice", "reminderDaysBefore"] as const) {
+      const value = readOptionalNumber(body[field]);
+      if (value !== undefined) data[field] = value;
+      if (body[field] === null) data[field] = null;
+    }
 
-    const website = readOptionalString(body.website);
-    if (website !== undefined) data.website = website.length > 0 ? website : null;
-
-    const notes = readOptionalString(body.notes);
-    if (notes !== undefined) data.notes = notes.length > 0 ? notes : null;
-    if (body.notes === null) data.notes = null;
-
-    const contractUrl = readOptionalString(body.contractUrl);
-    if (contractUrl !== undefined) data.contractUrl = contractUrl.length > 0 ? contractUrl : null;
-    if (body.contractUrl === null) data.contractUrl = null;
+    if (body.renewalDate !== undefined) {
+      const parsed = readOptionalDate(body.renewalDate);
+      if (body.renewalDate !== null && parsed === undefined) {
+        return res.status(400).json({ error: "renewalDate must be a valid date" });
+      }
+      data.renewalDate = parsed ?? null;
+    }
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ error: "No valid fields to update" });
@@ -97,9 +111,6 @@ clientsRouter.patch("/:id", async (req: AuthRequest, res) => {
     return res.json(updated);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
-      return res.status(404).json({ error: "Client not found" });
-    }
     return res.status(500).json({ error: message });
   }
 });
@@ -113,13 +124,17 @@ clientsRouter.delete("/:id", async (req: AuthRequest, res) => {
     const existing = await prisma.client.findFirst({ where: { id, userId } });
     if (!existing) return res.status(404).json({ error: "Client not found" });
 
+    const projects = await prisma.project.count({ where: { clientId: id } });
+    if (projects > 0) {
+      return res.status(409).json({
+        error: `ללקוח יש ${projects} פרויקטים. מחק אותם קודם.`,
+      });
+    }
+
     await prisma.client.delete({ where: { id } });
     return res.status(204).send();
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.toLowerCase().includes("record") && message.toLowerCase().includes("not")) {
-      return res.status(404).json({ error: "Client not found" });
-    }
     return res.status(500).json({ error: message });
   }
 });

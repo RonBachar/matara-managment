@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Client } from "@/types/client";
-import type { ClientServiceWithClient } from "@/types/clientService";
 import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
@@ -14,7 +13,6 @@ import {
   getUpcomingRenewalsTotal,
 } from "@/lib/dashboard";
 import { apiGetClients } from "@/lib/clientsApi";
-import { listAllServices } from "@/lib/clientServicesApi";
 import { fetchLeads } from "@/lib/leadsApi";
 import { apiGetProjects } from "@/lib/projectsApi";
 import { fetchTasks } from "@/lib/tasksApi";
@@ -24,10 +22,9 @@ type DashboardData = {
   clients: Client[];
   projects: Project[];
   tasks: Task[];
-  services: ClientServiceWithClient[];
 };
 
-const EMPTY_DATA: DashboardData = { leads: [], clients: [], projects: [], tasks: [], services: [] };
+const EMPTY_DATA: DashboardData = { leads: [], clients: [], projects: [], tasks: [] };
 
 function formatCurrency(value: number): string {
   return `₪${value.toLocaleString("he-IL")}`;
@@ -42,15 +39,14 @@ export function Dashboard() {
 
     const refresh = async () => {
       try {
-        const [leads, clients, projects, tasks, services] = await Promise.all([
+        const [leads, clients, projects, tasks] = await Promise.all([
           fetchLeads(),
           apiGetClients(),
           apiGetProjects(),
           fetchTasks(),
-          listAllServices(),
         ]);
         if (cancelled) return;
-        setData({ leads, clients, projects, tasks, services });
+        setData({ leads, clients, projects, tasks });
         setError(null);
       } catch (err) {
         if (cancelled) return;
@@ -78,8 +74,8 @@ export function Dashboard() {
       openLeads: getOpenLeadsCount(data.leads),
       openTasks: getOpenTasksCount(data.tasks),
       activeTasks: getActiveTasks(data.tasks),
-      upcomingRenewals: getUpcomingRenewals(data.services, 30),
-      renewalsTotal: getUpcomingRenewalsTotal(data.services, 30),
+      upcomingRenewals: getUpcomingRenewals(data.clients, 30),
+      renewalsTotal: getUpcomingRenewalsTotal(data.clients, 30),
     }),
     [data],
   );
@@ -126,7 +122,7 @@ export function Dashboard() {
 
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="text-sm font-semibold">חידושי שירותים ב־30 הימים הקרובים</div>
+          <div className="text-sm font-semibold">חידושי חבילות ב־30 הימים הקרובים</div>
           {summary.upcomingRenewals.length > 0 && (
             <div className="text-sm text-muted-foreground">
               סה״כ: {formatCurrency(summary.renewalsTotal)}
@@ -138,13 +134,13 @@ export function Dashboard() {
           <p className="mt-2 text-sm text-muted-foreground">אין חידושים קרובים.</p>
         ) : (
           <div className="mt-3 space-y-2">
-            {summary.upcomingRenewals.map(({ clientName, serviceName, renewalPrice, renewalDate, daysLeft }) => (
+            {summary.upcomingRenewals.map(({ clientId, clientName, packageType, renewalPrice, renewalDate, daysLeft }) => (
               <div
-                key={`${clientName}-${serviceName}-${renewalDate}`}
+                key={clientId}
                 className="grid gap-1 rounded-md border border-border/70 px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center md:gap-3"
               >
                 <div className="font-medium text-foreground">{clientName}</div>
-                <div className="text-muted-foreground">{serviceName}</div>
+                <div className="text-muted-foreground">{packageType}</div>
                 <div className="text-muted-foreground">
                   {renewalPrice == null ? "—" : formatCurrency(renewalPrice)}
                 </div>

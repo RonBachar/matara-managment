@@ -3,12 +3,12 @@ import type { Client } from "@/types/client";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
+import type { ClientPayload } from "@/types/client";
 import {
   apiCreateClient,
   apiDeleteClient,
   apiGetClients,
   apiUpdateClient,
-  type ClientPayload,
 } from "@/lib/clientsApi";
 
 export function Clients() {
@@ -49,7 +49,7 @@ export function Clients() {
     setFormOpen(true);
   }
 
-  async function handleFormSubmit(data: ClientPayload) {
+  async function handleFormSubmit(data: Partial<ClientPayload>) {
     if (formMode === "edit" && activeClient) {
       const updated = await apiUpdateClient(activeClient.id, data);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
