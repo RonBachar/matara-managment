@@ -137,7 +137,7 @@ export function QuoteForm({
           id="quote-url"
           dir="ltr"
           required
-          placeholder="https://matara-price-offers.netlify.app/quotes/..."
+          placeholder="https://offers.matara.studio/quotes/..."
           value={form.url}
           onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
         />
