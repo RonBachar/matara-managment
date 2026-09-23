@@ -3,10 +3,12 @@ import type { Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project } from "@/types/project";
 import type { Task } from "@/types/task";
+import type { Quote } from "@/types/quote";
 import {
   getActiveProjectsCount,
   getActiveTasks,
   getOpenLeadsCount,
+  getOpenQuotes,
   getOpenTasksCount,
   getTotalRemainingAmount,
   getUpcomingRenewals,
@@ -16,15 +18,17 @@ import { apiGetClients } from "@/lib/clientsApi";
 import { fetchLeads } from "@/lib/leadsApi";
 import { apiGetProjects } from "@/lib/projectsApi";
 import { fetchTasks } from "@/lib/tasksApi";
+import { apiGetQuotes } from "@/lib/quotesApi";
 
 type DashboardData = {
   leads: Lead[];
   clients: Client[];
   projects: Project[];
   tasks: Task[];
+  quotes: Quote[];
 };
 
-const EMPTY_DATA: DashboardData = { leads: [], clients: [], projects: [], tasks: [] };
+const EMPTY_DATA: DashboardData = { leads: [], clients: [], projects: [], tasks: [], quotes: [] };
 
 function formatCurrency(value: number): string {
   return `₪${value.toLocaleString("he-IL")}`;
@@ -39,14 +43,15 @@ export function Dashboard() {
 
     const refresh = async () => {
       try {
-        const [leads, clients, projects, tasks] = await Promise.all([
+        const [leads, clients, projects, tasks, quotes] = await Promise.all([
           fetchLeads(),
           apiGetClients(),
           apiGetProjects(),
           fetchTasks(),
+          apiGetQuotes(),
         ]);
         if (cancelled) return;
-        setData({ leads, clients, projects, tasks });
+        setData({ leads, clients, projects, tasks, quotes });
         setError(null);
       } catch (err) {
         if (cancelled) return;
@@ -72,6 +77,7 @@ export function Dashboard() {
       activeProjects: getActiveProjectsCount(data.projects),
       remainingToPay: getTotalRemainingAmount(data.projects),
       openLeads: getOpenLeadsCount(data.leads),
+      openQuotes: getOpenQuotes(data.quotes),
       openTasks: getOpenTasksCount(data.tasks),
       activeTasks: getActiveTasks(data.tasks),
       upcomingRenewals: getUpcomingRenewals(data.clients, 30),
@@ -93,10 +99,15 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <SummaryCard title="לקוחות" value={String(summary.totalClients)} />
         <SummaryCard title="פרויקטים פעילים" value={String(summary.activeProjects)} />
         <SummaryCard title="לידים פתוחים" value={String(summary.openLeads)} />
+        <SummaryCard
+          title="הצעות פתוחות"
+          value={String(summary.openQuotes.count)}
+          detail={formatCurrency(summary.openQuotes.total)}
+        />
         <SummaryCard title="משימות פתוחות" value={String(summary.openTasks)} />
         <SummaryCard title="נותר לגבייה" value={formatCurrency(summary.remainingToPay)} />
       </div>
@@ -159,11 +170,12 @@ export function Dashboard() {
   );
 }
 
-function SummaryCard({ title, value }: { title: string; value: string }) {
+function SummaryCard({ title, value, detail }: { title: string; value: string; detail?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-3">
       <div className="text-xs text-muted-foreground">{title}</div>
       <div className="mt-1 text-xl font-semibold text-foreground">{value}</div>
+      {detail && <div className="text-xs text-muted-foreground">{detail}</div>}
     </div>
   );
 }

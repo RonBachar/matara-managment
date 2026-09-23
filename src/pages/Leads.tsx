@@ -153,6 +153,7 @@ export function Leads() {
         onToggleSelectAll={toggleSelectAll}
         onDeleteSelected={requestDeleteSelected}
         onConvert={handleConvert}
+        onQuote={(lead) => navigate(`/quotes?lead=${encodeURIComponent(lead.id)}`)}
         convertingId={convertingId}
       />
 

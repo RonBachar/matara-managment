@@ -3,7 +3,6 @@ import type { Client } from "@/types/client";
 import { ClientsTable } from "@/components/clients/ClientsTable";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
 import { DeleteClientDialog } from "@/components/clients/DeleteClientDialog";
-import { UnlinkedQuotes } from "@/components/quotes/UnlinkedQuotes";
 import type { ClientPayload } from "@/types/client";
 import {
   apiCreateClient,
@@ -87,8 +86,6 @@ export function Clients() {
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
       />
-
-      <UnlinkedQuotes clients={clients} />
 
       <ClientFormModal
         open={formOpen}

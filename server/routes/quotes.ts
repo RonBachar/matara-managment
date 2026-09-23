@@ -20,6 +20,26 @@ async function resolveClientId(
   return client ? { ok: true, clientId: client.id } : { ok: false };
 }
 
+/** Same rules as resolveClientId, for the lead the quote was sent to. */
+async function resolveLeadId(
+  userId: string,
+  value: unknown,
+): Promise<{ ok: true; leadId: string | null | undefined } | { ok: false }> {
+  if (value === undefined) return { ok: true, leadId: undefined };
+  if (value === null) return { ok: true, leadId: null };
+  const id = readOptionalString(value);
+  if (id === undefined) return { ok: false };
+  if (id.length === 0) return { ok: true, leadId: null };
+  const lead = await prisma.lead.findFirst({ where: { id, userId }, select: { id: true } });
+  return lead ? { ok: true, leadId: lead.id } : { ok: false };
+}
+
+/** Who the quote belongs to, light enough for the quotes list. */
+const quoteInclude = {
+  lead: { select: { id: true, clientName: true, phone: true, email: true } },
+  client: { select: { id: true, clientName: true } },
+} as const;
+
 quotesRouter.get("/", async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!;
@@ -27,6 +47,7 @@ quotesRouter.get("/", async (req: AuthRequest, res) => {
     const quotes = await prisma.quote.findMany({
       where: clientId ? { userId, clientId } : { userId },
       orderBy: { sentAt: "desc" },
+      include: quoteInclude,
     });
     return res.json(quotes);
   } catch (err: unknown) {
@@ -52,6 +73,8 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
 
     const client = await resolveClientId(userId, body.clientId);
     if (!client.ok) return res.status(400).json({ error: "Client not found" });
+    const lead = await resolveLeadId(userId, body.leadId);
+    if (!lead.ok) return res.status(400).json({ error: "Lead not found" });
 
     const title = readOptionalString(body.title);
     const amount = body.amount === null ? null : readOptionalNumber(body.amount);
@@ -67,9 +90,11 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
         data: {
           url,
           ...(client.clientId !== undefined ? { clientId: client.clientId } : {}),
+          ...(lead.leadId !== undefined ? { leadId: lead.leadId } : {}),
           ...(title !== undefined && title.length > 0 ? { title } : {}),
           ...(amount !== undefined ? { amount } : {}),
         },
+        include: quoteInclude,
       });
       return res.status(200).json(updated);
     }
@@ -80,9 +105,11 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
         slug,
         url,
         clientId: client.clientId ?? null,
+        leadId: lead.leadId ?? null,
         title: title ?? "",
         amount: amount ?? null,
       },
+      include: quoteInclude,
     });
     return res.status(201).json(created);
   } catch (err: unknown) {
@@ -103,6 +130,10 @@ quotesRouter.patch("/:id", async (req: AuthRequest, res) => {
     const client = await resolveClientId(userId, body.clientId);
     if (!client.ok) return res.status(400).json({ error: "Client not found" });
     if (client.clientId !== undefined) data.clientId = client.clientId;
+
+    const lead = await resolveLeadId(userId, body.leadId);
+    if (!lead.ok) return res.status(400).json({ error: "Lead not found" });
+    if (lead.leadId !== undefined) data.leadId = lead.leadId;
 
     const title = readOptionalString(body.title);
     if (title !== undefined) data.title = title;
@@ -132,7 +163,7 @@ quotesRouter.patch("/:id", async (req: AuthRequest, res) => {
     const existing = await prisma.quote.findFirst({ where: { id, userId } });
     if (!existing) return res.status(404).json({ error: "Quote not found" });
 
-    const updated = await prisma.quote.update({ where: { id }, data });
+    const updated = await prisma.quote.update({ where: { id }, data, include: quoteInclude });
     return res.json(updated);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

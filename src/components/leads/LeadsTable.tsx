@@ -1,7 +1,7 @@
 import type { Lead } from "@/types/lead";
 import { LEAD_STATUS_OPTIONS } from "@/types/lead";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, UserPlus } from "lucide-react";
+import { FileSignature, Pencil, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatLeadCreatedAt, leadStatusPillClass } from "@/lib/leads";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,8 @@ type LeadsTableProps = {
   onToggleSelectAll: () => void;
   onDeleteSelected: () => void;
   onConvert: (lead: Lead) => void;
+  /** Opens the new-quote form with this lead chosen. */
+  onQuote: (lead: Lead) => void;
   convertingId?: string;
 };
 
@@ -33,6 +35,7 @@ export function LeadsTable({
   onToggleSelectAll,
   onDeleteSelected,
   onConvert,
+  onQuote,
   convertingId,
 }: LeadsTableProps) {
   const selected = new Set(selectedIds);
@@ -202,6 +205,17 @@ export function LeadsTable({
                             {convertingId === lead.id ? "ממיר..." : "הפוך ללקוח"}
                           </Button>
                         )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => onQuote(lead)}
+                          aria-label="הצעת מחיר לליד"
+                        >
+                          <FileSignature className="h-3.5 w-3.5" />
+                          הצעת מחיר
+                        </Button>
                         <Button
                           type="button"
                           variant="secondary"

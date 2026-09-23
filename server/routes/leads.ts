@@ -3,6 +3,7 @@ import { prisma } from "../db/prisma";
 import type { AuthRequest } from "../middleware/auth";
 import { readNonEmptyString, readOptionalString } from "../utils/validation";
 import { emailKeyOf, phoneKeyOf } from "../utils/leadMatching";
+import { convertLeadToClient } from "../services/leadConversion";
 
 export const leadsRouter = Router();
 
@@ -115,12 +116,8 @@ leadsRouter.patch("/:id", async (req: AuthRequest, res) => {
 });
 
 /**
- * Turn a lead into a client.
- *
- * The lead is kept and stamped rather than deleted, so a client can always be
- * traced back to the enquiry that produced them, and so the leads list still
- * reflects what actually came in. Converting twice is refused rather than
- * silently creating a second client.
+ * Turn a lead into a client (see convertLeadToClient). Converting twice is
+ * refused rather than silently creating a second client.
  */
 leadsRouter.post("/:id/convert", async (req: AuthRequest, res) => {
   try {
@@ -128,46 +125,16 @@ leadsRouter.post("/:id/convert", async (req: AuthRequest, res) => {
     const id = String(req.params.id ?? "").trim();
     if (!id) return res.status(400).json({ error: "Missing lead id" });
 
-    const lead = await prisma.lead.findFirst({ where: { id, userId } });
-    if (!lead) return res.status(404).json({ error: "Lead not found" });
-
-    if (lead.convertedClientId) {
-      const existing = await prisma.client.findFirst({
-        where: { id: lead.convertedClientId, userId },
-      });
-      // The client may have been deleted since; only block while it is there.
-      if (existing) {
-        return res.status(409).json({ error: "הליד כבר הומר ללקוח", client: existing });
-      }
-    }
-
     const body = (req.body ?? {}) as Record<string, unknown>;
-
-    // One transaction: a client without its stamped lead, or the other way
-    // round, would leave the two lists disagreeing about what happened.
-    const client = await prisma.$transaction(async (tx) => {
-      const created = await tx.client.create({
-        data: {
-          userId,
-          clientName: lead.clientName,
-          businessName: readOptionalString(body.businessName) ?? "",
-          phone: lead.phone,
-          email: lead.email ?? "",
-          serviceType: lead.serviceType,
-          leadSource: lead.leadSource,
-          notes: lead.notes,
-        },
-      });
-
-      await tx.lead.update({
-        where: { id },
-        data: { convertedClientId: created.id, convertedAt: new Date() },
-      });
-
-      return created;
+    const result = await convertLeadToClient(userId, id, {
+      businessName: readOptionalString(body.businessName),
     });
 
-    return res.status(201).json(client);
+    if (result.status === "not_found") return res.status(404).json({ error: "Lead not found" });
+    if (result.status === "already_converted") {
+      return res.status(409).json({ error: "הליד כבר הומר ללקוח", client: result.client });
+    }
+    return res.status(201).json(result.client);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return res.status(500).json({ error: message });

@@ -2,6 +2,8 @@ import type { Client } from "@/types/client";
 import type { Lead } from "@/types/lead";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { Task } from "@/types/task";
+import type { Quote } from "@/types/quote";
+import { QUOTE_STATUS_SENT } from "@/types/quote";
 
 const FINAL_PROJECT_STATUSES = new Set<ProjectStatus>(["הושלם"]);
 
@@ -36,6 +38,15 @@ export function getTotalRemainingAmount(projects: Project[]): number {
 
 export function getOpenLeadsCount(leads: Lead[]): number {
   return leads.filter((lead) => lead.status !== "לא מעוניין").length;
+}
+
+/** Quotes sent and not yet signed, and what they add up to. */
+export function getOpenQuotes(quotes: Quote[]): { count: number; total: number } {
+  const open = quotes.filter((quote) => quote.status === QUOTE_STATUS_SENT);
+  return {
+    count: open.length,
+    total: open.reduce((sum, quote) => sum + (quote.amount ?? 0), 0),
+  };
 }
 
 export function getUpcomingRenewals(clients: Client[], windowDays = 30): UpcomingRenewal[] {

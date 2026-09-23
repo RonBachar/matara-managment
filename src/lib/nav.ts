@@ -5,9 +5,10 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { path: '/dashboard', label: 'דשבורד' },
+  { path: '/leads', label: 'לידים' },
+  { path: '/quotes', label: 'הצעות מחיר' },
   { path: '/clients', label: 'לקוחות' },
   { path: '/projects', label: 'פרויקטים' },
-  { path: '/leads', label: 'לידים' },
   { path: '/tasks', label: 'לוח משימות' },
 ]
 

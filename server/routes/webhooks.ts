@@ -1,5 +1,7 @@
 import { Router } from "express";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { convertLeadToClient } from "../services/leadConversion";
 import { readOptionalDate, readOptionalString } from "../utils/validation";
 import { QUOTE_SLUG_PATTERN, quoteSlugFromUrl } from "../utils/quoteSlug";
 import {
@@ -175,9 +177,11 @@ const SIGNED_QUOTE_STATUS = "נחתמה";
  *
  * The quote is found by its slug (the last segment of its URL) and marked
  * signed. When nobody registered the quote beforehand it is created unlinked,
- * so it still shows up under "הצעות ללא לקוח". An unlinked quote is linked to
- * the one client whose email matches the signer's, and that client's contract
- * link is filled with the signed copy if it was empty.
+ * so it still shows up on the quotes page. An unlinked quote is linked to the
+ * one client whose email matches the signer's, or failing that to the one lead
+ * whose email or phone matches. A quote that ends up with a lead and no client
+ * converts that lead into a client (the same conversion as the leads page),
+ * and the client's contract link is filled with the signed copy if it was empty.
  *
  * Idempotent: the price-offers site may retry, and a repeat of the same payload
  * writes nothing.
@@ -222,6 +226,7 @@ webhooksRouter.post("/quotes", async (req, res) => {
     const title = readOptionalString(body.quoteTitle) || undefined;
     const signerName = readOptionalString(body.signerName) || null;
     const signerEmail = readOptionalString(body.signerEmail) || null;
+    const signerPhone = readOptionalString(body.signerPhone) || null;
     const signatureUrl = readOptionalString(body.signatureUrl) || null;
     const signedCopyUrl = readOptionalString(body.signedCopyUrl) || null;
 
@@ -271,7 +276,7 @@ webhooksRouter.post("/quotes", async (req, res) => {
       }
     }
 
-    if (!quote.clientId && signerEmail) {
+    if (!quote.clientId && !quote.leadId && signerEmail) {
       const matches = await prisma.client.findMany({
         where: {
           userId: ownerUserId,
@@ -284,6 +289,44 @@ webhooksRouter.post("/quotes", async (req, res) => {
         quote = await prisma.quote.update({
           where: { id: quote.id },
           data: { clientId: matches[0].id },
+        });
+      }
+    }
+
+    // Nobody registered the quote against a lead or client: look for the one
+    // lead that sent the enquiry, by email or phone.
+    if (!quote.clientId && !quote.leadId) {
+      const emailKey = emailKeyOf(signerEmail);
+      const phoneKey = phoneKeyOf(signerPhone);
+      const or: Prisma.LeadWhereInput[] = [];
+      if (emailKey) {
+        or.push({ emailKey }, { email: { equals: emailKey, mode: "insensitive" } });
+      }
+      if (phoneKey) or.push({ phoneKey });
+      if (or.length > 0) {
+        const leads = await prisma.lead.findMany({
+          where: { userId: ownerUserId, OR: or },
+          select: { id: true },
+          take: 2,
+        });
+        if (leads.length === 1) {
+          quote = await prisma.quote.update({
+            where: { id: quote.id },
+            data: { leadId: leads[0].id },
+          });
+        }
+      }
+    }
+
+    // A signed quote turns its lead into a client. Converting reuses the
+    // lead's existing client when it was converted before, so a retry of the
+    // same payload never creates a second client.
+    if (!quote.clientId && quote.leadId) {
+      const conversion = await convertLeadToClient(ownerUserId, quote.leadId);
+      if (conversion.status !== "not_found") {
+        quote = await prisma.quote.update({
+          where: { id: quote.id },
+          data: { clientId: conversion.client.id },
         });
       }
     }

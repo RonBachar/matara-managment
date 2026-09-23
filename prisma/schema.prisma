@@ -108,6 +108,8 @@ model Lead {
   convertedClientId String?
   convertedAt       DateTime?
 
+  quotes Quote[]
+
   @@index([userId])
   @@index([userId, phoneKey])
   @@index([userId, emailKey])
@@ -123,6 +125,11 @@ model Quote {
 
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
   clientId String?
+
+  /// The lead the quote was sent to, before they became a client. Kept after
+  /// the lead is converted, so the quote can be traced back to the enquiry.
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  leadId String?
 
   /// Last path segment of the quote URL, e.g. "growaswinners". One quote page per slug.
   slug   String   @unique
@@ -142,4 +149,5 @@ model Quote {
 
   @@index([userId])
   @@index([clientId])
+  @@index([leadId])
 }

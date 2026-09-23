@@ -6,6 +6,7 @@ import {
   KanbanSquare,
   Users,
   UserPlus,
+  FileSignature,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,7 @@ const pathToIcon: Record<
   "/projects": BriefcaseBusiness,
   "/clients": Users,
   "/leads": UserPlus,
+  "/quotes": FileSignature,
   "/tasks": KanbanSquare,
 };
 

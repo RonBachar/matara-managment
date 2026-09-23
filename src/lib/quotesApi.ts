@@ -14,12 +14,32 @@ function numOrNull(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function leadFromApi(value: unknown): Quote["lead"] {
+  if (!value || typeof value !== "object") return null;
+  const row = value as ApiQuote;
+  return {
+    id: str(row.id),
+    clientName: str(row.clientName),
+    phone: str(row.phone),
+    email: str(row.email) || null,
+  };
+}
+
+function clientFromApi(value: unknown): Quote["client"] {
+  if (!value || typeof value !== "object") return null;
+  const row = value as ApiQuote;
+  return { id: str(row.id), clientName: str(row.clientName) };
+}
+
 function quoteFromApi(row: ApiQuote): Quote {
   return {
     id: str(row.id),
     createdAt: str(row.createdAt) || undefined,
     updatedAt: str(row.updatedAt) || undefined,
     clientId: str(row.clientId) || null,
+    leadId: str(row.leadId) || null,
+    lead: leadFromApi(row.lead),
+    client: clientFromApi(row.client),
     slug: str(row.slug),
     title: str(row.title),
     url: str(row.url),
