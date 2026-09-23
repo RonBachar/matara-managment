@@ -3,6 +3,7 @@ import { projectsRouter } from "./routes/projects";
 import { clientsRouter } from "./routes/clients";
 import { leadsRouter } from "./routes/leads";
 import { tasksRouter } from "./routes/tasks";
+import { quotesRouter } from "./routes/quotes";
 import { webhooksRouter } from "./routes/webhooks";
 import { requireAuth } from "./middleware/auth";
 
@@ -22,3 +23,4 @@ app.use("/api/projects", requireAuth, projectsRouter);
 app.use("/api/clients", requireAuth, clientsRouter);
 app.use("/api/leads", requireAuth, leadsRouter);
 app.use("/api/tasks", requireAuth, tasksRouter);
+app.use("/api/quotes", requireAuth, quotesRouter);

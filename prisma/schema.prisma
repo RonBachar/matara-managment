@@ -40,6 +40,7 @@ model Client {
   contractUrl String?
 
   projects Project[]
+  quotes   Quote[]
 
   @@index([userId])
   @@index([clientName])
@@ -110,4 +111,35 @@ model Lead {
   @@index([userId])
   @@index([userId, phoneKey])
   @@index([userId, emailKey])
+}
+
+/// A price quote page on the price-offers site. Registered by hand from the
+/// client's page, or created by the signed-quote webhook when the client signs.
+model Quote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  clientId String?
+
+  /// Last path segment of the quote URL, e.g. "growaswinners". One quote page per slug.
+  slug   String   @unique
+  title  String   @default("")
+  url    String
+  amount Decimal? @db.Decimal(14, 2)
+
+  /// "נשלחה" | "נחתמה"
+  status   String    @default("נשלחה")
+  sentAt   DateTime  @default(now())
+  signedAt DateTime?
+
+  signerName    String?
+  signerEmail   String?
+  signatureUrl  String?
+  signedCopyUrl String?
+
+  @@index([userId])
+  @@index([clientId])
 }

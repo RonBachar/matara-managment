@@ -70,3 +70,12 @@ npm run db:studio
 
 `POST https://<domain>/api/webhooks/leads` עם כותרת `X-Matara-Webhook-Secret`.
 מקבל `name`/`clientName`, `phone`, `email`, `source`, `message`/`notes` (וכינויים נפוצים).
+
+## Webhook הצעות מחיר
+
+`POST https://<domain>/api/webhooks/quotes` עם אותה כותרת `X-Matara-Webhook-Secret`, נשלח מפרויקט
+price-offers כשלקוח חותם על הצעה. גוף JSON: `event` (חייב להיות `"quote.signed"`), `quoteSlug`
+(החלק האחרון בכתובת ההצעה, `^[a-z0-9-]+$`), `quoteUrl`, `quoteTitle`, `signerName`, `signerEmail`,
+`signedAt` (ISO), `signatureUrl`, `signedCopyUrl`, ואופציונלית `userAgent`, `ip`. ההצעה מסומנת "נחתמה"
+לפי ה־slug (ונוצרת אם לא נרשמה), משויכת ללקוח היחיד שהאימייל שלו תואם לחותם אם אין לה לקוח, וממלאת את
+קישור החוזה של הלקוח אם הוא ריק. קריאה חוזרת עם אותו גוף לא משנה דבר. מחזיר `{ ok, quoteId, clientId }`.

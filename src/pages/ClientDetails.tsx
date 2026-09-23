@@ -6,6 +6,7 @@ import { REMINDER_OPTIONS } from "@/types/client";
 import { Button } from "@/components/ui/button";
 import { apiGetClients, apiUpdateClient } from "@/lib/clientsApi";
 import { ClientFormModal } from "@/components/clients/ClientFormModal";
+import { ClientQuotes } from "@/components/quotes/ClientQuotes";
 
 type LocationState = { client?: Client };
 
@@ -180,6 +181,8 @@ export function ClientDetails() {
           </p>
         </div>
       </div>
+
+      <ClientQuotes clientId={client.id} />
 
       <ClientFormModal
         open={editOpen}

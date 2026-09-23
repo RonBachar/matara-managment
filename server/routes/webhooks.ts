@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { readOptionalString } from "../utils/validation";
+import { readOptionalDate, readOptionalString } from "../utils/validation";
+import { QUOTE_SLUG_PATTERN, quoteSlugFromUrl } from "../utils/quoteSlug";
 import {
   CLOSED_LEAD_STATUS,
   appendRepeatNote,
@@ -164,5 +165,144 @@ webhooksRouter.post("/leads", async (req, res) => {
   } catch (err: unknown) {
     console.error("webhook /leads failed", err);
     return res.status(500).json({ error: "Failed to create lead" });
+  }
+});
+
+const SIGNED_QUOTE_STATUS = "נחתמה";
+
+/**
+ * A client signed a quote on the price-offers site.
+ *
+ * The quote is found by its slug (the last segment of its URL) and marked
+ * signed. When nobody registered the quote beforehand it is created unlinked,
+ * so it still shows up under "הצעות ללא לקוח". An unlinked quote is linked to
+ * the one client whose email matches the signer's, and that client's contract
+ * link is filled with the signed copy if it was empty.
+ *
+ * Idempotent: the price-offers site may retry, and a repeat of the same payload
+ * writes nothing.
+ */
+webhooksRouter.post("/quotes", async (req, res) => {
+  try {
+    const secret = process.env.MATARA_WEBHOOK_SECRET?.trim();
+    if (!secret) {
+      return res.status(500).json({ error: "MATARA_WEBHOOK_SECRET is not configured" });
+    }
+
+    const ownerUserId = process.env.MATARA_OWNER_USER_ID?.trim();
+    if (!ownerUserId) {
+      return res.status(500).json({ error: "MATARA_OWNER_USER_ID is not configured" });
+    }
+
+    const provided = readWebhookSecret(req);
+    if (!provided || provided !== secret) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const body = (req.body ?? {}) as Record<string, unknown>;
+
+    if (body.event !== "quote.signed") {
+      return res.status(400).json({ error: "Unsupported event" });
+    }
+
+    const quoteUrl = readOptionalString(body.quoteUrl) || undefined;
+    const slug =
+      readOptionalString(body.quoteSlug)?.toLowerCase() ||
+      (quoteUrl ? quoteSlugFromUrl(quoteUrl) : null) ||
+      "";
+    if (!QUOTE_SLUG_PATTERN.test(slug)) {
+      return res.status(400).json({ error: "Invalid quoteSlug" });
+    }
+
+    const signedAtRaw = readOptionalDate(body.signedAt);
+    if (body.signedAt !== undefined && signedAtRaw === undefined) {
+      return res.status(400).json({ error: "signedAt must be a valid date" });
+    }
+
+    const title = readOptionalString(body.quoteTitle) || undefined;
+    const signerName = readOptionalString(body.signerName) || null;
+    const signerEmail = readOptionalString(body.signerEmail) || null;
+    const signatureUrl = readOptionalString(body.signatureUrl) || null;
+    const signedCopyUrl = readOptionalString(body.signedCopyUrl) || null;
+
+    let quote = await prisma.quote.findUnique({ where: { slug } });
+    if (quote && quote.userId !== ownerUserId) {
+      return res.status(409).json({ error: "Quote slug belongs to another user" });
+    }
+
+    const signed = {
+      status: SIGNED_QUOTE_STATUS,
+      // A retry without a timestamp must not move the signing date.
+      signedAt: signedAtRaw ?? quote?.signedAt ?? new Date(),
+      signerName,
+      signerEmail,
+      signatureUrl,
+      signedCopyUrl,
+    };
+
+    if (!quote) {
+      quote = await prisma.quote.create({
+        data: {
+          userId: ownerUserId,
+          slug,
+          url: quoteUrl ?? "",
+          title: title ?? "",
+          ...signed,
+        },
+      });
+    } else {
+      const data: Record<string, unknown> = {};
+      const next: Record<string, unknown> = {
+        ...signed,
+        ...(title ? { title } : {}),
+        ...(quoteUrl ? { url: quoteUrl } : {}),
+      };
+      const current = quote as unknown as Record<string, unknown>;
+      for (const [key, value] of Object.entries(next)) {
+        const before = current[key];
+        const same =
+          before instanceof Date && value instanceof Date
+            ? before.getTime() === value.getTime()
+            : before === value;
+        if (!same) data[key] = value;
+      }
+      if (Object.keys(data).length > 0) {
+        quote = await prisma.quote.update({ where: { id: quote.id }, data });
+      }
+    }
+
+    if (!quote.clientId && signerEmail) {
+      const matches = await prisma.client.findMany({
+        where: {
+          userId: ownerUserId,
+          email: { equals: signerEmail.trim(), mode: "insensitive" },
+        },
+        select: { id: true },
+        take: 2,
+      });
+      if (matches.length === 1) {
+        quote = await prisma.quote.update({
+          where: { id: quote.id },
+          data: { clientId: matches[0].id },
+        });
+      }
+    }
+
+    if (quote.clientId && signedCopyUrl) {
+      // Only fills an empty contract link; one set by hand is never replaced.
+      await prisma.client.updateMany({
+        where: {
+          id: quote.clientId,
+          userId: ownerUserId,
+          OR: [{ contractUrl: null }, { contractUrl: "" }],
+        },
+        data: { contractUrl: signedCopyUrl },
+      });
+    }
+
+    return res.status(200).json({ ok: true, quoteId: quote.id, clientId: quote.clientId });
+  } catch (err: unknown) {
+    console.error("webhook /quotes failed", err);
+    return res.status(500).json({ error: "Failed to record signed quote" });
   }
 });
