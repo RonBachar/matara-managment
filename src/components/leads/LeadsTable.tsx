@@ -7,27 +7,39 @@ import { cn } from "@/lib/utils";
 
 type LeadsTableProps = {
   leads: Lead[];
+  selectedIds: string[];
   onAdd: () => void;
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
   onStatusChange: (leadId: string, status: Lead["status"]) => void;
+  onToggleSelect: (leadId: string) => void;
+  onToggleSelectAll: () => void;
+  onDeleteSelected: () => void;
 };
+
+const CHECKBOX_CLASS = "size-4 cursor-pointer accent-[#7C3AED] disabled:cursor-not-allowed";
 
 export function LeadsTable({
   leads,
+  selectedIds,
   onAdd,
   onEdit,
   onDelete,
   onStatusChange,
+  onToggleSelect,
+  onToggleSelectAll,
+  onDeleteSelected,
 }: LeadsTableProps) {
+  const selected = new Set(selectedIds);
+  const allSelected = leads.length > 0 && selectedIds.length === leads.length;
+  const someSelected = selectedIds.length > 0 && !allSelected;
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">לידים</h2>
-          <p className="text-sm text-muted-foreground">
-            ניהול ומעקב לידים.
-          </p>
+          <p className="text-sm text-muted-foreground">ניהול ומעקב לידים.</p>
         </div>
         <Button
           size="sm"
@@ -38,10 +50,42 @@ export function LeadsTable({
         </Button>
       </div>
 
+      {/* Only takes up room once something is selected. */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#7C3AED]/40 bg-[#7C3AED]/5 px-3 py-2">
+          <span className="text-sm font-medium text-foreground">
+            נבחרו {selectedIds.length} לידים
+          </span>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onToggleSelectAll}>
+              {allSelected ? "נקה בחירה" : "בחר הכל"}
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={onDeleteSelected}>
+              <Trash2 className="h-4 w-4" />
+              מחיקת הנבחרים
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted/60">
             <tr className="text-right">
+              <th className="w-10 px-3 py-2">
+                <input
+                  type="checkbox"
+                  className={CHECKBOX_CLASS}
+                  checked={allSelected}
+                  ref={(el) => {
+                    // Half-filled box when only some rows are ticked.
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={onToggleSelectAll}
+                  disabled={leads.length === 0}
+                  aria-label="בחירת כל הלידים"
+                />
+              </th>
               <th className="px-3 py-2 font-medium">תאריך יצירה</th>
               <th className="px-3 py-2 font-medium">שם הלקוח</th>
               <th className="px-3 py-2 font-medium">טלפון</th>
@@ -55,20 +99,30 @@ export function LeadsTable({
           <tbody>
             {leads.length === 0 ? (
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-3 py-6 text-center text-muted-foreground"
-                >
+                <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">
                   אין לידים. הוסף ליד חדש.
                 </td>
               </tr>
             ) : (
               leads.map((lead) => {
+                const isSelected = selected.has(lead.id);
                 return (
                   <tr
                     key={lead.id}
-                    className="border-t border-border/60 even:bg-muted/30"
+                    className={cn(
+                      "border-t border-border/60",
+                      isSelected ? "bg-[#7C3AED]/5" : "even:bg-muted/30",
+                    )}
                   >
+                    <td className="px-3 py-2 align-middle">
+                      <input
+                        type="checkbox"
+                        className={CHECKBOX_CLASS}
+                        checked={isSelected}
+                        onChange={() => onToggleSelect(lead.id)}
+                        aria-label={`בחירת ${lead.clientName}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 align-middle">
                       <span className="text-xs text-muted-foreground">
                         {formatLeadCreatedAt(lead.createdAt)}
@@ -105,10 +159,7 @@ export function LeadsTable({
                       <select
                         value={lead.status}
                         onChange={(e) =>
-                          onStatusChange(
-                            lead.id,
-                            e.target.value as Lead["status"],
-                          )
+                          onStatusChange(lead.id, e.target.value as Lead["status"])
                         }
                         className={cn(
                           "w-full min-w-[8.5rem] cursor-pointer rounded-md border px-2 py-1.5 text-xs font-medium shadow-sm outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring",
