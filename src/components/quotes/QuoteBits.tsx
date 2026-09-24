@@ -31,13 +31,18 @@ function QuoteLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-/** The quote page itself and, once signed, the proof of signing. */
+/**
+ * The quote page itself, and once it is signed the proof of that. The signed
+ * copy is the document with the signature on it, so it stands in for the bare
+ * signature image whenever both exist — one link, not two.
+ */
 export function QuoteLinks({ quote }: { quote: Quote }) {
+  const signature = quote.signedCopyUrl || quote.signatureUrl;
+
   return (
     <div className="flex flex-wrap gap-3">
       {quote.url && <QuoteLink href={quote.url} label="פתיחת ההצעה" />}
-      {quote.signedCopyUrl && <QuoteLink href={quote.signedCopyUrl} label="העותק החתום" />}
-      {quote.signatureUrl && <QuoteLink href={quote.signatureUrl} label="החתימה" />}
+      {signature && <QuoteLink href={signature} label="החתימה" />}
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { DeleteQuoteDialog } from "@/components/quotes/DeleteQuoteDialog";
 import { apiDeleteQuote, apiGetQuotes } from "@/lib/quotesApi";
 import { apiGetClients } from "@/lib/clientsApi";
 import { fetchLeads } from "@/lib/leadsApi";
-import { formatQuoteAmount, formatQuoteDate, quoteDisplayTitle } from "@/lib/quoteFormat";
+import { formatQuoteDate, quoteDisplayTitle } from "@/lib/quoteFormat";
 import { cn } from "@/lib/utils";
 
 type StatusFilter = "all" | typeof QUOTE_STATUS_SENT | typeof QUOTE_STATUS_SIGNED;
@@ -166,33 +166,29 @@ export function Quotes() {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted/60">
             <tr className="text-right">
-              <th className="px-3 py-2 font-medium">הצעה</th>
-              <th className="px-3 py-2 font-medium">למי</th>
-              <th className="px-3 py-2 font-medium">סכום</th>
+              <th className="px-3 py-2 font-medium">שם הלקוח</th>
+              <th className="px-3 py-2 font-medium">תיאור</th>
               <th className="px-3 py-2 font-medium">סטטוס</th>
               <th className="px-3 py-2 font-medium">נשלחה</th>
               <th className="px-3 py-2 font-medium">נחתמה</th>
-              <th className="px-3 py-2 font-medium">קישורים</th>
+              <th className="px-3 py-2 font-medium">קישור</th>
               <th className="px-3 py-2 text-center font-medium">פעולות</th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
                   {loaded ? "אין הצעות מחיר." : "טוען..."}
                 </td>
               </tr>
             ) : (
               visible.map((quote) => (
                 <tr key={quote.id} className="border-t border-border/70 align-middle">
-                  <td className="px-3 py-2 font-medium">{quoteDisplayTitle(quote)}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 font-medium">
                     <QuoteOwner quote={quote} />
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {formatQuoteAmount(quote.amount) ?? ""}
-                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{quoteDisplayTitle(quote)}</td>
                   <td className="px-3 py-2">
                     <QuoteStatusBadge status={quote.status} />
                   </td>
