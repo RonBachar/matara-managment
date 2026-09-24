@@ -7,6 +7,7 @@ import {
   readOptionalNumber,
   readOptionalDate,
 } from "../utils/validation";
+import { QUOTE_SIGNED } from "../services/quoteStatus";
 
 export const clientsRouter = Router();
 
@@ -128,6 +129,22 @@ clientsRouter.delete("/:id", async (req: AuthRequest, res) => {
     if (projects > 0) {
       return res.status(409).json({
         error: `ללקוח יש ${projects} פרויקטים. מחק אותם קודם.`,
+      });
+    }
+
+    // Quotes survive their client (the relation is SetNull), so without this
+    // the client goes and the quote is left with no owner — including a signed
+    // one, which is the agreement itself.
+    const [signedQuotes, totalQuotes] = await Promise.all([
+      prisma.quote.count({ where: { clientId: id, status: QUOTE_SIGNED } }),
+      prisma.quote.count({ where: { clientId: id } }),
+    ]);
+    if (totalQuotes > 0) {
+      return res.status(409).json({
+        error:
+          signedQuotes > 0
+            ? `ללקוח יש ${signedQuotes} הצעות מחיר חתומות. מחק אותן קודם, או השאר את הלקוח.`
+            : `ללקוח יש ${totalQuotes} הצעות מחיר. מחק אותן קודם.`,
       });
     }
 

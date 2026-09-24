@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { convertLeadToClient } from "../services/leadConversion";
+import { QUOTE_SIGNED } from "../services/quoteStatus";
 import { readOptionalDate, readOptionalNumber, readOptionalString } from "../utils/validation";
 import { QUOTE_SLUG_PATTERN, quoteSlugFromUrl } from "../utils/quoteSlug";
 import {
@@ -170,7 +171,6 @@ webhooksRouter.post("/leads", async (req, res) => {
   }
 });
 
-const SIGNED_QUOTE_STATUS = "נחתמה";
 
 /**
  * A client signed a quote on the price-offers site.
@@ -240,7 +240,7 @@ webhooksRouter.post("/quotes", async (req, res) => {
     }
 
     const signed = {
-      status: SIGNED_QUOTE_STATUS,
+      status: QUOTE_SIGNED,
       // A retry without a timestamp must not move the signing date.
       signedAt: signedAtRaw ?? quote?.signedAt ?? new Date(),
       signerName,
