@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { convertLeadToClient } from "../services/leadConversion";
-import { readOptionalDate, readOptionalString } from "../utils/validation";
+import { readOptionalDate, readOptionalNumber, readOptionalString } from "../utils/validation";
 import { QUOTE_SLUG_PATTERN, quoteSlugFromUrl } from "../utils/quoteSlug";
 import {
   CLOSED_LEAD_STATUS,
@@ -224,6 +224,10 @@ webhooksRouter.post("/quotes", async (req, res) => {
     }
 
     const title = readOptionalString(body.quoteTitle) || undefined;
+    // The price-offers page sends its own total, but only when the document
+    // names exactly one — a multi-package quote sends nothing, because the
+    // signature does not say which package was chosen.
+    const amount = readOptionalNumber(body.quoteAmount);
     const signerName = readOptionalString(body.signerName) || null;
     const signerEmail = readOptionalString(body.signerEmail) || null;
     const signerPhone = readOptionalString(body.signerPhone) || null;
@@ -252,6 +256,7 @@ webhooksRouter.post("/quotes", async (req, res) => {
           slug,
           url: quoteUrl ?? "",
           title: title ?? "",
+          ...(amount !== undefined ? { amount } : {}),
           ...signed,
         },
       });
@@ -261,6 +266,10 @@ webhooksRouter.post("/quotes", async (req, res) => {
         ...signed,
         ...(title ? { title } : {}),
         ...(quoteUrl ? { url: quoteUrl } : {}),
+        // Fills a blank amount, never replaces one that was typed in when the
+        // quote was registered: a hand-entered figure may carry a discount, or
+        // name the package the client actually picked.
+        ...(amount !== undefined && quote.amount === null ? { amount } : {}),
       };
       const current = quote as unknown as Record<string, unknown>;
       for (const [key, value] of Object.entries(next)) {
