@@ -256,6 +256,8 @@ webhooksRouter.post("/quotes", async (req, res) => {
           slug,
           url: quoteUrl ?? "",
           title: title ?? "",
+          // Nobody registered this quote, so the signer is the only name we have.
+          recipientName: signerName ?? "",
           ...(amount !== undefined ? { amount } : {}),
           ...signed,
         },

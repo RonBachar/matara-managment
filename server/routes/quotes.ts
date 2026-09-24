@@ -77,6 +77,7 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
     if (!lead.ok) return res.status(400).json({ error: "Lead not found" });
 
     const title = readOptionalString(body.title);
+    const recipientName = readOptionalString(body.recipientName);
     const amount = body.amount === null ? null : readOptionalNumber(body.amount);
 
     const existing = await prisma.quote.findUnique({ where: { slug } });
@@ -92,6 +93,7 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
           ...(client.clientId !== undefined ? { clientId: client.clientId } : {}),
           ...(lead.leadId !== undefined ? { leadId: lead.leadId } : {}),
           ...(title !== undefined && title.length > 0 ? { title } : {}),
+          ...(recipientName !== undefined && recipientName.length > 0 ? { recipientName } : {}),
           ...(amount !== undefined ? { amount } : {}),
         },
         include: quoteInclude,
@@ -107,6 +109,7 @@ quotesRouter.post("/", async (req: AuthRequest, res) => {
         clientId: client.clientId ?? null,
         leadId: lead.leadId ?? null,
         title: title ?? "",
+        recipientName: recipientName ?? "",
         amount: amount ?? null,
       },
       include: quoteInclude,
@@ -137,6 +140,9 @@ quotesRouter.patch("/:id", async (req: AuthRequest, res) => {
 
     const title = readOptionalString(body.title);
     if (title !== undefined) data.title = title;
+
+    const recipientName = readOptionalString(body.recipientName);
+    if (recipientName !== undefined) data.recipientName = recipientName;
 
     if (body.amount === null) data.amount = null;
     else {

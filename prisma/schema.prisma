@@ -134,6 +134,11 @@ model Quote {
   /// Last path segment of the quote URL, e.g. "growaswinners". One quote page per slug.
   slug   String   @unique
   title  String   @default("")
+
+  /// Who the quote is made out to, as the document itself names them. Used when
+  /// the recipient is not a lead or a client here, so the list still shows a name.
+  recipientName String @default("")
+
   url    String
   amount Decimal? @db.Decimal(14, 2)
 

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { apiCreateQuote } from "@/lib/quotesApi";
 import { cn } from "@/lib/utils";
 
-const EMPTY_FORM = { url: "", title: "", amount: "" };
+const EMPTY_FORM = { url: "", title: "", amount: "", recipientName: "" };
 
 /** "lead:<id>" | "client:<id>" | "" for the "למי" chooser. */
 type Recipient = string;
@@ -76,6 +76,7 @@ export function QuoteForm({
         ...owner,
         url,
         title: form.title.trim() || undefined,
+        recipientName: form.recipientName.trim() || undefined,
         amount,
       });
       setForm(EMPTY_FORM);
@@ -90,13 +91,18 @@ export function QuoteForm({
   // Converted leads are offered as their client instead.
   const openLeads = recipients?.leads.filter((l) => !l.convertedClientId) ?? [];
 
+  // With nobody chosen the list would have no name to show, so ask for one.
+  const needsName = Boolean(recipients) && !recipient;
+
   return (
     <form
       onSubmit={handleSubmit}
       className={cn(
         "grid gap-3 rounded-lg border border-border/70 p-3 md:items-end",
         recipients
-          ? "md:grid-cols-[1.5fr_2fr_1.5fr_1fr_auto]"
+          ? needsName
+            ? "md:grid-cols-[1.5fr_1.5fr_2fr_1.5fr_1fr_auto]"
+            : "md:grid-cols-[1.5fr_2fr_1.5fr_1fr_auto]"
           : "md:grid-cols-[2fr_1.5fr_1fr_auto]",
       )}
     >
@@ -129,6 +135,17 @@ export function QuoteForm({
               </optgroup>
             )}
           </select>
+        </div>
+      )}
+      {needsName && (
+        <div className="space-y-1">
+          <Label htmlFor="quote-recipient-name">שם הלקוח</Label>
+          <Input
+            id="quote-recipient-name"
+            placeholder="למי ההצעה"
+            value={form.recipientName}
+            onChange={(e) => setForm((f) => ({ ...f, recipientName: e.target.value }))}
+          />
         </div>
       )}
       <div className="space-y-1">

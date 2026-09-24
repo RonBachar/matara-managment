@@ -15,6 +15,8 @@ export type Quote = {
   /** Last path segment of the quote URL; how the signing webhook finds it. */
   slug: string;
   title: string;
+  /** Who the quote is made out to, when they are not a lead or a client here. */
+  recipientName: string;
   url: string;
   amount: number | null;
   /** "נשלחה" | "נחתמה" */
@@ -35,5 +37,6 @@ export type QuotePayload = {
   leadId?: string | null;
   url?: string;
   title?: string;
+  recipientName?: string;
   amount?: number | null;
 };

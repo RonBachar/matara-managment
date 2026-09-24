@@ -46,6 +46,8 @@ function QuoteOwner({ quote }: { quote: Quote }) {
       </Link>
     );
   }
+  // Quotes sent before the recipient existed here carry their name in the document.
+  if (quote.recipientName) return <span>{quote.recipientName}</span>;
   return <span className="text-muted-foreground">ללא שיוך</span>;
 }
 

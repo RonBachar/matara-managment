@@ -42,6 +42,7 @@ function quoteFromApi(row: ApiQuote): Quote {
     client: clientFromApi(row.client),
     slug: str(row.slug),
     title: str(row.title),
+    recipientName: str(row.recipientName),
     url: str(row.url),
     amount: numOrNull(row.amount),
     status: str(row.status),
